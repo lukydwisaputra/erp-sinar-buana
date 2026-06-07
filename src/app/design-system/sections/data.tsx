@@ -65,10 +65,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import {
-  DataTable,
-  type DataTableColumnMeta,
-} from "@/components/shared/data-table";
+import { DataTable } from "@/components/shared/data-table";
 
 /* ---------- DS-14 Card ---------- */
 function CardShowcase() {
@@ -158,7 +155,7 @@ const STATUS: Record<
   StatusKey,
   {
     label: string;
-    variant: "success" | "warning" | "danger" | "info";
+    variant: "success" | "warning" | "destructive" | "info";
     icon: React.ComponentType<{ className?: string }>;
   }
 > = {
@@ -166,7 +163,7 @@ const STATUS: Record<
   tertunda: { label: "Tertunda", variant: "warning", icon: ClockIcon },
   "jatuh-tempo": {
     label: "Jatuh Tempo",
-    variant: "danger",
+    variant: "destructive",
     icon: TriangleAlertIcon,
   },
   draf: { label: "Draf", variant: "info", icon: FileTextIcon },
@@ -247,8 +244,6 @@ const INVOICES: Invoice[] = [
   },
 ];
 
-const rightMono: DataTableColumnMeta = { align: "right", mono: true };
-
 const invoiceColumns: ColumnDef<Invoice>[] = [
   {
     accessorKey: "faktur",
@@ -271,7 +266,7 @@ const invoiceColumns: ColumnDef<Invoice>[] = [
   {
     accessorKey: "jumlah",
     header: "Jumlah",
-    meta: rightMono,
+    meta: { align: "right", mono: true },
     cell: ({ row }) => formatRupiah(row.original.jumlah),
   },
   {
@@ -281,9 +276,74 @@ const invoiceColumns: ColumnDef<Invoice>[] = [
   },
 ];
 
+// Reduced column set for the compact state demos (loading / empty / error).
+const compactColumns: ColumnDef<Invoice>[] = [
+  {
+    accessorKey: "faktur",
+    header: "No. Faktur",
+    cell: ({ row }) => (
+      <span className="font-mono">{row.original.faktur}</span>
+    ),
+    enableSorting: false,
+  },
+  {
+    accessorKey: "jumlah",
+    header: "Jumlah",
+    meta: { align: "right", mono: true },
+    cell: ({ row }) => formatRupiah(row.original.jumlah),
+    enableSorting: false,
+  },
+];
+
+function DataTableStatesShowcase() {
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <p className="text-sm font-medium text-muted-foreground">
+        Status tabel: memuat / kosong / gagal
+      </p>
+      <div className="grid w-full gap-6 md:grid-cols-3">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs tracking-wide text-muted-foreground uppercase">
+            Memuat
+          </span>
+          <DataTable
+            columns={compactColumns}
+            data={[]}
+            loading
+            initialPageSize={3}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs tracking-wide text-muted-foreground uppercase">
+            Kosong
+          </span>
+          <DataTable
+            columns={compactColumns}
+            data={[]}
+            emptyMessage="Belum ada data"
+            initialPageSize={3}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs tracking-wide text-muted-foreground uppercase">
+            Gagal
+          </span>
+          <DataTable
+            columns={compactColumns}
+            data={[]}
+            error="Gagal memuat data"
+            onRetry={() => {}}
+            initialPageSize={3}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DataTableShowcase() {
   return (
-    <div className="w-full">
+    <div className="flex w-full flex-col gap-8">
       <DataTable
         columns={invoiceColumns}
         data={INVOICES}
@@ -299,6 +359,7 @@ function DataTableShowcase() {
         ]}
         initialPageSize={5}
       />
+      <DataTableStatesShowcase />
     </div>
   );
 }

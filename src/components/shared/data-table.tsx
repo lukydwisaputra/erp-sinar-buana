@@ -6,6 +6,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
   type Table as TanstackTable,
+  type RowData,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -48,6 +49,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    align?: "left" | "right";
+    mono?: boolean;
+  }
+}
 
 /** Option for the toolbar status (faceted) filter. */
 export type DataTableFilterOption = { label: string; value: string };
@@ -169,9 +178,7 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id} className="hover:bg-transparent">
                 {hg.headers.map((header) => {
-                  const meta = header.column.columnDef.meta as
-                    | DataTableColumnMeta
-                    | undefined;
+                  const meta = header.column.columnDef.meta;
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
                   return (
@@ -235,9 +242,7 @@ export function DataTable<TData, TValue>({
                 (_, r) => (
                   <TableRow key={r} className="hover:bg-transparent">
                     {table.getVisibleLeafColumns().map((col) => {
-                      const meta = col.columnDef.meta as
-                        | DataTableColumnMeta
-                        | undefined;
+                      const meta = col.columnDef.meta;
                       return (
                         <TableCell key={col.id} className="py-3">
                           <Skeleton
@@ -268,9 +273,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => {
-                    const meta = cell.column.columnDef.meta as
-                      | DataTableColumnMeta
-                      | undefined;
+                    const meta = cell.column.columnDef.meta;
                     return (
                       <TableCell
                         key={cell.id}
@@ -300,12 +303,6 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
-
-/** Per-column display hints read by the DataTable (right-align / mono amount). */
-export type DataTableColumnMeta = {
-  align?: "left" | "right";
-  mono?: boolean;
-};
 
 function DataTablePagination<TData>({
   table,
