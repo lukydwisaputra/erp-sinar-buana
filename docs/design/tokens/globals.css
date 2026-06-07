@@ -1,0 +1,149 @@
+/* Hallmark · genre: modern-minimal · system: Sinar Buana ERP · accent: Supabase green ~159°
+ * ===========================================================================
+ * Design tokens (drop-in). Visual language: Supabase (brand green on a neutral
+ * scale). Colours are OKLCH — perceptually uniform, predictable lightness, one
+ * anchor hue. Neutrals carry a faint green tint (chroma 0.005–0.008 @ hue 156)
+ * so the greys read "made," not flat-synthetic. No pure #000 / #fff.
+ *
+ * Format: Tailwind v4 / shadcn store the *full* colour in the variable and map
+ * it with `var(--token)` (NOT `hsl(var(--token))`). See tokens/tailwind-theme.ts.
+ *
+ * Wiring (when apps/web exists):
+ *   1. Copy to the app's global stylesheet (e.g. src/app/globals.css).
+ *   2. Keep the @tailwind / @import "tailwindcss" directives at the top.
+ *   3. next-themes toggles `.dark` on <html> (attribute="class").
+ *   4. Font CSS variables (--font-sans, --font-mono) come from tokens/fonts.ts.
+ *
+ * Token reference + WCAG contrast table: ./colors.md
+ * =========================================================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* surfaces & text — tinted paper/ink, never pure white/black */
+    --background: oklch(99.4% 0.003 156);
+    --foreground: oklch(20.5% 0.010 156);
+    --card: oklch(99.4% 0.003 156);
+    --card-foreground: oklch(20.5% 0.010 156);
+    --popover: oklch(99.4% 0.003 156);
+    --popover-foreground: oklch(20.5% 0.010 156);
+
+    /* brand (Supabase green) — the single saturated accent */
+    --primary: oklch(76.2% 0.154 159);
+    --primary-foreground: oklch(26.6% 0.063 153);
+
+    /* tinted neutrals */
+    --secondary: oklch(96.8% 0.005 156);
+    --secondary-foreground: oklch(20.5% 0.010 156);
+    --muted: oklch(96.8% 0.005 156);
+    --muted-foreground: oklch(51.5% 0.006 156);
+    --accent: oklch(96.8% 0.005 156);
+    --accent-foreground: oklch(20.5% 0.010 156);
+
+    /* status */
+    --destructive: oklch(62.6% 0.193 23);
+    --destructive-foreground: oklch(99% 0.010 156);
+    --success: oklch(68.4% 0.142 162);
+    --success-foreground: oklch(99% 0.010 156);
+    --warning: oklch(76.9% 0.165 70);
+    --warning-foreground: oklch(20.5% 0.010 156);
+    --info: oklch(54.4% 0.191 267);
+    --info-foreground: oklch(99% 0.010 156);
+
+    /* lines & focus */
+    --border: oklch(91.5% 0.006 156);
+    --input: oklch(91.5% 0.006 156);
+    --ring: oklch(76.2% 0.154 159);
+    --radius: 0.5rem;
+
+    /* charts */
+    --chart-1: oklch(76.2% 0.154 159);
+    --chart-2: oklch(54.4% 0.191 267);
+    --chart-3: oklch(76.9% 0.165 70);
+    --chart-4: oklch(62.7% 0.233 304);
+    --chart-5: oklch(62.6% 0.193 23);
+
+    /* sidebar (recessed) */
+    --sidebar: oklch(98.2% 0.004 156);
+    --sidebar-foreground: oklch(43.5% 0.006 156);
+    --sidebar-primary: oklch(76.2% 0.154 159);
+    --sidebar-primary-foreground: oklch(26.6% 0.063 153);
+    --sidebar-accent: oklch(95.0% 0.006 156);
+    --sidebar-accent-foreground: oklch(20.5% 0.010 156);
+    --sidebar-border: oklch(91.5% 0.006 156);
+    --sidebar-ring: oklch(76.2% 0.154 159);
+  }
+
+  .dark {
+    /* Paper lightness ~21% (not #000); ink ~94% (not #fff). Hue never switches
+     * between modes — only lightness/chroma move. Elevation = lighter surface. */
+    --background: oklch(21.0% 0.006 156);
+    --foreground: oklch(94.5% 0.004 156);
+    --card: oklch(25.5% 0.006 156);
+    --card-foreground: oklch(94.5% 0.004 156);
+    --popover: oklch(25.5% 0.006 156);
+    --popover-foreground: oklch(94.5% 0.004 156);
+
+    --primary: oklch(76.2% 0.154 159);
+    --primary-foreground: oklch(26.6% 0.063 153);
+
+    --secondary: oklch(28.0% 0.006 156);
+    --secondary-foreground: oklch(94.5% 0.004 156);
+    --muted: oklch(28.0% 0.006 156);
+    --muted-foreground: oklch(70.5% 0.005 156);
+    --accent: oklch(30.0% 0.006 156);
+    --accent-foreground: oklch(94.5% 0.004 156);
+
+    --destructive: oklch(62.6% 0.193 23);
+    --destructive-foreground: oklch(99% 0.010 156);
+    --success: oklch(76.2% 0.154 159);
+    --success-foreground: oklch(26.6% 0.063 153);
+    --warning: oklch(76.9% 0.165 70);
+    --warning-foreground: oklch(20.5% 0.010 156);
+    --info: oklch(54.4% 0.191 267);
+    --info-foreground: oklch(99% 0.010 156);
+
+    --border: oklch(30.0% 0.008 156);
+    --input: oklch(36.5% 0.008 156);
+    --ring: oklch(76.2% 0.154 159);
+
+    --chart-1: oklch(76.2% 0.154 159);
+    --chart-2: oklch(54.4% 0.191 267);
+    --chart-3: oklch(76.9% 0.165 70);
+    --chart-4: oklch(62.7% 0.233 304);
+    --chart-5: oklch(62.6% 0.193 23);
+
+    --sidebar: oklch(18.0% 0.006 156);
+    --sidebar-foreground: oklch(80.0% 0.005 156);
+    --sidebar-primary: oklch(76.2% 0.154 159);
+    --sidebar-primary-foreground: oklch(26.6% 0.063 153);
+    --sidebar-accent: oklch(28.0% 0.006 156);
+    --sidebar-accent-foreground: oklch(94.5% 0.004 156);
+    --sidebar-border: oklch(28.0% 0.006 156);
+    --sidebar-ring: oklch(76.2% 0.154 159);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Dark mode: drop body weight ~50 units to offset the optical bloom of light
+   * text on a dark surface (hallmark color.md § dark-mode recipe). */
+  .dark body {
+    font-weight: 350;
+  }
+  /* Financial figures: align columns + use the mono face. */
+  .tabular,
+  td.amount,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}
