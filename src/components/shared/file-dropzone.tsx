@@ -6,7 +6,6 @@ import { UploadCloudIcon, FileIcon, XIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Toaster } from "@/components/ui/sonner";
 
 function humanSize(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -32,10 +31,6 @@ export function FileDropzone() {
 
   return (
     <div className="w-80">
-      {/* Local Toaster for this self-contained demo. Group E sets up the
-          app-wide Toaster later; we mount one here so the demo works standalone. */}
-      <Toaster />
-
       <div
         role="button"
         tabIndex={0}
