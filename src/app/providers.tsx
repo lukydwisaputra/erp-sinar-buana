@@ -12,7 +12,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
-      <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+      <TooltipProvider delayDuration={200} disableHoverableContent>
+        {children}
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
