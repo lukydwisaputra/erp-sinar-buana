@@ -5,7 +5,7 @@ export const perusahaanFixtures: Perusahaan[] = [
     id: "PRSH-001",
     nama: "PT Maju Bersama Industri",
     npwp: "01.234.567.8-901.000",
-    alamat: "Jl. Gatot Subroto No. 12, Kuningan",
+    alamat: "Gedung Menara Sentosa Lantai 12, Jl. Jenderal Gatot Subroto Kav. 21-22, Kuningan Timur, Setiabudi, Jakarta Selatan 12950",
     kota: "Jakarta",
     telepon: "021-5550101",
     email: "info@majubersama.co.id",

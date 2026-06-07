@@ -11,7 +11,7 @@ import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
 import type { PIC, Perusahaan } from "@/lib/schemas/perusahaan";
 
@@ -83,15 +83,15 @@ function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
 
 /* ---------- detail drawer pieces ---------- */
 
-function Stat({ label, value, icon: Icon, mono }: {
-  label: string; value: string; icon: typeof FileText; mono?: boolean;
+function Stat({ label, value, icon: Icon, mono, title }: {
+  label: string; value: string; icon: typeof FileText; mono?: boolean; title?: string;
 }) {
   return (
     <div className="rounded-lg border border-border p-3">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Icon className="size-3.5" /> {label}
       </div>
-      <p className={cn("mt-1 text-base font-semibold text-foreground", mono && "font-mono tabular-nums")}>
+      <p className={cn("mt-1 truncate text-base font-semibold text-foreground", mono && "font-mono tabular-nums")} title={title ?? value}>
         {value}
       </p>
     </div>
@@ -120,7 +120,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid grid-cols-3 gap-3 py-2.5">
       <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="col-span-2 text-sm">{value}</dd>
+      <dd className="col-span-2 text-sm break-words hyphens-none">{value}</dd>
     </div>
   );
 }
@@ -138,8 +138,8 @@ function PerusahaanDetail({ p }: { p: Perusahaan }) {
         <div className="grid grid-cols-2 gap-2">
           <Stat label="Penawaran" value={String(m.jumlahPenawaran)} icon={FileText} />
           <Stat label="Proyek Aktif" value={String(m.proyekAktif)} icon={FolderKanban} />
-          <Stat label="Nilai Kontrak" value={formatRupiah(m.nilaiKontrak)} icon={Wallet} mono />
-          <Stat label="Piutang" value={formatRupiah(m.piutang)} icon={Receipt} mono />
+          <Stat label="Nilai Kontrak" value={formatRupiahCompact(m.nilaiKontrak)} title={formatRupiah(m.nilaiKontrak)} icon={Wallet} mono />
+          <Stat label="Piutang" value={formatRupiahCompact(m.piutang)} title={formatRupiah(m.piutang)} icon={Receipt} mono />
         </div>
       </section>
 
@@ -193,13 +193,15 @@ export default function PerusahaanPage() {
         <SheetContent className="overflow-y-auto sm:max-w-md">
           {selected && (
             <>
-              <SheetHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <SheetTitle className="font-mono text-base">{selected.id}</SheetTitle>
+              <SheetHeader className="pr-10">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <SheetTitle className="text-lg leading-tight font-semibold">
+                    {selected.nama}
+                  </SheetTitle>
                   <StatusBadge status={selected.status} />
                 </div>
-                <SheetDescription className="text-base font-medium text-foreground">
-                  {selected.nama}
+                <SheetDescription className="font-mono text-sm text-muted-foreground">
+                  {selected.id}
                 </SheetDescription>
               </SheetHeader>
               <PerusahaanDetail p={selected} />
