@@ -1,5 +1,6 @@
 import { ThemeToggle } from "@/components/design-system/theme-toggle";
 import { FormSection } from "./sections/form";
+import { DataSection } from "./sections/data";
 
 export default function DesignSystemPage() {
   return (
@@ -12,6 +13,7 @@ export default function DesignSystemPage() {
         <ThemeToggle />
       </div>
       <FormSection />
+      <DataSection />
     </div>
   );
 }

@@ -34,6 +34,15 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  /* status badge (subtle bg + AA-compliant text) */
+  --color-badge-success: var(--badge-success);
+  --color-badge-success-foreground: var(--badge-success-foreground);
+  --color-badge-warning: var(--badge-warning);
+  --color-badge-warning-foreground: var(--badge-warning-foreground);
+  --color-badge-destructive: var(--badge-destructive);
+  --color-badge-destructive-foreground: var(--badge-destructive-foreground);
+  --color-badge-info: var(--badge-info);
+  --color-badge-info-foreground: var(--badge-info-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -93,6 +102,18 @@
   --info: oklch(54.4% 0.191 267);
   --info-foreground: oklch(99% 0.010 156);
 
+  /* status badge — subtle tint bg + AA-verified darker text (light mode).
+   * Pairs match docs/design/tokens/colors.md §3 (all ≥4.5:1). The "success"
+   * text is brand-deep #006239, NOT brand green (#3ECF8E fails on light). */
+  --badge-success: oklch(96.4% 0.034 162);            /* #E7F8F0 */
+  --badge-success-foreground: oklch(43.7% 0.104 157); /* #006239 brand-deep */
+  --badge-warning: oklch(96.6% 0.038 84);             /* #FEF3DA */
+  --badge-warning-foreground: oklch(50.4% 0.149 52);  /* #B45309 */
+  --badge-destructive: oklch(94.6% 0.025 19);         /* #FDE9E9 */
+  --badge-destructive-foreground: oklch(52.5% 0.169 21); /* #C2363B */
+  --badge-info: oklch(94.2% 0.025 267);               /* #E7ECFC */
+  --badge-info-foreground: oklch(40.6% 0.155 268);    /* #2E44A0 */
+
   /* lines & focus */
   --border: oklch(91.5% 0.006 156);
   --input: oklch(91.5% 0.006 156);
@@ -145,6 +166,16 @@
   --warning-foreground: oklch(20.5% 0.010 156);
   --info: oklch(54.4% 0.191 267);
   --info-foreground: oklch(99% 0.010 156);
+
+  /* status badge — dark mode: deeper tint bg + lighter AA-verified text. */
+  --badge-success: oklch(29.0% 0.046 159);            /* #15301F */
+  --badge-success-foreground: oklch(76.2% 0.154 159); /* #3ECF8E */
+  --badge-warning: oklch(27.4% 0.043 75);             /* #332408 */
+  --badge-warning-foreground: oklch(76.9% 0.165 70);  /* #F59E0B */
+  --badge-destructive: oklch(28.4% 0.055 22);         /* #3A1717 */
+  --badge-destructive-foreground: oklch(70.6% 0.176 23); /* #FF6B6B */
+  --badge-info: oklch(25.2% 0.045 268);               /* #181F33 */
+  --badge-info-foreground: oklch(64.4% 0.151 268);    /* #6E8BFF */
 
   --border: oklch(30.0% 0.008 156);
   --input: oklch(36.5% 0.008 156);
