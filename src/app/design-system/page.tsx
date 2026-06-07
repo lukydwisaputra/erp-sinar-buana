@@ -1,4 +1,5 @@
 import { ThemeToggle } from "@/components/design-system/theme-toggle";
+import { FormSection } from "./sections/form";
 
 export default function DesignSystemPage() {
   return (
@@ -10,7 +11,7 @@ export default function DesignSystemPage() {
         </div>
         <ThemeToggle />
       </div>
-      {/* Sections appended here as each component task lands */}
+      <FormSection />
     </div>
   );
 }
