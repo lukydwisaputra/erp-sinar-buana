@@ -10,7 +10,11 @@ export async function listPerusahaan(params: ListPerusahaanParams = {}): Promise
   const rows = perusahaanSchema.array().parse(perusahaanFixtures);
   if (!params.q) return rows;
   const q = params.q.toLowerCase();
-  return rows.filter((r) => r.nama.toLowerCase().includes(q) || r.pic.toLowerCase().includes(q));
+  return rows.filter(
+    (r) =>
+      r.nama.toLowerCase().includes(q) ||
+      r.pic.some((p) => p.nama.toLowerCase().includes(q)),
+  );
 }
 
 export async function getPerusahaan(id: string): Promise<Perusahaan | null> {

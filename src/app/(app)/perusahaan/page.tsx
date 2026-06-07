@@ -1,16 +1,19 @@
 "use client";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Building2 } from "lucide-react";
+import { Building2, FileText, FolderKanban, Receipt, Wallet } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { formatRupiah } from "@/lib/format";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
-import type { Perusahaan } from "@/lib/schemas/perusahaan";
+import type { PIC, Perusahaan } from "@/lib/schemas/perusahaan";
 
 function StatusBadge({ status }: { status: Perusahaan["status"] }) {
   return status === "aktif" ? (
@@ -20,7 +23,11 @@ function StatusBadge({ status }: { status: Perusahaan["status"] }) {
   );
 }
 
-/** Columns are built with an `onOpen` callback so the ID/Nama cells can open the detail drawer. */
+function initials(name: string) {
+  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+}
+
+/** Columns are built with an `onOpen` callback so the ID/Nama cells open the detail drawer. */
 function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
   return [
     {
@@ -50,7 +57,21 @@ function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
         </button>
       ),
     },
-    { accessorKey: "pic", header: "PIC" },
+    {
+      id: "pic",
+      header: "PIC",
+      accessorFn: (row) => row.pic[0]?.nama ?? "",
+      cell: ({ row }) => {
+        const pics = row.original.pic;
+        const extra = pics.length - 1;
+        return (
+          <span>
+            {pics[0]?.nama ?? "—"}
+            {extra > 0 && <span className="ml-1 text-muted-foreground">+{extra}</span>}
+          </span>
+        );
+      },
+    },
     { accessorKey: "kota", header: "Kota" },
     {
       accessorKey: "status",
@@ -60,11 +81,85 @@ function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
   ];
 }
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+/* ---------- detail drawer pieces ---------- */
+
+function Stat({ label, value, icon: Icon, mono }: {
+  label: string; value: string; icon: typeof FileText; mono?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Icon className="size-3.5" /> {label}
+      </div>
+      <p className={cn("mt-1 text-base font-semibold text-foreground", mono && "font-mono tabular-nums")}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function PicCard({ pic }: { pic: PIC }) {
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="flex items-center gap-2.5">
+        <Avatar className="size-9"><AvatarFallback className="text-xs">{initials(pic.nama)}</AvatarFallback></Avatar>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{pic.nama}</p>
+          <p className="truncate text-xs text-muted-foreground">{pic.jabatan}</p>
+        </div>
+      </div>
+      <div className="mt-2.5 grid gap-1 text-xs">
+        <a href={`tel:${pic.telepon}`} className="font-mono text-muted-foreground hover:text-foreground">{pic.telepon}</a>
+        <a href={`mailto:${pic.email}`} className="truncate text-primary hover:underline">{pic.email}</a>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid grid-cols-3 gap-3 py-2.5">
       <dt className="text-sm text-muted-foreground">{label}</dt>
       <dd className="col-span-2 text-sm">{value}</dd>
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{children}</h3>;
+}
+
+function PerusahaanDetail({ p }: { p: Perusahaan }) {
+  const m = p.metrik;
+  return (
+    <div className="space-y-6 px-4 pb-8">
+      <section>
+        <SectionLabel>Ringkasan</SectionLabel>
+        <div className="grid grid-cols-2 gap-2">
+          <Stat label="Penawaran" value={String(m.jumlahPenawaran)} icon={FileText} />
+          <Stat label="Proyek Aktif" value={String(m.proyekAktif)} icon={FolderKanban} />
+          <Stat label="Nilai Kontrak" value={formatRupiah(m.nilaiKontrak)} icon={Wallet} mono />
+          <Stat label="Piutang" value={formatRupiah(m.piutang)} icon={Receipt} mono />
+        </div>
+      </section>
+
+      <section>
+        <SectionLabel>Kontak PIC ({p.pic.length})</SectionLabel>
+        <div className="grid gap-2">
+          {p.pic.map((pic) => <PicCard key={pic.email} pic={pic} />)}
+        </div>
+      </section>
+
+      <section>
+        <SectionLabel>Informasi Perusahaan</SectionLabel>
+        <dl className="divide-y divide-border">
+          <InfoRow label="NPWP" value={<span className="font-mono">{p.npwp}</span>} />
+          <InfoRow label="Alamat" value={p.alamat} />
+          <InfoRow label="Kota" value={p.kota} />
+          <InfoRow label="Telepon" value={<span className="font-mono">{p.telepon}</span>} />
+          <InfoRow label="Email" value={<a href={`mailto:${p.email}`} className="text-primary hover:underline">{p.email}</a>} />
+        </dl>
+      </section>
     </div>
   );
 }
@@ -95,32 +190,19 @@ export default function PerusahaanPage() {
       )}
 
       <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        <SheetContent className="sm:max-w-md">
+        <SheetContent className="overflow-y-auto sm:max-w-md">
           {selected && (
             <>
               <SheetHeader>
-                <SheetTitle className="font-mono text-base">{selected.id}</SheetTitle>
-                <SheetDescription>{selected.nama}</SheetDescription>
+                <div className="flex items-center justify-between gap-2">
+                  <SheetTitle className="font-mono text-base">{selected.id}</SheetTitle>
+                  <StatusBadge status={selected.status} />
+                </div>
+                <SheetDescription className="text-base font-medium text-foreground">
+                  {selected.nama}
+                </SheetDescription>
               </SheetHeader>
-              <div className="px-4">
-                <StatusBadge status={selected.status} />
-                <Separator className="my-3" />
-                <dl className="divide-y divide-border">
-                  <DetailRow label="Nama" value={selected.nama} />
-                  <DetailRow label="NPWP" value={<span className="font-mono">{selected.npwp}</span>} />
-                  <DetailRow label="PIC" value={selected.pic} />
-                  <DetailRow label="Telepon" value={<span className="font-mono">{selected.telepon}</span>} />
-                  <DetailRow
-                    label="Email"
-                    value={
-                      <a href={`mailto:${selected.email}`} className="text-primary hover:underline">
-                        {selected.email}
-                      </a>
-                    }
-                  />
-                  <DetailRow label="Kota" value={selected.kota} />
-                </dl>
-              </div>
+              <PerusahaanDetail p={selected} />
             </>
           )}
         </SheetContent>
