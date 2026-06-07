@@ -3,6 +3,7 @@ import { FormSection } from "./sections/form";
 import { DataSection } from "./sections/data";
 import { OverlaySection } from "./sections/overlays";
 import { FeedbackSection } from "./sections/feedback";
+import { DisclosureSection } from "./sections/disclosure";
 
 export default function DesignSystemPage() {
   return (
@@ -18,6 +19,7 @@ export default function DesignSystemPage() {
       <DataSection />
       <OverlaySection />
       <FeedbackSection />
+      <DisclosureSection />
     </div>
   );
 }
