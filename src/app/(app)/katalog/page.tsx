@@ -1,10 +1,24 @@
 "use client";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { BookOpen, FileText, FolderKanban, Tag } from "lucide-react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { BookOpen, FileText, FolderKanban, Plus, Tag } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
+import { FormSheet } from "@/components/shared/form-sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  InputGroup, InputGroupAddon, InputGroupInput, InputGroupText,
+} from "@/components/ui/input-group";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -12,6 +26,9 @@ import { StatTile, InfoRow, InfoList, SectionLabel } from "@/components/shared/d
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKatalogList } from "@/lib/query/katalog";
 import type { Layanan } from "@/lib/schemas/katalog";
+
+const JENIS_DOKUMEN = ["Pertek", "AMDAL", "UKL-UPL", "SPPL", "Laporan"] as const;
+const KEWENANGAN = ["Pusat (KLHK)", "Provinsi", "Kabupaten/Kota"] as const;
 
 function StatusBadge({ status }: { status: Layanan["status"] }) {
   return status === "aktif" ? (
@@ -97,17 +114,134 @@ function LayananDetail({ l }: { l: Layanan }) {
   );
 }
 
+/* ---------- create form ---------- */
+
+const layananCreateSchema = z.object({
+  nama: z.string().min(1, "Nama layanan wajib diisi."),
+  jenisDokumen: z.string().min(1, "Jenis dokumen wajib dipilih."),
+  kewenangan: z.string().min(1, "Kewenangan wajib dipilih."),
+  dasarHukum: z.string().min(1, "Dasar hukum wajib diisi."),
+  hargaStandar: z.string(),
+  tags: z.string(),
+  templateMilestone: z.string(),
+});
+type LayananCreate = z.infer<typeof layananCreateSchema>;
+
+function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const form = useForm<LayananCreate>({
+    resolver: zodResolver(layananCreateSchema),
+    defaultValues: { nama: "", jenisDokumen: "", kewenangan: "", dasarHukum: "", hargaStandar: "", tags: "", templateMilestone: "" },
+  });
+  const { register, handleSubmit, control, reset, formState: { errors } } = form;
+
+  const onSubmit = handleSubmit(() => {
+    toast.success("Demo: data tidak benar-benar disimpan");
+    onOpenChange(false);
+    reset();
+  });
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
+      title="Tambah Layanan"
+      description="Tambahkan jenis layanan perizinan ke katalog."
+      onSubmit={onSubmit}
+    >
+      <Field data-invalid={!!errors.nama}>
+        <FieldLabel htmlFor="l-nama">Nama Layanan</FieldLabel>
+        <Input id="l-nama" aria-invalid={!!errors.nama} {...register("nama")} />
+        <FieldError errors={errors.nama ? [errors.nama] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.jenisDokumen}>
+        <FieldLabel htmlFor="l-jenis">Jenis Dokumen</FieldLabel>
+        <Controller
+          control={control}
+          name="jenisDokumen"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="l-jenis" className="w-full" aria-invalid={!!errors.jenisDokumen}>
+                <SelectValue placeholder="Pilih jenis dokumen" />
+              </SelectTrigger>
+              <SelectContent>
+                {JENIS_DOKUMEN.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <FieldError errors={errors.jenisDokumen ? [errors.jenisDokumen] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.kewenangan}>
+        <FieldLabel htmlFor="l-kewenangan">Kewenangan</FieldLabel>
+        <Controller
+          control={control}
+          name="kewenangan"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="l-kewenangan" className="w-full" aria-invalid={!!errors.kewenangan}>
+                <SelectValue placeholder="Pilih kewenangan" />
+              </SelectTrigger>
+              <SelectContent>
+                {KEWENANGAN.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <FieldError errors={errors.kewenangan ? [errors.kewenangan] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.dasarHukum}>
+        <FieldLabel htmlFor="l-dasar">Dasar Hukum</FieldLabel>
+        <Input id="l-dasar" aria-invalid={!!errors.dasarHukum} {...register("dasarHukum")} />
+        <FieldError errors={errors.dasarHukum ? [errors.dasarHukum] : undefined} />
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="l-harga">Harga Standar (opsional)</FieldLabel>
+        <InputGroup>
+          <InputGroupAddon>
+            <InputGroupText>Rp</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput id="l-harga" inputMode="numeric" className="text-right font-mono tabular-nums" {...register("hargaStandar")} />
+        </InputGroup>
+        <FieldDescription>Kosongkan jika diisi manual di SPH.</FieldDescription>
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="l-tags">Tag (opsional)</FieldLabel>
+        <Input id="l-tags" {...register("tags")} />
+        <FieldDescription>Pisahkan dengan koma.</FieldDescription>
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="l-tahapan">Tahapan Proyek (opsional)</FieldLabel>
+        <Input id="l-tahapan" {...register("templateMilestone")} />
+      </Field>
+    </FormSheet>
+  );
+}
+
 export default function KatalogPage() {
   const { data, isLoading, isError, refetch } = useKatalogList();
   const [selected, setSelected] = useState<Layanan | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const columns = makeColumns(setSelected);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <BookOpen className="size-5 text-muted-foreground" />
-        <h1 className="text-xl font-semibold tracking-tight">Katalog Layanan</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <BookOpen className="size-5 text-muted-foreground" />
+          <h1 className="text-xl font-semibold tracking-tight">Katalog Layanan</h1>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="size-4" /> Tambah Layanan
+        </Button>
       </div>
+
+      <LayananCreateForm open={createOpen} onOpenChange={setCreateOpen} />
 
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

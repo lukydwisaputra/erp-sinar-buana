@@ -1,11 +1,20 @@
 "use client";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Building2, FileText, FolderKanban, Receipt, Wallet } from "lucide-react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { Building2, FileText, FolderKanban, Plus, Receipt, Wallet, X } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
+import { FormSheet } from "@/components/shared/form-sheet";
 import { StatTile, InfoRow, InfoList, SectionLabel, ContactCard } from "@/components/shared/detail-drawer";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -115,17 +124,154 @@ function PerusahaanDetail({ p }: { p: Perusahaan }) {
   );
 }
 
+/* ---------- create form ---------- */
+
+const perusahaanCreateSchema = z.object({
+  nama: z.string().min(1, "Nama perusahaan wajib diisi."),
+  alamat: z.string().min(1, "Alamat wajib diisi."),
+  kota: z.string().min(1, "Kota wajib diisi."),
+  npwp: z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka."),
+  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
+  pic: z
+    .array(
+      z.object({
+        nama: z.string().min(1, "Nama PIC wajib."),
+        jabatan: z.string(),
+        telepon: z.string().min(1, "Nomor HP wajib."),
+        email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
+      }),
+    )
+    .min(1, "Minimal satu PIC."),
+});
+type PerusahaanCreate = z.infer<typeof perusahaanCreateSchema>;
+
+const emptyPic = { nama: "", jabatan: "", telepon: "", email: "" };
+
+function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const form = useForm<PerusahaanCreate>({
+    resolver: zodResolver(perusahaanCreateSchema),
+    defaultValues: { nama: "", alamat: "", kota: "", npwp: "", email: "", pic: [{ ...emptyPic }] },
+  });
+  const { register, handleSubmit, control, reset, formState: { errors } } = form;
+  const { fields, append, remove } = useFieldArray({ control, name: "pic" });
+
+  const onSubmit = handleSubmit(() => {
+    toast.success("Demo: data tidak benar-benar disimpan");
+    onOpenChange(false);
+    reset();
+  });
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
+      title="Tambah Perusahaan"
+      description="Lengkapi data perusahaan dan minimal satu kontak PIC."
+      onSubmit={onSubmit}
+    >
+      <Field data-invalid={!!errors.nama}>
+        <FieldLabel htmlFor="p-nama">Nama Perusahaan</FieldLabel>
+        <Input id="p-nama" aria-invalid={!!errors.nama} {...register("nama")} />
+        <FieldError errors={errors.nama ? [errors.nama] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.alamat}>
+        <FieldLabel htmlFor="p-alamat">Alamat</FieldLabel>
+        <Textarea id="p-alamat" aria-invalid={!!errors.alamat} {...register("alamat")} />
+        <FieldError errors={errors.alamat ? [errors.alamat] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.kota}>
+        <FieldLabel htmlFor="p-kota">Kota</FieldLabel>
+        <Input id="p-kota" aria-invalid={!!errors.kota} {...register("kota")} />
+        <FieldError errors={errors.kota ? [errors.kota] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.npwp}>
+        <FieldLabel htmlFor="p-npwp">NPWP</FieldLabel>
+        <Input id="p-npwp" inputMode="numeric" aria-invalid={!!errors.npwp} {...register("npwp")} />
+        <FieldDescription>Maksimal 16 digit angka.</FieldDescription>
+        <FieldError errors={errors.npwp ? [errors.npwp] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.email}>
+        <FieldLabel htmlFor="p-email">Email (opsional)</FieldLabel>
+        <Input id="p-email" type="email" aria-invalid={!!errors.email} {...register("email")} />
+        <FieldError errors={errors.email ? [errors.email] : undefined} />
+      </Field>
+
+      <div className="space-y-3 border-t border-border pt-4">
+        <div className="flex items-center justify-between">
+          <SectionLabel>Kontak PIC</SectionLabel>
+          <Button type="button" variant="outline" size="sm" onClick={() => append({ ...emptyPic })}>
+            <Plus className="size-4" /> Tambah PIC
+          </Button>
+        </div>
+
+        {fields.map((f, i) => (
+          <div key={f.id} className="space-y-2 rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">PIC {i + 1}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                disabled={fields.length === 1}
+                onClick={() => remove(i)}
+                aria-label={`Hapus PIC ${i + 1}`}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+
+            <Field data-invalid={!!errors.pic?.[i]?.nama}>
+              <FieldLabel htmlFor={`p-pic-${i}-nama`}>Nama</FieldLabel>
+              <Input id={`p-pic-${i}-nama`} aria-invalid={!!errors.pic?.[i]?.nama} {...register(`pic.${i}.nama`)} />
+              <FieldError errors={errors.pic?.[i]?.nama ? [errors.pic[i]!.nama!] : undefined} />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor={`p-pic-${i}-jabatan`}>Jabatan (opsional)</FieldLabel>
+              <Input id={`p-pic-${i}-jabatan`} {...register(`pic.${i}.jabatan`)} />
+            </Field>
+
+            <Field data-invalid={!!errors.pic?.[i]?.telepon}>
+              <FieldLabel htmlFor={`p-pic-${i}-telepon`}>No. HP</FieldLabel>
+              <Input id={`p-pic-${i}-telepon`} inputMode="tel" aria-invalid={!!errors.pic?.[i]?.telepon} {...register(`pic.${i}.telepon`)} />
+              <FieldError errors={errors.pic?.[i]?.telepon ? [errors.pic[i]!.telepon!] : undefined} />
+            </Field>
+
+            <Field data-invalid={!!errors.pic?.[i]?.email}>
+              <FieldLabel htmlFor={`p-pic-${i}-email`}>Email (opsional)</FieldLabel>
+              <Input id={`p-pic-${i}-email`} type="email" aria-invalid={!!errors.pic?.[i]?.email} {...register(`pic.${i}.email`)} />
+              <FieldError errors={errors.pic?.[i]?.email ? [errors.pic[i]!.email!] : undefined} />
+            </Field>
+          </div>
+        ))}
+      </div>
+    </FormSheet>
+  );
+}
+
 export default function PerusahaanPage() {
   const { data, isLoading, isError, refetch } = usePerusahaanList();
   const [selected, setSelected] = useState<Perusahaan | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const columns = makeColumns(setSelected);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Building2 className="size-5 text-muted-foreground" />
-        <h1 className="text-xl font-semibold tracking-tight">Perusahaan</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Building2 className="size-5 text-muted-foreground" />
+          <h1 className="text-xl font-semibold tracking-tight">Perusahaan</h1>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="size-4" /> Tambah Perusahaan
+        </Button>
       </div>
+
+      <PerusahaanCreateForm open={createOpen} onOpenChange={setCreateOpen} />
 
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

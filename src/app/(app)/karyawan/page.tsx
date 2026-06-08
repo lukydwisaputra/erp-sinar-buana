@@ -1,10 +1,24 @@
 "use client";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Users, Wallet, HandCoins, Gauge, CalendarDays } from "lucide-react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { Users, Wallet, HandCoins, Gauge, CalendarDays, Plus } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
+import { FormSheet } from "@/components/shared/form-sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldLabel, FieldError } from "@/components/ui/field";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  InputGroup, InputGroupAddon, InputGroupInput, InputGroupText,
+} from "@/components/ui/input-group";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
@@ -13,6 +27,12 @@ import { StatTile, InfoRow, InfoList, SectionLabel, initials } from "@/component
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKaryawanList } from "@/lib/query/karyawan";
 import type { Karyawan } from "@/lib/schemas/karyawan";
+
+const KEPEGAWAIAN_OPTIONS = [
+  { value: "tetap", label: "Tetap" },
+  { value: "kontrak", label: "Kontrak" },
+  { value: "probation", label: "Magang" },
+] as const;
 
 const KEPEGAWAIAN: Record<Karyawan["statusKepegawaian"], { label: string; variant: "success" | "info" | "warning" }> = {
   tetap: { label: "Tetap", variant: "success" },
@@ -95,17 +115,168 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
   );
 }
 
+/* ---------- create form ---------- */
+
+const karyawanCreateSchema = z.object({
+  nama: z.string().min(1, "Nama wajib diisi."),
+  jabatan: z.string().min(1, "Jabatan wajib diisi."),
+  statusKepegawaian: z.enum(["tetap", "kontrak", "probation"]),
+  pengali: z.coerce.number().min(0, "Pengali tidak valid."),
+  gajiPokok: z.coerce.number({ message: "Gaji pokok wajib diisi." }).min(1, "Gaji pokok wajib diisi."),
+  tunjangan: z.coerce.number().min(0, "Tunjangan tidak valid."),
+  bank: z.object({
+    nama: z.string().min(1, "Nama bank wajib diisi."),
+    nomor: z.string().regex(/^\d+$/, "Nomor rekening harus angka."),
+    atasNama: z.string().min(1, "Atas nama wajib diisi."),
+  }),
+  npwp: z.string(),
+  email: z.string().email("Format email tidak valid."),
+  tanggalMasuk: z.string().min(1, "Tanggal masuk wajib diisi."),
+});
+type KaryawanCreate = z.input<typeof karyawanCreateSchema>;
+
+function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const form = useForm<KaryawanCreate>({
+    resolver: zodResolver(karyawanCreateSchema),
+    defaultValues: {
+      nama: "", jabatan: "", statusKepegawaian: "tetap",
+      pengali: 1, gajiPokok: undefined, tunjangan: 0,
+      bank: { nama: "", nomor: "", atasNama: "" },
+      npwp: "", email: "", tanggalMasuk: "",
+    },
+  });
+  const { register, handleSubmit, control, reset, formState: { errors } } = form;
+
+  const onSubmit = handleSubmit(() => {
+    toast.success("Demo: data tidak benar-benar disimpan");
+    onOpenChange(false);
+    reset();
+  });
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
+      title="Tambah Karyawan"
+      description="Lengkapi data karyawan dan informasi penggajian."
+      onSubmit={onSubmit}
+    >
+      <Field data-invalid={!!errors.nama}>
+        <FieldLabel htmlFor="k-nama">Nama</FieldLabel>
+        <Input id="k-nama" aria-invalid={!!errors.nama} {...register("nama")} />
+        <FieldError errors={errors.nama ? [errors.nama] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.jabatan}>
+        <FieldLabel htmlFor="k-jabatan">Jabatan</FieldLabel>
+        <Input id="k-jabatan" aria-invalid={!!errors.jabatan} {...register("jabatan")} />
+        <FieldError errors={errors.jabatan ? [errors.jabatan] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.statusKepegawaian}>
+        <FieldLabel htmlFor="k-status">Status Kepegawaian</FieldLabel>
+        <Controller
+          control={control}
+          name="statusKepegawaian"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="k-status" className="w-full" aria-invalid={!!errors.statusKepegawaian}>
+                <SelectValue placeholder="Pilih status" />
+              </SelectTrigger>
+              <SelectContent>
+                {KEPEGAWAIAN_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <FieldError errors={errors.statusKepegawaian ? [errors.statusKepegawaian] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.pengali}>
+        <FieldLabel htmlFor="k-pengali">Pengali</FieldLabel>
+        <Input id="k-pengali" type="number" step="0.1" aria-invalid={!!errors.pengali} {...register("pengali")} />
+        <FieldError errors={errors.pengali ? [errors.pengali] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.gajiPokok}>
+        <FieldLabel htmlFor="k-gaji">Gaji Pokok</FieldLabel>
+        <InputGroup>
+          <InputGroupAddon><InputGroupText>Rp</InputGroupText></InputGroupAddon>
+          <InputGroupInput id="k-gaji" type="number" inputMode="numeric" aria-invalid={!!errors.gajiPokok} className="text-right font-mono tabular-nums" {...register("gajiPokok")} />
+        </InputGroup>
+        <FieldError errors={errors.gajiPokok ? [errors.gajiPokok] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.tunjangan}>
+        <FieldLabel htmlFor="k-tunjangan">Tunjangan</FieldLabel>
+        <InputGroup>
+          <InputGroupAddon><InputGroupText>Rp</InputGroupText></InputGroupAddon>
+          <InputGroupInput id="k-tunjangan" type="number" inputMode="numeric" aria-invalid={!!errors.tunjangan} className="text-right font-mono tabular-nums" {...register("tunjangan")} />
+        </InputGroup>
+        <FieldError errors={errors.tunjangan ? [errors.tunjangan] : undefined} />
+      </Field>
+
+      <div className="space-y-3 border-t border-border pt-4">
+        <SectionLabel>Rekening Bank</SectionLabel>
+
+        <Field data-invalid={!!errors.bank?.nama}>
+          <FieldLabel htmlFor="k-bank-nama">Nama Bank</FieldLabel>
+          <Input id="k-bank-nama" aria-invalid={!!errors.bank?.nama} {...register("bank.nama")} />
+          <FieldError errors={errors.bank?.nama ? [errors.bank.nama] : undefined} />
+        </Field>
+
+        <Field data-invalid={!!errors.bank?.nomor}>
+          <FieldLabel htmlFor="k-bank-nomor">Nomor Rekening</FieldLabel>
+          <Input id="k-bank-nomor" inputMode="numeric" aria-invalid={!!errors.bank?.nomor} {...register("bank.nomor")} />
+          <FieldError errors={errors.bank?.nomor ? [errors.bank.nomor] : undefined} />
+        </Field>
+
+        <Field data-invalid={!!errors.bank?.atasNama}>
+          <FieldLabel htmlFor="k-bank-an">Atas Nama</FieldLabel>
+          <Input id="k-bank-an" aria-invalid={!!errors.bank?.atasNama} {...register("bank.atasNama")} />
+          <FieldError errors={errors.bank?.atasNama ? [errors.bank.atasNama] : undefined} />
+        </Field>
+      </div>
+
+      <Field>
+        <FieldLabel htmlFor="k-npwp">NPWP (opsional)</FieldLabel>
+        <Input id="k-npwp" inputMode="numeric" {...register("npwp")} />
+      </Field>
+
+      <Field data-invalid={!!errors.email}>
+        <FieldLabel htmlFor="k-email">Email</FieldLabel>
+        <Input id="k-email" type="email" aria-invalid={!!errors.email} {...register("email")} />
+        <FieldError errors={errors.email ? [errors.email] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.tanggalMasuk}>
+        <FieldLabel htmlFor="k-tanggal">Tanggal Masuk</FieldLabel>
+        <Input id="k-tanggal" type="date" aria-invalid={!!errors.tanggalMasuk} {...register("tanggalMasuk")} />
+        <FieldError errors={errors.tanggalMasuk ? [errors.tanggalMasuk] : undefined} />
+      </Field>
+    </FormSheet>
+  );
+}
+
 export default function KaryawanPage() {
   const { data, isLoading, isError, refetch } = useKaryawanList();
   const [selected, setSelected] = useState<Karyawan | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const columns = makeColumns(setSelected);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Users className="size-5 text-muted-foreground" />
-        <h1 className="text-xl font-semibold tracking-tight">Karyawan</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Users className="size-5 text-muted-foreground" />
+          <h1 className="text-xl font-semibold tracking-tight">Karyawan</h1>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="size-4" /> Tambah Karyawan
+        </Button>
       </div>
+
+      <KaryawanCreateForm open={createOpen} onOpenChange={setCreateOpen} />
 
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
