@@ -35,9 +35,9 @@ export function TopBar() {
       </Breadcrumb>
 
       <div className="ml-auto flex items-center gap-1.5">
-        <Button variant="outline" size="sm" className="gap-2 text-muted-foreground"
+        <Button variant="outline" size="sm" className="w-56 justify-start gap-2 text-muted-foreground"
           onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}>
-          <Search className="size-4" /> Cari <Kbd>⌘K</Kbd>
+          <Search className="size-4" /> Cari <Kbd className="ml-auto">⌘K</Kbd>
         </Button>
         <ThemeToggle />
         <DropdownMenu>
