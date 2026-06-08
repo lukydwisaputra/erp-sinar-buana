@@ -1,4 +1,13 @@
 import type { Sph } from "@/lib/schemas/penawaran";
+import { defaultItemRab, defaultItemJadwal, type RabRow } from "@/lib/sph-templates";
+
+/** Per-item RAB seeded from the standard template; `tweak` lets a service vary
+ * a few personil rates so the per-service totals differ a little. */
+function itemRab(tweak?: (r: { personil: RabRow[]; langsung: RabRow[] }) => void) {
+  const rab = defaultItemRab();
+  tweak?.(rab);
+  return rab;
+}
 
 export const penawaranFixtures: Sph[] = [
   {
@@ -10,15 +19,22 @@ export const penawaranFixtures: Sph[] = [
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Penyusunan Pertek Air Limbah dan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
-      { layananId: "LYN-001", nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket" },
-      { layananId: "LYN-004", nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 2, harga: 25_000_000, satuan: "Paket" },
+      {
+        layananId: "LYN-001", nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
+        rab: itemRab((r) => { r.personil[0].hargaSatuan = 5_000_000; }),
+        jadwal: defaultItemJadwal("Penyusunan Pertek Air Limbah"),
+      },
+      {
+        layananId: "LYN-004", nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 2, harga: 25_000_000, satuan: "Paket",
+        rab: itemRab((r) => { r.langsung[3].hargaSatuan = 4_000_000; }),
+        jadwal: defaultItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
+      },
     ],
     termin: [
       { label: "Termin I", persen: 40, pemicu: "Mulai" },
       { label: "Termin II", persen: 30, pemicu: "Pertek selesai" },
       { label: "Termin III", persen: 30, pemicu: "Pelunasan" },
     ],
-    rab: { personil: 45_000_000, langsung: 20_000_000 },
     catatan: [
       "Biaya diatas dengan catatan persyaratan administratif sudah lengkap.",
       "Biaya diatas belum termasuk PPN 11%.",
@@ -33,12 +49,17 @@ export const penawaranFixtures: Sph[] = [
     lampiran: "RAB dan Estimasi Waktu",
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen AMDAL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
-    items: [{ layananId: "LYN-002", nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket" }],
+    items: [
+      {
+        layananId: "LYN-002", nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
+        rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 6)); }),
+        jadwal: defaultItemJadwal("Dokumen AMDAL"),
+      },
+    ],
     termin: [
       { label: "Termin I", persen: 50, pemicu: "Mulai" },
       { label: "Termin II", persen: 50, pemicu: "Pelunasan" },
     ],
-    rab: { personil: 180_000_000, langsung: 60_000_000 },
     catatan: [
       "Biaya diatas dengan catatan persyaratan administratif sudah lengkap.",
       "Biaya diatas belum termasuk PPN 11%.",
@@ -54,9 +75,14 @@ export const penawaranFixtures: Sph[] = [
     lampiran: "RAB dan Estimasi Waktu",
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
-    items: [{ layananId: "LYN-003", nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket" }],
+    items: [
+      {
+        layananId: "LYN-003", nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        rab: itemRab(),
+        jadwal: defaultItemJadwal("Dokumen UKL-UPL"),
+      },
+    ],
     termin: [{ label: "Termin I", persen: 100, pemicu: "Pelunasan" }],
-    rab: { personil: 20_000_000, langsung: 8_000_000 },
     catatan: [
       "Biaya diatas dengan catatan persyaratan administratif sudah lengkap.",
       "Biaya diatas belum termasuk PPN 11%.",
@@ -71,12 +97,17 @@ export const penawaranFixtures: Sph[] = [
     lampiran: "RAB dan Estimasi Waktu",
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Persetujuan Teknis Emisi Udara. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
-    items: [{ layananId: "LYN-005", nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket" }],
+    items: [
+      {
+        layananId: "LYN-005", nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
+        rab: itemRab((r) => { r.langsung[2].hargaSatuan = 1_500_000; }),
+        jadwal: defaultItemJadwal("Persetujuan Teknis Emisi Udara"),
+      },
+    ],
     termin: [
       { label: "Termin I", persen: 40, pemicu: "Mulai" },
       { label: "Termin II", persen: 60, pemicu: "Pertek selesai" },
     ],
-    rab: { personil: 38_000_000, langsung: 12_000_000 },
     catatan: [
       "Biaya diatas dengan catatan persyaratan administratif sudah lengkap.",
       "Biaya diatas belum termasuk PPN 11%.",
@@ -92,14 +123,21 @@ export const penawaranFixtures: Sph[] = [
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL dan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
-      { layananId: "LYN-003", nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket" },
-      { layananId: "LYN-004", nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket" },
+      {
+        layananId: "LYN-003", nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        rab: itemRab(),
+        jadwal: defaultItemJadwal("Dokumen UKL-UPL"),
+      },
+      {
+        layananId: "LYN-004", nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket",
+        rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 1)); }),
+        jadwal: defaultItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
+      },
     ],
     termin: [
       { label: "Termin I", persen: 50, pemicu: "Mulai" },
       { label: "Termin II", persen: 50, pemicu: "Pelunasan" },
     ],
-    rab: { personil: 30_000_000, langsung: 10_000_000 },
     catatan: [
       "Biaya diatas dengan catatan persyaratan administratif sudah lengkap.",
       "Biaya diatas belum termasuk PPN 11%.",

@@ -9,7 +9,6 @@ import { id as idLocale } from "date-fns/locale";
 import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { BuilderSection } from "@/components/shared/builder-layout";
 import { LineItemEditor, type ServiceOption } from "@/components/shared/line-item-editor";
-import { MoneyInput } from "@/components/shared/money-input";
 import {
   totalPenawaran,
   totalRab,
@@ -28,11 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Command,
   CommandEmpty,
@@ -349,58 +343,39 @@ function TerminEditor({
   );
 }
 
-/* ---------- 4. RAB Internal ---------- */
+/* ---------- 4. RAB Internal (read-only summary; detail dikelola per layanan) ---------- */
 function RabSection({ form }: { form: UseFormReturn<SphFormValues> }) {
-  const rab = form.watch("rab");
   const items = form.watch("items");
-  const m = margin(items, rab);
+  const total = totalRab(items);
+  const m = margin(items);
 
   return (
     <BuilderSection
       title="RAB Internal"
       action={<Badge variant="secondary">Internal — tidak tampil ke klien</Badge>}
     >
-      <Collapsible>
-        <CollapsibleTrigger asChild>
-          <Button type="button" variant="outline" size="sm">
-            Tampilkan / Sembunyikan
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4 space-y-4">
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Biaya Personil (A)</label>
-            <MoneyInput
-              defaultValue={rab.personil}
-              onValueChange={(n) => form.setValue("rab.personil", n, { shouldValidate: true })}
-            />
+      <div className="space-y-3 text-sm">
+        <div className="space-y-1 border-b border-border pb-3">
+          <div>
+            <span className="text-muted-foreground">Total RAB: </span>
+            <span className="font-mono tabular-nums">{formatRupiah(total)}</span>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Biaya Langsung (B)</label>
-            <MoneyInput
-              defaultValue={rab.langsung}
-              onValueChange={(n) => form.setValue("rab.langsung", n, { shouldValidate: true })}
-            />
+          <div>
+            <span className="text-muted-foreground">Estimasi Margin: </span>
+            <span
+              className={cn(
+                "font-mono tabular-nums font-semibold",
+                m >= 0 ? "text-success" : "text-destructive"
+              )}
+            >
+              {formatRupiah(m)}
+            </span>
           </div>
-
-          <div className="space-y-1 border-t border-border pt-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Total RAB: </span>
-              <span className="font-mono tabular-nums">{formatRupiah(totalRab(rab))}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Estimasi Margin: </span>
-              <span
-                className={cn(
-                  "font-mono tabular-nums font-semibold",
-                  m >= 0 ? "text-success" : "text-destructive"
-                )}
-              >
-                {formatRupiah(m)}
-              </span>
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          RAB rinci dikelola per layanan (lihat Baris Layanan).
+        </p>
+      </div>
     </BuilderSection>
   );
 }

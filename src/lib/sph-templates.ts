@@ -52,3 +52,16 @@ export function jadwalTemplate(serviceName: string): { kegiatan: string[]; highl
   ];
   return { kegiatan, highlights };
 }
+
+/** Fresh per-item RAB copy so each line item owns its own rows. */
+export function defaultItemRab(): { personil: RabRow[]; langsung: RabRow[] } {
+  return {
+    personil: rabTemplate.personil.map((r) => ({ ...r })),
+    langsung: rabTemplate.langsung.map((r) => ({ ...r })),
+  };
+}
+
+/** Fresh per-item Estimasi Jadwal for a service. */
+export function defaultItemJadwal(serviceName: string): { kegiatan: string[]; highlights: number[][] } {
+  return jadwalTemplate(serviceName);
+}

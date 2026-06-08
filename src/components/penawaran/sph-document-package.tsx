@@ -9,8 +9,8 @@ export function SphDocumentPackage({ values, noSph }: { values: SphFormValues; n
   return (
     <div className="space-y-8">
       <SphCoverLetter values={values} noSph={noSph} />
-      {services.map((it, i) => <SphRabPage key={`rab-${i}`} serviceName={it.nama} />)}
-      {services.map((it, i) => <SphJadwalPage key={`jad-${i}`} serviceName={it.nama} />)}
+      {services.map((it, i) => <SphRabPage key={`rab-${i}`} serviceName={it.nama} rab={it.rab} />)}
+      {services.map((it, i) => <SphJadwalPage key={`jad-${i}`} serviceName={it.nama} jadwal={it.jadwal} />)}
     </div>
   );
 }

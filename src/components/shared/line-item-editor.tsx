@@ -10,9 +10,18 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { defaultItemRab, defaultItemJadwal, type RabRow } from "@/lib/sph-templates";
 
 export type ServiceOption = { id: string; nama: string; harga: number };
-export type LineItem = { layananId: string; nama: string; volume: number; harga: number; satuan: string };
+export type LineItem = {
+  layananId: string;
+  nama: string;
+  volume: number;
+  harga: number;
+  satuan: string;
+  rab: { personil: RabRow[]; langsung: RabRow[] };
+  jadwal: { kegiatan: string[]; highlights: number[][] };
+};
 
 export function LineItemEditor({ items, options, onChange }: {
   items: LineItem[]; options: ServiceOption[]; onChange: (items: LineItem[]) => void;
@@ -20,7 +29,19 @@ export function LineItemEditor({ items, options, onChange }: {
   const update = (i: number, patch: Partial<LineItem>) =>
     onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const removeRow = (i: number) => onChange(items.filter((_, idx) => idx !== i));
-  const addRow = () => onChange([...items, { layananId: "", nama: "", volume: 1, harga: 0, satuan: "Paket" }]);
+  const addRow = () =>
+    onChange([
+      ...items,
+      {
+        layananId: "",
+        nama: "",
+        volume: 1,
+        harga: 0,
+        satuan: "Paket",
+        rab: defaultItemRab(),
+        jadwal: defaultItemJadwal(""),
+      },
+    ]);
 
   return (
     <div className="space-y-3">

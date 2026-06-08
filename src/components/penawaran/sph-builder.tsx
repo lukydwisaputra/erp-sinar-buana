@@ -18,6 +18,7 @@ import { SphCoverLetter } from "@/components/penawaran/sph-cover-letter";
 import { SphDocumentPackage } from "@/components/penawaran/sph-document-package";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { katalogFixtures } from "@/lib/fixtures/katalog";
+import { defaultItemRab, defaultItemJadwal } from "@/lib/sph-templates";
 import {
   sphFormSchema,
   type SphFormValues,
@@ -43,9 +44,18 @@ const emptyValues: SphFormValues = {
   tanggal: "",
   kalimatPembuka: "",
   lampiran: "RAB dan Estimasi Waktu",
-  items: [{ layananId: "", nama: "", volume: 1, harga: 0, satuan: "Paket" }],
+  items: [
+    {
+      layananId: "",
+      nama: "",
+      volume: 1,
+      harga: 0,
+      satuan: "Paket",
+      rab: defaultItemRab(),
+      jadwal: defaultItemJadwal(""),
+    },
+  ],
   termin: [{ label: "Termin I", persen: 100, pemicu: "Pelunasan" }],
-  rab: { personil: 0, langsung: 0 },
   catatan: [],
 };
 
@@ -68,7 +78,6 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
           lampiran: existing.lampiran,
           items: existing.items,
           termin: existing.termin,
-          rab: existing.rab,
           catatan: existing.catatan,
         }
       : emptyValues,

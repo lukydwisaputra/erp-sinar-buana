@@ -1,5 +1,4 @@
 import { companyProfile } from "@/lib/company-profile";
-import { jadwalTemplate } from "@/lib/sph-templates";
 
 /** Compact SBMJ letterhead strip shared by the RAB / Jadwal pages. */
 function LetterheadStrip(): React.JSX.Element {
@@ -18,8 +17,14 @@ function LetterheadStrip(): React.JSX.Element {
 
 const WEEKS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-export function SphJadwalPage({ serviceName }: { serviceName: string }): React.JSX.Element {
-  const { kegiatan, highlights } = jadwalTemplate(serviceName);
+export function SphJadwalPage({
+  serviceName,
+  jadwal,
+}: {
+  serviceName: string;
+  jadwal: { kegiatan: string[]; highlights: number[][] };
+}): React.JSX.Element {
+  const { kegiatan, highlights } = jadwal;
 
   return (
     <div className="sph-doc mx-auto w-full max-w-[210mm] bg-white text-[var(--sph-ink)] shadow-sm">

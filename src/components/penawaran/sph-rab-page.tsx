@@ -1,13 +1,17 @@
 import { companyProfile } from "@/lib/company-profile";
 import { formatRupiah } from "@/lib/format";
-import {
-  rabGrandTotal,
-  rabLangsungTotal,
-  rabPersonilTotal,
-  rabRowTotal,
-  rabTemplate,
-  type RabRow,
-} from "@/lib/sph-templates";
+import { rabTotalOf } from "@/lib/sph";
+import { rabRowTotal, type RabRow } from "@/lib/sph-templates";
+import { terbilang } from "@/lib/terbilang";
+
+/** "satu juta" → "Satu Juta" */
+function titleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function rowsTotal(rows: RabRow[]): number {
+  return rows.reduce((s, r) => s + rabRowTotal(r), 0);
+}
 
 /** Compact SBMJ letterhead strip shared by the RAB / Jadwal pages. */
 function LetterheadStrip(): React.JSX.Element {
@@ -41,10 +45,18 @@ function RabRowCells({ no, row }: { no: number; row: RabRow }): React.JSX.Elemen
   );
 }
 
-export function SphRabPage({ serviceName }: { serviceName: string }): React.JSX.Element {
-  const personilTotal = rabPersonilTotal(rabTemplate);
-  const langsungTotal = rabLangsungTotal(rabTemplate);
-  const grandTotal = rabGrandTotal(rabTemplate);
+export function SphRabPage({
+  serviceName,
+  rab,
+  subtitle,
+}: {
+  serviceName: string;
+  rab: { personil: RabRow[]; langsung: RabRow[] };
+  subtitle?: string;
+}): React.JSX.Element {
+  const personilTotal = rowsTotal(rab.personil);
+  const langsungTotal = rowsTotal(rab.langsung);
+  const grandTotal = rabTotalOf(rab);
 
   return (
     <div className="sph-doc mx-auto w-full max-w-[210mm] bg-white text-[var(--sph-ink)] shadow-sm">
@@ -55,6 +67,7 @@ export function SphRabPage({ serviceName }: { serviceName: string }): React.JSX.
         <div className="text-center font-bold leading-snug">
           <p>RINCIAN ANGGARAN BIAYA</p>
           <p>PENGURUSAN {serviceName.toUpperCase()}</p>
+          {subtitle ? <p className="font-normal italic">{subtitle}</p> : null}
         </div>
 
         {/* A. Rincian Biaya Personil */}
@@ -70,7 +83,7 @@ export function SphRabPage({ serviceName }: { serviceName: string }): React.JSX.
             </tr>
           </thead>
           <tbody>
-            {rabTemplate.personil.map((row, i) => (
+            {rab.personil.map((row, i) => (
               <RabRowCells key={i} no={i + 1} row={row} />
             ))}
             <tr>
@@ -97,7 +110,7 @@ export function SphRabPage({ serviceName }: { serviceName: string }): React.JSX.
             </tr>
           </thead>
           <tbody>
-            {rabTemplate.langsung.map((row, i) => (
+            {rab.langsung.map((row, i) => (
               <RabRowCells key={i} no={i + 1} row={row} />
             ))}
             <tr>
@@ -134,6 +147,10 @@ export function SphRabPage({ serviceName }: { serviceName: string }): React.JSX.
             </tr>
           </tbody>
         </table>
+
+        <p className="mt-3 italic">
+          Terbilang : {titleCase(terbilang(grandTotal))} Rupiah
+        </p>
       </div>
     </div>
   );
