@@ -23,8 +23,13 @@ export type LineItem = {
   jadwal: { kegiatan: string[]; highlights: number[][] };
 };
 
-export function LineItemEditor({ items, options, onChange }: {
+export function LineItemEditor({ items, options, onChange, renderRowExtra }: {
   items: LineItem[]; options: ServiceOption[]; onChange: (items: LineItem[]) => void;
+  renderRowExtra?: (
+    item: LineItem,
+    index: number,
+    update: (i: number, patch: Partial<LineItem>) => void
+  ) => React.ReactNode;
 }) {
   const update = (i: number, patch: Partial<LineItem>) =>
     onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -63,6 +68,7 @@ export function LineItemEditor({ items, options, onChange }: {
               <label className="text-xs text-muted-foreground">Harga Satuan</label>
               <MoneyInput defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} />
             </div>
+            {renderRowExtra?.(it, i, update)}
             <Button type="button" variant="ghost" size="icon" aria-label="Hapus baris" onClick={() => removeRow(i)}>
               <Trash2Icon className="size-4 text-destructive" />
             </Button>

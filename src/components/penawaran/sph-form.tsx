@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { Trash2Icon, CalendarIcon } from "lucide-react";
+import { Trash2Icon, CalendarIcon, SlidersHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { BuilderSection } from "@/components/shared/builder-layout";
 import { LineItemEditor, type ServiceOption } from "@/components/shared/line-item-editor";
+import { ServiceRabJadwalEditor } from "@/components/penawaran/service-rab-jadwal-editor";
 import {
   totalPenawaran,
   totalRab,
@@ -73,6 +74,19 @@ export function SphForm({
           items={values.items}
           options={layananOptions as ServiceOption[]}
           onChange={(v) => form.setValue("items", v, { shouldValidate: true })}
+          renderRowExtra={(it, i, update) => (
+            <ServiceRabJadwalEditor
+              serviceName={it.nama}
+              rab={it.rab}
+              jadwal={it.jadwal}
+              onChange={(patch) => update(i, patch)}
+              trigger={
+                <Button type="button" variant="outline" size="sm">
+                  <SlidersHorizontal className="size-4" /> Kelola RAB &amp; Jadwal
+                </Button>
+              }
+            />
+          )}
         />
         <div className="mt-3 text-right">
           <div className="text-sm">
