@@ -37,7 +37,7 @@ function makeColumns(onOpen: (l: Layanan) => void): ColumnDef<Layanan>[] {
       ),
     },
     {
-      accessorKey: "nama", header: "Nama Layanan",
+      accessorKey: "nama", header: "Nama Layanan", meta: { className: "min-w-64" },
       cell: ({ row }) => (
         <button type="button" onClick={() => onOpen(row.original)}
           className="rounded-sm text-left font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
