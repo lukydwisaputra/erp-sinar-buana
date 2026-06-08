@@ -78,6 +78,8 @@ declare module "@tanstack/react-table" {
     mono?: boolean;
     /** Shrink the column to its content width (e.g. a trailing actions column). */
     collapse?: boolean;
+    /** Extra classes applied to this column's header + body cells (e.g. a min-width). */
+    className?: string;
   }
 }
 
@@ -241,7 +243,8 @@ export function DataTable<TData, TValue>({
                       className={cn(
                         "px-4 text-xs font-medium tracking-wide text-muted-foreground uppercase",
                         meta?.align === "right" && "text-right",
-                        meta?.collapse && "w-0"
+                        meta?.collapse && "w-0",
+                        meta?.className
                       )}
                     >
                       {header.isPlaceholder ? null : canSort ? (
@@ -336,7 +339,8 @@ export function DataTable<TData, TValue>({
                           "px-4 py-3",
                           meta?.align === "right" && "text-right",
                           meta?.mono && "font-mono tabular-nums",
-                          meta?.collapse && "w-0"
+                          meta?.collapse && "w-0",
+                          meta?.className
                         )}
                       >
                         {flexRender(
