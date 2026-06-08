@@ -163,13 +163,13 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
     >
       <Field data-invalid={!!errors.nama}>
         <FieldLabel htmlFor="k-nama">Nama</FieldLabel>
-        <Input id="k-nama" placeholder="mis. Budi Santoso" aria-invalid={!!errors.nama} {...register("nama")} />
+        <Input id="k-nama" placeholder="Budi Santoso" aria-invalid={!!errors.nama} {...register("nama")} />
         <FieldError errors={errors.nama ? [errors.nama] : undefined} />
       </Field>
 
       <Field data-invalid={!!errors.jabatan}>
         <FieldLabel htmlFor="k-jabatan">Jabatan</FieldLabel>
-        <Input id="k-jabatan" placeholder="mis. Ketua Tim Teknis" aria-invalid={!!errors.jabatan} {...register("jabatan")} />
+        <Input id="k-jabatan" placeholder="Ketua Tim Teknis" aria-invalid={!!errors.jabatan} {...register("jabatan")} />
         <FieldError errors={errors.jabatan ? [errors.jabatan] : undefined} />
       </Field>
 
@@ -194,7 +194,7 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
 
       <Field data-invalid={!!errors.pengali}>
         <FieldLabel htmlFor="k-pengali">Pengali</FieldLabel>
-        <Input id="k-pengali" type="number" step="any" inputMode="decimal" placeholder="mis. 1 atau 0.8" aria-invalid={!!errors.pengali} {...register("pengali")} />
+        <Input id="k-pengali" type="number" step="any" inputMode="decimal" placeholder="1 atau 0.8" aria-invalid={!!errors.pengali} {...register("pengali")} />
         <FieldError errors={errors.pengali ? [errors.pengali] : undefined} />
       </Field>
 
@@ -202,7 +202,7 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
         <FieldLabel htmlFor="k-gaji">Gaji Pokok</FieldLabel>
         <InputGroup>
           <InputGroupAddon><InputGroupText>Rp</InputGroupText></InputGroupAddon>
-          <InputGroupInput id="k-gaji" type="number" inputMode="numeric" placeholder="mis. 12000000" aria-invalid={!!errors.gajiPokok} className="text-right font-mono tabular-nums" {...register("gajiPokok")} />
+          <InputGroupInput id="k-gaji" type="number" inputMode="numeric" placeholder="12000000" aria-invalid={!!errors.gajiPokok} className="text-right font-mono tabular-nums" {...register("gajiPokok")} />
         </InputGroup>
         <FieldError errors={errors.gajiPokok ? [errors.gajiPokok] : undefined} />
       </Field>
@@ -211,7 +211,7 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
         <FieldLabel htmlFor="k-tunjangan">Tunjangan</FieldLabel>
         <InputGroup>
           <InputGroupAddon><InputGroupText>Rp</InputGroupText></InputGroupAddon>
-          <InputGroupInput id="k-tunjangan" type="number" inputMode="numeric" placeholder="mis. 2000000" aria-invalid={!!errors.tunjangan} className="text-right font-mono tabular-nums" {...register("tunjangan")} />
+          <InputGroupInput id="k-tunjangan" type="number" inputMode="numeric" placeholder="2000000" aria-invalid={!!errors.tunjangan} className="text-right font-mono tabular-nums" {...register("tunjangan")} />
         </InputGroup>
         <FieldError errors={errors.tunjangan ? [errors.tunjangan] : undefined} />
       </Field>
@@ -221,31 +221,31 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
 
         <Field data-invalid={!!errors.bank?.nama}>
           <FieldLabel htmlFor="k-bank-nama">Nama Bank</FieldLabel>
-          <Input id="k-bank-nama" placeholder="mis. BCA" aria-invalid={!!errors.bank?.nama} {...register("bank.nama")} />
+          <Input id="k-bank-nama" placeholder="BCA" aria-invalid={!!errors.bank?.nama} {...register("bank.nama")} />
           <FieldError errors={errors.bank?.nama ? [errors.bank.nama] : undefined} />
         </Field>
 
         <Field data-invalid={!!errors.bank?.nomor}>
           <FieldLabel htmlFor="k-bank-nomor">Nomor Rekening</FieldLabel>
-          <Input id="k-bank-nomor" inputMode="numeric" placeholder="mis. 1234567890" aria-invalid={!!errors.bank?.nomor} {...register("bank.nomor")} />
+          <Input id="k-bank-nomor" inputMode="numeric" placeholder="1234567890" aria-invalid={!!errors.bank?.nomor} {...register("bank.nomor")} />
           <FieldError errors={errors.bank?.nomor ? [errors.bank.nomor] : undefined} />
         </Field>
 
         <Field data-invalid={!!errors.bank?.atasNama}>
           <FieldLabel htmlFor="k-bank-an">Atas Nama</FieldLabel>
-          <Input id="k-bank-an" placeholder="mis. Budi Santoso" aria-invalid={!!errors.bank?.atasNama} {...register("bank.atasNama")} />
+          <Input id="k-bank-an" placeholder="Budi Santoso" aria-invalid={!!errors.bank?.atasNama} {...register("bank.atasNama")} />
           <FieldError errors={errors.bank?.atasNama ? [errors.bank.atasNama] : undefined} />
         </Field>
       </div>
 
       <Field>
         <FieldLabel htmlFor="k-npwp">NPWP (opsional)</FieldLabel>
-        <Input id="k-npwp" inputMode="numeric" placeholder="mis. 09.111.222.3-444.000" {...register("npwp")} />
+        <Input id="k-npwp" inputMode="numeric" placeholder="09.111.222.3-444.000" {...register("npwp")} />
       </Field>
 
       <Field data-invalid={!!errors.email}>
         <FieldLabel htmlFor="k-email">Email</FieldLabel>
-        <Input id="k-email" type="email" placeholder="mis. budi@sinarbuana.co.id" aria-invalid={!!errors.email} {...register("email")} />
+        <Input id="k-email" type="email" placeholder="budi@sinarbuana.co.id" aria-invalid={!!errors.email} {...register("email")} />
         <FieldError errors={errors.email ? [errors.email] : undefined} />
       </Field>
 

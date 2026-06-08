@@ -150,7 +150,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
     >
       <Field data-invalid={!!errors.nama}>
         <FieldLabel htmlFor="l-nama">Nama Layanan</FieldLabel>
-        <Input id="l-nama" placeholder="mis. Penyusunan Pertek Air Limbah" aria-invalid={!!errors.nama} {...register("nama")} />
+        <Input id="l-nama" placeholder="Penyusunan Pertek Air Limbah" aria-invalid={!!errors.nama} {...register("nama")} />
         <FieldError errors={errors.nama ? [errors.nama] : undefined} />
       </Field>
 
@@ -194,7 +194,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
 
       <Field data-invalid={!!errors.dasarHukum}>
         <FieldLabel htmlFor="l-dasar">Dasar Hukum</FieldLabel>
-        <Input id="l-dasar" placeholder="mis. PP No. 22 Tahun 2021" aria-invalid={!!errors.dasarHukum} {...register("dasarHukum")} />
+        <Input id="l-dasar" placeholder="PP No. 22 Tahun 2021" aria-invalid={!!errors.dasarHukum} {...register("dasarHukum")} />
         <FieldError errors={errors.dasarHukum ? [errors.dasarHukum] : undefined} />
       </Field>
 
@@ -204,20 +204,20 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
           <InputGroupAddon>
             <InputGroupText>Rp</InputGroupText>
           </InputGroupAddon>
-          <InputGroupInput id="l-harga" inputMode="numeric" placeholder="mis. 75000000" className="text-right font-mono tabular-nums" {...register("hargaStandar")} />
+          <InputGroupInput id="l-harga" inputMode="numeric" placeholder="75000000" className="text-right font-mono tabular-nums" {...register("hargaStandar")} />
         </InputGroup>
         <FieldDescription>Kosongkan jika diisi manual di SPH.</FieldDescription>
       </Field>
 
       <Field>
         <FieldLabel htmlFor="l-tags">Tag (opsional)</FieldLabel>
-        <Input id="l-tags" placeholder="Pisahkan dengan koma, mis. Air Limbah, Berulang" {...register("tags")} />
+        <Input id="l-tags" placeholder="Pisahkan dengan koma, Air Limbah, Berulang" {...register("tags")} />
         <FieldDescription>Pisahkan dengan koma.</FieldDescription>
       </Field>
 
       <Field>
         <FieldLabel htmlFor="l-tahapan">Tahapan Proyek (opsional)</FieldLabel>
-        <Input id="l-tahapan" placeholder="mis. Pertek 5 Tahap" {...register("templateMilestone")} />
+        <Input id="l-tahapan" placeholder="Pertek 5 Tahap" {...register("templateMilestone")} />
       </Field>
     </FormSheet>
   );
