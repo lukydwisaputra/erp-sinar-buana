@@ -119,7 +119,32 @@ Both themes; tokens only; Bahasa-Indonesia; money mono/tabular; live preview upd
 
 ## 9. Out of scope (this round)
 
-Activity×week schedule matrix (FR-03.6) · real Convert-Deal → Proyek/Faktur generation (FR-03.9) · real send/PDF/persistence/email (EP-10) · RBAC · No-SPH real auto-numbering (display only). These are later specs (Faktur is next).
+Real Convert-Deal → Proyek/Faktur generation (FR-03.9) · real persistence/email send (EP-10) · RBAC · No-SPH real auto-numbering (display only). *(Updated: the schedule matrix and a real downloadable document are now IN scope — see §11.)*
+
+## 11. Document template — canonical real SPH (overrides the simplified preview)
+
+> Reference: `6. penawaran harga ukl upl PT MAB kab bdg.pdf` (real SBMJ SPH). The downloaded document must look like this. **SBMJ blue letterhead + logo** (document-specific branding, distinct from the green app chrome — the document is a branded artifact). Full **multi-page package**.
+
+**The document is a package of pages, each a `DocumentPaper`:**
+
+1. **Cover letter** (client-facing, page 1) — SBMJ letterhead band + logo + identity; right block `No / Tanggal(city, date)`; `Perihal: Surat Penawaran Harga` / `Lampiran: -`; **Kepada Yth. / Bpk-Ibu Direktur / {perusahaan} / Di Tempat`**; intro paragraph "Sehubungan dengan permintaan Kegiatan {perusahaan} di wilayah {wilayah} dengan Jenis Investasi: {jenisInvestasi}. Kami menawarkan jasa {daftar layanan}…"; **service table** `No · Uraian · Harga Satuan (Rp) · Vol ({satuan}, e.g. "1 Paket") · Harga (Rp)`; **Total Biaya** + **Terbilang** (italic); **Catatan** bullets: (a) "Penawaran harga berlaku {masaBerlaku} hari kalender", (b) the boilerplate fisik/konstruksi note, (c) **Termin pembayaran dibagi menjadi {n} termin:** numbered list from the termin scheme ("40% pada saat {pemicu}…"), plus any free-text catatan; closing paragraph; **signature block** (Hormat Kami / logo-stamp placeholder / {direktur.nama} / {direktur.jabatan}); **footer band** (phone · email · addresses · website).
+2. **RAB page per service** (internal — never in the client send) — title "RINCIAN ANGGARAN BIAYA / PENGURUSAN {layanan}"; **A. Rincian Biaya Personil** (Uraian · Vol(Bln) · Harga Satuan · Jumlah → Jumlah A); **B. Rincian Biaya Langsung** (Uraian · Volume(Ls) · Harga Satuan · Jumlah → Jumlah B); **TOTAL BIAYA** = A + B. Seeded from a per-service RAB template (prototype; detailed per-row editing is a later round).
+3. **Schedule page per service** (Estimasi Jadwal) — title "ESTIMASI JADWAL RENCANA KEGIATAN / {layanan}"; matrix NO · KEGIATAN · BULAN-1..3 × MINGGU 1-4; cells **highlighted (warning/yellow)** per a seeded plan. Seeded 12-activity template; cell-toggle/flexible-weeks editing is a later round.
+
+**Data model additions** (`schemas/penawaran.ts`):
+- `sphItemSchema`: add `satuan: z.string()` (default "Paket") + optional per-service `rab` detail + `jadwal` highlight plan (seeded).
+- `sphFormSchema`/`sphSchema`: add `wilayah: z.string()`, `jenisInvestasi: z.string()`.
+- New `src/lib/company-profile.ts` (mock SBMJ identity): nama, tagline "Konsultan Lingkungan", logo placeholder, kota, alamat[] (Karawang + Bandung), telepon "0856-2483-2610", email "contact.sbmj@gmail.com", website "www.portalkonsultan.com", direktur `{ nama: "Dini Mardiani, SE.,MBA", jabatan: "Direktur" }`. (Stand-in until EP-02 Profil Perusahaan exists.)
+
+**Branding:** the document uses an SBMJ blue palette scoped to a `.sph-doc` wrapper (its own CSS vars / classes), NOT the app's green tokens — intentional, since it represents the real branded letter. Logo = a styled placeholder mark ("SBMJ" badge) with the real asset droppable later.
+
+**Side preview** shows the cover letter (primary). **Fullscreen preview** stacks the whole package (letter + RAB pages + schedule pages). **Unduh** = browser print (`window.print()`) with a print stylesheet that prints only the document pages at A4 — produces a PDF that looks like the template. (No server-side PDF this round.)
+
+**Builder form (this round):** edits the client-facing letter parts + adds **Wilayah** and **Jenis Investasi** fields and per-line **Satuan**. The per-service RAB-detail and schedule-cell editing are seeded from templates and rendered in the document; full editing of those is a follow-up.
+
+## 10. Reuse for Faktur (next)
+
+`BuilderLayout`, `DocumentPaper`, `LineItemEditor`, the document-package + print approach, and the calc-helper + mock-spine pattern carry to Faktur. Faktur gets its own spec/plan.
 
 ## 10. Reuse for Faktur (next)
 
