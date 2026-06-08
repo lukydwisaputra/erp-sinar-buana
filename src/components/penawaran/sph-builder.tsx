@@ -14,7 +14,8 @@ import {
   type PerusahaanOption,
   type LayananOption,
 } from "@/components/penawaran/sph-form";
-import { SphDocument } from "@/components/penawaran/sph-document";
+import { SphCoverLetter } from "@/components/penawaran/sph-cover-letter";
+import { SphDocumentPackage } from "@/components/penawaran/sph-document-package";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { katalogFixtures } from "@/lib/fixtures/katalog";
 import {
@@ -110,25 +111,19 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
             layananOptions={layananOptions}
           />
         }
-        preview={
-          <SphDocument values={values} noSph={noSph} status={existing?.status} />
-        }
+        preview={<SphCoverLetter values={values} noSph={noSph} />}
       />
 
       <Dialog open={fs} onOpenChange={setFs}>
         <DialogContent className="max-h-[95vh] max-w-3xl overflow-y-auto p-0">
           <DialogTitle className="sr-only">Pratinjau SPH</DialogTitle>
           <div className="bg-muted/40 p-4 sm:p-6">
-            <SphDocument
-              values={values}
-              noSph={noSph}
-              status={existing?.status}
-            />
+            <SphDocumentPackage values={values} noSph={noSph} />
             <div className="mt-4 flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => toast.success("Demo: tidak diunduh")}
-              >
+              <Button variant="outline" onClick={() => setFs(false)}>
+                Tutup
+              </Button>
+              <Button variant="outline" onClick={() => window.print()}>
                 Unduh
               </Button>
               <Button
@@ -143,6 +138,12 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden print container — outside the Dialog so window.print() always
+          emits the full package regardless of dialog state. */}
+      <div className="sph-print hidden print:block">
+        <SphDocumentPackage values={values} noSph={noSph} />
+      </div>
     </>
   );
 }

@@ -247,3 +247,14 @@
   background: #ffffff;
 }
 .sph-doc table { border-color: var(--sph-rule); }
+
+/* SPH document print isolation — only the .sph-print package prints, one page per .sph-doc */
+@media print {
+  body { background: #ffffff; }
+  body * { visibility: hidden; }
+  .sph-print, .sph-print * { visibility: visible; }
+  .sph-print { position: absolute; inset: 0; width: 100%; }
+  .sph-print .sph-doc { page-break-after: always; box-shadow: none !important; border: none !important; max-width: 100% !important; }
+  .sph-print .sph-doc:last-child { page-break-after: auto; }
+}
+@page { size: A4; margin: 12mm; }
