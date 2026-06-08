@@ -141,7 +141,7 @@ export function DataTable<TData, TValue>({
                 table.getColumn(searchColumn)?.setFilterValue(e.target.value)
               }
               placeholder={searchPlaceholder}
-              className="h-9 w-56"
+              className="h-9 w-84"
             />
           )}
           {filterColumn && filterOptions && (
