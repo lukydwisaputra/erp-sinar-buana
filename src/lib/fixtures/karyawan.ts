@@ -1,0 +1,10 @@
+import type { Karyawan } from "@/lib/schemas/karyawan";
+
+export const karyawanFixtures: Karyawan[] = [
+  { id: "KRY-001", nama: "Budi Santoso", jabatan: "Direktur", statusKepegawaian: "tetap", pengali: 1, gajiPokok: 25_000_000, tunjangan: 5_000_000, bank: { nama: "BCA", nomor: "1234567890", atasNama: "Budi Santoso" }, npwp: "09.111.222.3-444.000", email: "budi@sinarbuana.co.id", tanggalMasuk: "2019-01-15", status: "aktif" },
+  { id: "KRY-002", nama: "Rina Marlina", jabatan: "Manajer Keuangan", statusKepegawaian: "tetap", pengali: 1, gajiPokok: 14_000_000, tunjangan: 2_500_000, bank: { nama: "Mandiri", nomor: "1390011223344", atasNama: "Rina Marlina" }, npwp: "09.222.333.4-555.000", email: "rina@sinarbuana.co.id", tanggalMasuk: "2020-06-01", status: "aktif" },
+  { id: "KRY-003", nama: "Agus Setiawan", jabatan: "Ketua Tim Teknis", statusKepegawaian: "tetap", pengali: 1, gajiPokok: 12_000_000, tunjangan: 2_000_000, bank: { nama: "BNI", nomor: "0559332815", atasNama: "Agus Setiawan" }, npwp: "09.333.444.5-666.000", email: "agus@sinarbuana.co.id", tanggalMasuk: "2021-02-10", status: "aktif" },
+  { id: "KRY-004", nama: "Dewi Anggraini", jabatan: "Anggota Tim Teknis", statusKepegawaian: "kontrak", pengali: 1, gajiPokok: 8_500_000, tunjangan: 1_200_000, bank: { nama: "BRI", nomor: "302201998877", atasNama: "Dewi Anggraini" }, npwp: "09.444.555.6-777.000", email: "dewi@sinarbuana.co.id", tanggalMasuk: "2023-08-01", status: "aktif" },
+  { id: "KRY-005", nama: "Fajar Ramadhan", jabatan: "Document Controller", statusKepegawaian: "probation", pengali: 0.8, gajiPokok: 6_500_000, tunjangan: 800_000, bank: { nama: "BCA", nomor: "5566778899", atasNama: "Fajar Ramadhan" }, npwp: "09.555.666.7-888.000", email: "fajar@sinarbuana.co.id", tanggalMasuk: "2026-03-01", status: "aktif" },
+  { id: "KRY-006", nama: "Sari Wulandari", jabatan: "Staf Marketing", statusKepegawaian: "kontrak", pengali: 1, gajiPokok: 7_000_000, tunjangan: 1_000_000, bank: { nama: "Mandiri", nomor: "1390099887766", atasNama: "Sari Wulandari" }, npwp: "09.666.777.8-999.000", email: "sari@sinarbuana.co.id", tanggalMasuk: "2022-11-20", status: "terarsip" },
+];
