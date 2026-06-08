@@ -4,7 +4,7 @@ export const perusahaanFixtures: Perusahaan[] = [
   {
     id: "PRSH-001",
     nama: "PT Maju Bersama Industri",
-    npwp: "01.234.567.8-901.000",
+    npwp: "0123456789010000",
     alamat: "Gedung Menara Sentosa Lantai 12, Jl. Jenderal Gatot Subroto Kav. 21-22, Kuningan Timur, Setiabudi, Jakarta Selatan 12950",
     kota: "Jakarta",
     telepon: "021-5550101",
@@ -20,7 +20,7 @@ export const perusahaanFixtures: Perusahaan[] = [
   {
     id: "PRSH-002",
     nama: "CV Sumber Rejeki Pangan",
-    npwp: "02.345.678.9-012.000",
+    npwp: "0234567890120000",
     alamat: "Jl. Soekarno Hatta No. 88, Kiaracondong",
     kota: "Bandung",
     telepon: "022-5550202",
@@ -35,7 +35,7 @@ export const perusahaanFixtures: Perusahaan[] = [
   {
     id: "PRSH-003",
     nama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
-    npwp: "03.456.789.0-123.000",
+    npwp: "0345678901230000",
     alamat: "Kawasan Industri SIER Blok C-4",
     kota: "Surabaya",
     telepon: "031-5550303",
@@ -49,7 +49,7 @@ export const perusahaanFixtures: Perusahaan[] = [
   {
     id: "PRSH-004",
     nama: "PT Hijau Lestari Permai",
-    npwp: "04.567.890.1-234.000",
+    npwp: "0456789012340000",
     alamat: "Jl. Pemuda No. 45, Semarang Tengah",
     kota: "Semarang",
     telepon: "024-5550404",
@@ -64,7 +64,7 @@ export const perusahaanFixtures: Perusahaan[] = [
   {
     id: "PRSH-005",
     nama: "CV Bahari Sentosa",
-    npwp: "05.678.901.2-345.000",
+    npwp: "0567890123450000",
     alamat: "Jl. Bypass Ngurah Rai No. 200, Sanur",
     kota: "Denpasar",
     telepon: "0361-5550505",
@@ -79,7 +79,7 @@ export const perusahaanFixtures: Perusahaan[] = [
   {
     id: "PRSH-006",
     nama: "PT Cahaya Teknik Mandiri",
-    npwp: "06.789.012.3-456.000",
+    npwp: "0678901234560000",
     alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
     kota: "Medan",
     telepon: "061-5550606",

@@ -9,6 +9,7 @@ import { Users, Wallet, HandCoins, Gauge, CalendarDays, Plus } from "lucide-reac
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
+import { NpwpField, PhoneField, EmailField } from "@/components/shared/form-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +109,7 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
           <InfoRow label="Bank" value={`${k.bank.nama} • ${k.bank.nomor}`} />
           <InfoRow label="a.n." value={k.bank.atasNama} />
           <InfoRow label="Email" value={<a href={`mailto:${k.email}`} className="text-primary hover:underline">{k.email}</a>} />
+          <InfoRow label="No. HP" value={<span className="font-mono">{k.telepon}</span>} />
           <InfoRow label="Tanggal Masuk" value={tanggalID(k.tanggalMasuk)} />
         </InfoList>
       </section>
@@ -129,8 +131,9 @@ const karyawanCreateSchema = z.object({
     nomor: z.string().regex(/^\d+$/, "Nomor rekening harus angka."),
     atasNama: z.string().min(1, "Atas nama wajib diisi."),
   }),
-  npwp: z.string(),
+  npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]),
   email: z.string().email("Format email tidak valid."),
+  telepon: z.string().min(1, "Nomor HP wajib."),
   tanggalMasuk: z.string().min(1, "Tanggal masuk wajib diisi."),
 });
 type KaryawanCreate = z.input<typeof karyawanCreateSchema>;
@@ -142,7 +145,7 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
       nama: "", jabatan: "", statusKepegawaian: "tetap",
       pengali: 1, gajiPokok: undefined, tunjangan: 0,
       bank: { nama: "", nomor: "", atasNama: "" },
-      npwp: "", email: "", tanggalMasuk: "",
+      npwp: "", email: "", telepon: "", tanggalMasuk: "",
     },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
@@ -238,16 +241,11 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
         </Field>
       </div>
 
-      <Field>
-        <FieldLabel htmlFor="k-npwp">NPWP (opsional)</FieldLabel>
-        <Input id="k-npwp" inputMode="numeric" placeholder="09.111.222.3-444.000" {...register("npwp")} />
-      </Field>
+      <NpwpField id="k-npwp" error={errors.npwp} {...register("npwp")} />
 
-      <Field data-invalid={!!errors.email}>
-        <FieldLabel htmlFor="k-email">Email</FieldLabel>
-        <Input id="k-email" type="email" placeholder="budi@sinarbuana.co.id" aria-invalid={!!errors.email} {...register("email")} />
-        <FieldError errors={errors.email ? [errors.email] : undefined} />
-      </Field>
+      <EmailField id="k-email" error={errors.email} {...register("email")} />
+
+      <PhoneField id="k-telepon" error={errors.telepon} {...register("telepon")} />
 
       <Field data-invalid={!!errors.tanggalMasuk}>
         <FieldLabel htmlFor="k-tanggal">Tanggal Masuk</FieldLabel>

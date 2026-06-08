@@ -14,6 +14,7 @@ export const karyawanSchema = z.object({
   bank: z.object({ nama: z.string(), nomor: z.string(), atasNama: z.string() }),
   npwp: z.string(),
   email: z.string().email(),
+  telepon: z.string(),
   tanggalMasuk: z.string(),
   status: karyawanStatus,
 });

@@ -9,13 +9,13 @@ import { Building2, FileText, FolderKanban, Plus, Receipt, Wallet, X } from "luc
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
-import { PhoneInput } from "@/components/shared/phone-input";
+import { NpwpField, PhoneField, EmailField } from "@/components/shared/form-fields";
 import { StatTile, InfoRow, InfoList, SectionLabel, ContactCard } from "@/components/shared/detail-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
+import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
@@ -188,18 +188,9 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
         <FieldError errors={errors.kota ? [errors.kota] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.npwp}>
-        <FieldLabel htmlFor="p-npwp">NPWP</FieldLabel>
-        <Input id="p-npwp" inputMode="numeric" placeholder="16 digit angka, 0123456789012345" aria-invalid={!!errors.npwp} {...register("npwp")} />
-        <FieldDescription>Maksimal 16 digit angka.</FieldDescription>
-        <FieldError errors={errors.npwp ? [errors.npwp] : undefined} />
-      </Field>
+      <NpwpField id="p-npwp" error={errors.npwp} {...register("npwp")} />
 
-      <Field data-invalid={!!errors.email}>
-        <FieldLabel htmlFor="p-email">Email (opsional)</FieldLabel>
-        <Input id="p-email" type="email" placeholder="info@perusahaan.co.id" aria-invalid={!!errors.email} {...register("email")} />
-        <FieldError errors={errors.email ? [errors.email] : undefined} />
-      </Field>
+      <EmailField id="p-email" error={errors.email} {...register("email")} />
 
       <div className="space-y-3 border-t border-border pt-4">
         <div className="flex items-center justify-between">
@@ -236,17 +227,9 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
               <Input id={`p-pic-${i}-jabatan`} placeholder="Direktur Operasional" {...register(`pic.${i}.jabatan`)} />
             </Field>
 
-            <Field data-invalid={!!errors.pic?.[i]?.telepon}>
-              <FieldLabel htmlFor={`p-pic-${i}-telepon`}>No. HP</FieldLabel>
-              <PhoneInput id={`p-pic-${i}-telepon`} placeholder="812-3456-7890" aria-invalid={!!errors.pic?.[i]?.telepon} {...register(`pic.${i}.telepon`)} />
-              <FieldError errors={errors.pic?.[i]?.telepon ? [errors.pic[i]!.telepon!] : undefined} />
-            </Field>
+            <PhoneField id={`p-pic-${i}-telepon`} error={errors.pic?.[i]?.telepon} {...register(`pic.${i}.telepon`)} />
 
-            <Field data-invalid={!!errors.pic?.[i]?.email}>
-              <FieldLabel htmlFor={`p-pic-${i}-email`}>Email (opsional)</FieldLabel>
-              <Input id={`p-pic-${i}-email`} type="email" placeholder="andi@perusahaan.co.id" aria-invalid={!!errors.pic?.[i]?.email} {...register(`pic.${i}.email`)} />
-              <FieldError errors={errors.pic?.[i]?.email ? [errors.pic[i]!.email!] : undefined} />
-            </Field>
+            <EmailField id={`p-pic-${i}-email`} label="Email" error={errors.pic?.[i]?.email} {...register(`pic.${i}.email`)} />
           </div>
         ))}
       </div>

@@ -1,10 +1,6 @@
 "use client";
 import * as React from "react";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -22,35 +18,51 @@ const COUNTRY_CODES = [
 ] as const;
 
 /**
- * Phone field: a leading country-code selector (default Indonesia +62) inside an
- * input group, followed by the local number input. Forwards ref + props to the
- * number input so it works with RHF `{...register(...)}`. The selected code is
- * local UI state (prototype — not persisted).
+ * Phone field: a leading country-code selector (default Indonesia +62) and the
+ * local number input, rendered as one bordered control. Built as siblings (not
+ * an input-group addon) so the Select opens reliably. Forwards ref + props to
+ * the number input for RHF `{...register(...)}`. The code is local UI state
+ * (prototype — not persisted).
  */
 export const PhoneInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  function PhoneInput({ className, ...props }, ref) {
+  function PhoneInput({ className, "aria-invalid": ariaInvalid, ...props }, ref) {
     const [code, setCode] = React.useState("+62");
     return (
-      <InputGroup>
-        <InputGroupAddon align="inline-start" className="pr-0 pl-1">
-          <Select value={code} onValueChange={setCode}>
-            <SelectTrigger
-              aria-label="Kode negara"
-              className="h-7 gap-1 border-0 bg-transparent px-1.5 font-mono text-sm tabular-nums shadow-none focus-visible:ring-0 dark:bg-transparent"
-            >
-              <span>{code}</span>
-            </SelectTrigger>
-            <SelectContent>
-              {COUNTRY_CODES.map((c) => (
-                <SelectItem key={c.code} value={c.code}>
-                  {c.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </InputGroupAddon>
-        <InputGroupInput ref={ref} inputMode="tel" className={className} {...props} />
-      </InputGroup>
+      <div
+        data-invalid={ariaInvalid ? "true" : undefined}
+        className={cn(
+          "flex h-9 w-full items-center rounded-lg border border-input bg-transparent text-sm transition-colors dark:bg-input/30",
+          "focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50",
+          "data-[invalid=true]:border-destructive data-[invalid=true]:ring-[3px] data-[invalid=true]:ring-destructive/20",
+        )}
+      >
+        <Select value={code} onValueChange={setCode}>
+          <SelectTrigger
+            aria-label="Kode negara"
+            className="h-full shrink-0 gap-1 rounded-l-lg rounded-r-none border-0 bg-transparent px-2.5 font-mono tabular-nums shadow-none focus-visible:ring-0 dark:bg-transparent"
+          >
+            <span>{code}</span>
+          </SelectTrigger>
+          <SelectContent>
+            {COUNTRY_CODES.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="h-5 w-px shrink-0 bg-border" aria-hidden />
+        <input
+          ref={ref}
+          inputMode="tel"
+          aria-invalid={ariaInvalid}
+          className={cn(
+            "h-full min-w-0 flex-1 rounded-r-lg bg-transparent px-3 outline-none placeholder:text-muted-foreground",
+            className,
+          )}
+          {...props}
+        />
+      </div>
     );
   },
 );
