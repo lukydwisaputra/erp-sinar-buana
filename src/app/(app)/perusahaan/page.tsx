@@ -4,16 +4,15 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Building2, FileText, FolderKanban, Receipt, Wallet } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
+import { StatTile, InfoRow, InfoList, SectionLabel, ContactCard } from "@/components/shared/detail-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
-import type { PIC, Perusahaan } from "@/lib/schemas/perusahaan";
+import type { Perusahaan } from "@/lib/schemas/perusahaan";
 
 function StatusBadge({ status }: { status: Perusahaan["status"] }) {
   return status === "aktif" ? (
@@ -21,10 +20,6 @@ function StatusBadge({ status }: { status: Perusahaan["status"] }) {
   ) : (
     <Badge variant="secondary">Nonaktif</Badge>
   );
-}
-
-function initials(name: string) {
-  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
 /** Columns are built with an `onOpen` callback so the ID/Nama cells open the detail drawer. */
@@ -83,52 +78,6 @@ function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
 
 /* ---------- detail drawer pieces ---------- */
 
-function Stat({ label, value, icon: Icon, mono, title }: {
-  label: string; value: string; icon: typeof FileText; mono?: boolean; title?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border p-3">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="size-3.5" /> {label}
-      </div>
-      <p className={cn("mt-1 truncate text-base font-semibold text-foreground", mono && "font-mono tabular-nums")} title={title ?? value}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function PicCard({ pic }: { pic: PIC }) {
-  return (
-    <div className="rounded-lg border border-border p-3">
-      <div className="flex items-center gap-2.5">
-        <Avatar className="size-9"><AvatarFallback className="text-xs">{initials(pic.nama)}</AvatarFallback></Avatar>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{pic.nama}</p>
-          <p className="truncate text-xs text-muted-foreground">{pic.jabatan}</p>
-        </div>
-      </div>
-      <div className="mt-2.5 grid gap-1 text-xs">
-        <a href={`tel:${pic.telepon}`} className="font-mono text-muted-foreground hover:text-foreground">{pic.telepon}</a>
-        <a href={`mailto:${pic.email}`} className="truncate text-primary hover:underline">{pic.email}</a>
-      </div>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-3 gap-3 py-2.5">
-      <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="col-span-2 text-sm break-words hyphens-none">{value}</dd>
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{children}</h3>;
-}
-
 function PerusahaanDetail({ p }: { p: Perusahaan }) {
   const m = p.metrik;
   return (
@@ -136,29 +85,31 @@ function PerusahaanDetail({ p }: { p: Perusahaan }) {
       <section>
         <SectionLabel>Ringkasan</SectionLabel>
         <div className="grid grid-cols-2 gap-2">
-          <Stat label="Penawaran" value={String(m.jumlahPenawaran)} icon={FileText} />
-          <Stat label="Proyek Aktif" value={String(m.proyekAktif)} icon={FolderKanban} />
-          <Stat label="Nilai Kontrak" value={formatRupiahCompact(m.nilaiKontrak)} title={formatRupiah(m.nilaiKontrak)} icon={Wallet} mono />
-          <Stat label="Piutang" value={formatRupiahCompact(m.piutang)} title={formatRupiah(m.piutang)} icon={Receipt} mono />
+          <StatTile label="Penawaran" value={String(m.jumlahPenawaran)} icon={FileText} />
+          <StatTile label="Proyek Aktif" value={String(m.proyekAktif)} icon={FolderKanban} />
+          <StatTile label="Nilai Kontrak" value={formatRupiahCompact(m.nilaiKontrak)} title={formatRupiah(m.nilaiKontrak)} icon={Wallet} mono />
+          <StatTile label="Piutang" value={formatRupiahCompact(m.piutang)} title={formatRupiah(m.piutang)} icon={Receipt} mono />
         </div>
       </section>
 
       <section>
         <SectionLabel>Kontak PIC ({p.pic.length})</SectionLabel>
         <div className="grid gap-2">
-          {p.pic.map((pic) => <PicCard key={pic.email} pic={pic} />)}
+          {p.pic.map((pic) => (
+            <ContactCard key={pic.email} name={pic.nama} role={pic.jabatan} phone={pic.telepon} email={pic.email} />
+          ))}
         </div>
       </section>
 
       <section>
         <SectionLabel>Informasi Perusahaan</SectionLabel>
-        <dl className="divide-y divide-border">
+        <InfoList>
           <InfoRow label="NPWP" value={<span className="font-mono">{p.npwp}</span>} />
           <InfoRow label="Alamat" value={p.alamat} />
           <InfoRow label="Kota" value={p.kota} />
           <InfoRow label="Telepon" value={<span className="font-mono">{p.telepon}</span>} />
           <InfoRow label="Email" value={<a href={`mailto:${p.email}`} className="text-primary hover:underline">{p.email}</a>} />
-        </dl>
+        </InfoList>
       </section>
     </div>
   );
