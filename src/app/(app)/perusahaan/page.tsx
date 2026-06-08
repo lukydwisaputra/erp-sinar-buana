@@ -194,15 +194,18 @@ export default function PerusahaanPage() {
           {selected && (
             <>
               <SheetHeader className="pr-10">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <SheetTitle className="text-lg leading-tight font-semibold">
-                    {selected.nama}
-                  </SheetTitle>
+                <div className="mb-1 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Building2 className="size-5" />
+                </div>
+                <SheetTitle className="text-lg leading-tight font-semibold break-words">
+                  {selected.nama}
+                </SheetTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SheetDescription className="font-mono text-sm text-muted-foreground">
+                    {selected.id}
+                  </SheetDescription>
                   <StatusBadge status={selected.status} />
                 </div>
-                <SheetDescription className="font-mono text-sm text-muted-foreground">
-                  {selected.id}
-                </SheetDescription>
               </SheetHeader>
               <PerusahaanDetail p={selected} />
             </>

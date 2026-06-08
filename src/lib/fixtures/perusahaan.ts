@@ -34,7 +34,7 @@ export const perusahaanFixtures: Perusahaan[] = [
   },
   {
     id: "PRSH-003",
-    nama: "PT Karya Logam Nusantara",
+    nama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     npwp: "03.456.789.0-123.000",
     alamat: "Kawasan Industri SIER Blok C-4",
     kota: "Surabaya",
