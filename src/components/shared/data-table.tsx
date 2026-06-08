@@ -18,14 +18,35 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   ChevronsUpDownIcon,
+  EllipsisVerticalIcon,
   InboxIcon,
+  SquarePenIcon,
+  Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -79,6 +100,14 @@ export type DataTableProps<TData, TValue> = {
   /** Page sizes offered by the pagination footer. Default [5, 10, 20]. */
   pageSizeOptions?: number[];
   initialPageSize?: number;
+  /**
+   * Trailing per-row ⋮ menu (Ubah / Hapus). Shown by default. Provide handlers
+   * for real behaviour; without them the actions fire a demo toast (prototype).
+   * Set `rowActions={false}` to hide the column entirely.
+   */
+  rowActions?: boolean;
+  onEdit?: (row: TData) => void;
+  onDelete?: (row: TData) => void;
 };
 
 /**
@@ -107,15 +136,38 @@ export function DataTable<TData, TValue>({
   emptyMessage = "Tidak ada data.",
   pageSizeOptions = [5, 10, 20],
   initialPageSize = 5,
+  rowActions = true,
+  onEdit,
+  onDelete,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
 
+  const tableColumns = React.useMemo<ColumnDef<TData, TValue>[]>(() => {
+    if (!rowActions) return columns;
+    return [
+      ...columns,
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        enableHiding: false,
+        meta: { align: "right" },
+        cell: ({ row }) => (
+          <RowActions
+            onEdit={onEdit ? () => onEdit(row.original) : undefined}
+            onDelete={onDelete ? () => onDelete(row.original) : undefined}
+          />
+        ),
+      },
+    ];
+  }, [columns, rowActions, onEdit, onDelete]);
+
   const table = useReactTable({
     data,
-    columns,
+    columns: tableColumns,
     state: { sorting, columnFilters },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -300,6 +352,57 @@ export function DataTable<TData, TValue>({
       {!loading && !error && data.length > 0 && (
         <DataTablePagination table={table} pageSizeOptions={pageSizeOptions} />
       )}
+    </div>
+  );
+}
+
+/** Trailing ⋮ row menu: Ubah + Hapus (Hapus confirms via alert-dialog). Demo by default. */
+function RowActions({ onEdit, onDelete }: { onEdit?: () => void; onDelete?: () => void }) {
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const handleEdit = onEdit ?? (() => toast("Demo: fitur ubah belum tersedia"));
+  const handleDelete = onDelete ?? (() => toast("Demo: data tidak dihapus"));
+
+  return (
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="size-8" aria-label="Aksi baris">
+            <EllipsisVerticalIcon className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-36">
+          <DropdownMenuItem onSelect={() => handleEdit()}>
+            <SquarePenIcon className="mr-2 size-4" /> Ubah
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={(e) => {
+              e.preventDefault();
+              setConfirmOpen(true);
+            }}
+          >
+            <Trash2Icon className="mr-2 size-4" /> Hapus
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus data ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini tidak dapat dibatalkan. (Demo: data tidak benar-benar dihapus.)
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => handleDelete()}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
