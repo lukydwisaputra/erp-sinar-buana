@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 export type ServiceOption = { id: string; nama: string; harga: number };
-export type LineItem = { layananId: string; nama: string; volume: number; harga: number };
+export type LineItem = { layananId: string; nama: string; volume: number; harga: number; satuan: string };
 
 export function LineItemEditor({ items, options, onChange }: {
   items: LineItem[]; options: ServiceOption[]; onChange: (items: LineItem[]) => void;
@@ -20,7 +20,7 @@ export function LineItemEditor({ items, options, onChange }: {
   const update = (i: number, patch: Partial<LineItem>) =>
     onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   const removeRow = (i: number) => onChange(items.filter((_, idx) => idx !== i));
-  const addRow = () => onChange([...items, { layananId: "", nama: "", volume: 1, harga: 0 }]);
+  const addRow = () => onChange([...items, { layananId: "", nama: "", volume: 1, harga: 0, satuan: "Paket" }]);
 
   return (
     <div className="space-y-3">

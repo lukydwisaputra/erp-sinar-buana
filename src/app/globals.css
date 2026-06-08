@@ -230,3 +230,20 @@
     appearance: textfield;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * SPH document branding — SBMJ blue letterhead palette.
+ * Intentionally NOT part of the app token system: the SPH document is a real
+ * branded artifact (its letterhead/footer differ from the green app chrome).
+ * Scoped to .sph-doc so it never leaks into app components.
+ * ------------------------------------------------------------------------- */
+.sph-doc {
+  --sph-blue: #1f4e96;        /* deep royal blue — company name, headings */
+  --sph-blue-2: #2e78c7;      /* medium blue — bands, tagline */
+  --sph-blue-soft: #dcebf7;   /* light blue — header/footer band background */
+  --sph-ink: #1a1a1a;         /* near-black document text */
+  --sph-rule: #b8b8b8;        /* table/border gray */
+  color: var(--sph-ink);
+  background: #ffffff;
+}
+.sph-doc table { border-color: var(--sph-rule); }

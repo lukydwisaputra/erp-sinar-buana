@@ -8,6 +8,7 @@ export const sphItemSchema = z.object({
   nama: z.string(),
   volume: z.coerce.number(),
   harga: z.coerce.number(),
+  satuan: z.string(),
 });
 export const sphTerminSchema = z.object({
   label: z.string(),
@@ -22,6 +23,8 @@ export const sphFormSchema = z.object({
   perusahaanNama: z.string(),
   pic: z.string(),
   alamat: z.string(),
+  wilayah: z.string(),
+  jenisInvestasi: z.string(),
   tanggal: z.string().min(1, "Tanggal wajib diisi."),
   masaBerlaku: z.coerce.number().min(1, "Masa berlaku harus > 0 hari."),
   items: z.array(sphItemSchema).min(1, "Tambahkan minimal satu layanan."),
