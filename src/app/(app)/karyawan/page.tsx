@@ -75,7 +75,7 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
         <div className="grid grid-cols-2 gap-2">
           <StatTile label="Gaji Pokok" value={formatRupiahCompact(k.gajiPokok)} title={formatRupiah(k.gajiPokok)} icon={Wallet} mono />
           <StatTile label="Tunjangan" value={formatRupiahCompact(k.tunjangan)} title={formatRupiah(k.tunjangan)} icon={HandCoins} mono />
-          <StatTile label="Pengali" value={`${k.pengali}×`} icon={Gauge} mono />
+          <StatTile label="Pengali" value={`${k.pengali.toLocaleString("id-ID")}×`} icon={Gauge} mono />
           <StatTile label="Masa Kerja" value={masaKerja(k.tanggalMasuk)} icon={CalendarDays} />
         </div>
       </section>
