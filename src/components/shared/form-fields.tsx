@@ -49,7 +49,7 @@ export function PhoneField({
     <Field data-invalid={!!error}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <PhoneInput id={id} placeholder="812-3456-7890" aria-invalid={!!error} {...props} />
-      <FieldDescription>Tanpa angka 0 di depan, mis: 812-3456-7890.</FieldDescription>
+      <FieldDescription>Tanpa angka 0 di depan, contoh 812-3456-7890.</FieldDescription>
       <FieldError errors={errs(error)} />
     </Field>
   );
