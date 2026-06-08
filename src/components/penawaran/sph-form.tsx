@@ -186,6 +186,28 @@ function TujuanSection({
             <FieldError errors={err(errors.masaBerlaku)} />
           </Field>
         </div>
+
+        <Field>
+          <FieldLabel>Wilayah</FieldLabel>
+          <Input {...form.register("wilayah")} placeholder="Kabupaten Bandung" />
+        </Field>
+
+        <Field>
+          <FieldLabel>Jenis Investasi</FieldLabel>
+          <Select
+            value={form.watch("jenisInvestasi") || undefined}
+            onValueChange={(v) => form.setValue("jenisInvestasi", v, { shouldValidate: true })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Pilih jenis investasi" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PMDN">PMDN</SelectItem>
+              <SelectItem value="PMA">PMA</SelectItem>
+              <SelectItem value="UMK">UMK</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
       </div>
     </BuilderSection>
   );

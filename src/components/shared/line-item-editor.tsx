@@ -34,6 +34,10 @@ export function LineItemEditor({ items, options, onChange }: {
               <Input type="number" min={1} value={it.volume}
                 onChange={(e) => update(i, { volume: Number(e.target.value) })} className="text-right font-mono tabular-nums" />
             </div>
+            <div className="w-24">
+              <label className="text-xs text-muted-foreground">Satuan</label>
+              <Input value={it.satuan} onChange={(e) => update(i, { satuan: e.target.value })} placeholder="Paket" />
+            </div>
             <div className="w-44">
               <label className="text-xs text-muted-foreground">Harga Satuan</label>
               <MoneyInput defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} />

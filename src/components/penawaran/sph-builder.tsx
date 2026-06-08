@@ -67,6 +67,8 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
           perusahaanNama: existing.perusahaanNama,
           pic: existing.pic,
           alamat: existing.alamat,
+          wilayah: existing.wilayah,
+          jenisInvestasi: existing.jenisInvestasi,
           tanggal: existing.tanggal,
           masaBerlaku: existing.masaBerlaku,
           items: existing.items,
