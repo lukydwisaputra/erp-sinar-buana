@@ -206,7 +206,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
           </InputGroupAddon>
           <InputGroupInput id="l-harga" inputMode="numeric" placeholder="75000000" className="text-right font-mono tabular-nums" {...register("hargaStandar")} />
         </InputGroup>
-        <FieldDescription>Kosongkan jika diisi manual di SPH.</FieldDescription>
+        <FieldDescription>Harga standar; masih dapat disesuaikan per proyek di SPH.</FieldDescription>
       </Field>
 
       <Field>
