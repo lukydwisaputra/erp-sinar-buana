@@ -142,6 +142,22 @@ Real Convert-Deal → Proyek/Faktur generation (FR-03.9) · real persistence/ema
 
 **Builder form (this round):** edits the client-facing letter parts + adds **Wilayah** and **Jenis Investasi** fields and per-line **Satuan**. The per-service RAB-detail and schedule-cell editing are seeded from templates and rendered in the document; full editing of those is a follow-up.
 
+## 11.1 Revision (real-doc v2 — second reference PDF, 2026-06-08)
+
+Two real SBMJ SPHs reviewed. Corrections to align the template + builder:
+
+1. **Remove PIC and Jenis Investasi entirely** from the SPH form + document. Kepada block = `Kepada Yth. / Bpk/Ibu Direktur / {perusahaan} / Di Tempat` (no PIC, no address). Drop `pic` usage + `jenisInvestasi` field/schema.
+2. **Remove Masa Berlaku** entirely (field + schema + the validity catatan bullet + the letterhead "masa berlaku" line). Also drop `wilayah` (it was only for the old templated intro — the intro is now free text).
+3. **Date picker = shadcn** `Calendar` in a `Popover` (DS-09 pattern), not the native `<input type=date>`.
+4. **Letterhead fix:** the full "PT SINAR BUANA MANDIRI JAYA" must not be cut off — give it room (wider block, no truncation, sized to fit), with the tagline under it.
+5. **Logo configurable:** render `companyProfile.logo` (an image) if set, else the placeholder badge. Logo path is config (drop in the real sun logo). Treat company profile (logo, footer contact, signatory) as the editable config source.
+6. **Per-service RAB + schedule, editable, in the Lampiran (multi-page, multi-form):** EACH service line item carries its OWN editable `rab` (Biaya Personil rows + Biaya Langsung rows, each `{uraian, vol, hargaSatuan}`) and `jadwal` (12 activity labels + week highlights). The builder provides a per-service "Kelola RAB & Jadwal" sub-form (e.g. a dialog with RAB-rows editor + a click-to-toggle week matrix). The document's **Lampiran** = one RAB page + one Estimasi Jadwal page per service (each with its own values; RAB page ends with a **Terbilang** line). The cover-letter **Lampiran** field (default "RAB dan Estimasi Waktu") + a catatan line "…Terlampir". Internal **Estimasi Margin = Total Penawaran − Σ(per-service RAB totals)**.
+7. **Configurable text from form data:** the **kalimat pembuka** (intro paragraph) is a free `Textarea` field; the **Catatan** is an editable **list of bullet lines** (add/remove), with the termin scheme rendered as one bullet ("Termin pembayaran dibagi menjadi N tahap: 1. X% …"); the **footer** (phone/email/addresses/website) + **signatory** come from the editable `companyProfile` config.
+
+**Cover-letter service table columns** (per the real doc): `No · Uraian · Biaya Satuan (Rp) · Banyaknya · Total (Rp)` → **TOTAL BIAYA** + **Terbilang** row. `satuan` is kept on items but the column shows "Banyaknya" (the volume).
+
+**Updated data model:** `sphItemSchema` += `rab: { personil: RabRow[]; langsung: RabRow[] }`, `jadwal: { kegiatan: string[]; highlights: number[][] }`. `sphFormSchema`: remove `pic`(optional/unused), `jenisInvestasi`, `masaBerlaku`, `wilayah`; add `kalimatPembuka: string`, `catatan: string[]` (bullet lines), `lampiran: string`. `RabRow` reused from `lib/sph-templates.ts`; `rabTemplate`/`jadwalTemplate` become the *defaults* used to seed a new service's editable rab/jadwal.
+
 ## 10. Reuse for Faktur (next)
 
 `BuilderLayout`, `DocumentPaper`, `LineItemEditor`, the document-package + print approach, and the calc-helper + mock-spine pattern carry to Faktur. Faktur gets its own spec/plan.
