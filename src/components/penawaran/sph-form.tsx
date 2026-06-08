@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { Trash2Icon } from "lucide-react";
+import { Trash2Icon, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 
 import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { BuilderSection } from "@/components/shared/builder-layout";
@@ -25,13 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Collapsible,
   CollapsibleContent,
@@ -47,7 +43,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-export type PerusahaanOption = { id: string; nama: string; alamat: string; pics: string[] };
+export type PerusahaanOption = { id: string; nama: string; alamat: string };
 export type LayananOption = { id: string; nama: string; harga: number };
 
 const err = (e: { message?: string } | undefined) => (e ? [e] : undefined);
@@ -66,6 +62,17 @@ export function SphForm({
   return (
     <div className="space-y-6">
       <TujuanSection form={form} perusahaanOptions={perusahaanOptions} />
+
+      <BuilderSection title="Naskah Dokumen">
+        <Field>
+          <FieldLabel>Kalimat Pembuka</FieldLabel>
+          <Textarea
+            rows={3}
+            placeholder="Sehubungan dengan adanya permintaan untuk…"
+            {...form.register("kalimatPembuka")}
+          />
+        </Field>
+      </BuilderSection>
 
       <BuilderSection title="Baris Layanan">
         <LineItemEditor
@@ -99,12 +106,52 @@ export function SphForm({
       <RabSection form={form} />
 
       <BuilderSection title="Catatan & Ketentuan">
-        <Textarea
-          rows={4}
-          placeholder="Syarat, ketentuan, atau catatan tambahan…"
-          {...form.register("catatan")}
+        <CatatanEditor
+          catatan={values.catatan}
+          onChange={(v) => form.setValue("catatan", v, { shouldValidate: true })}
         />
       </BuilderSection>
+    </div>
+  );
+}
+
+/* ---------- Catatan (editable bullet list) ---------- */
+function CatatanEditor({
+  catatan,
+  onChange,
+}: {
+  catatan: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const update = (i: number, value: string) =>
+    onChange(catatan.map((c, idx) => (idx === i ? value : c)));
+  const removeRow = (i: number) => onChange(catatan.filter((_, idx) => idx !== i));
+  const addRow = () => onChange([...catatan, ""]);
+
+  return (
+    <div className="space-y-3">
+      {catatan.map((c, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="text-muted-foreground">•</span>
+          <Input
+            value={c}
+            onChange={(e) => update(i, e.target.value)}
+            placeholder="Tulis catatan…"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Hapus catatan"
+            onClick={() => removeRow(i)}
+          >
+            <Trash2Icon className="size-4 text-destructive" />
+          </Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" onClick={addRow}>
+        Tambah Catatan
+      </Button>
     </div>
   );
 }
@@ -118,11 +165,12 @@ function TujuanSection({
   perusahaanOptions: PerusahaanOption[];
 }) {
   const perusahaanId = form.watch("perusahaanId");
-  const alamat = form.watch("alamat");
-  const pic = form.watch("pic");
+  const tanggal = form.watch("tanggal");
   const selected = perusahaanOptions.find((p) => p.id === perusahaanId);
-  const pics = selected?.pics ?? [];
   const errors = form.formState.errors;
+
+  const [tglOpen, setTglOpen] = React.useState(false);
+  const tglDate = tanggal ? new Date(tanggal) : undefined;
 
   return (
     <BuilderSection title="Tujuan Penawaran">
@@ -136,77 +184,49 @@ function TujuanSection({
               form.setValue("perusahaanId", opt.id, { shouldValidate: true });
               form.setValue("perusahaanNama", opt.nama);
               form.setValue("alamat", opt.alamat);
-              form.setValue("pic", opt.pics[0] ?? "");
             }}
           />
           <FieldError errors={err(errors.perusahaanId)} />
         </Field>
 
-        <Field>
-          <FieldLabel>PIC</FieldLabel>
-          <Select
-            value={pic || undefined}
-            onValueChange={(v) => form.setValue("pic", v, { shouldValidate: true })}
-            disabled={!selected}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Pilih PIC…" />
-            </SelectTrigger>
-            <SelectContent>
-              {pics.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Field data-invalid={!!errors.tanggal} className="w-56">
+          <FieldLabel>Tanggal</FieldLabel>
+          <Popover open={tglOpen} onOpenChange={setTglOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "w-full justify-start font-normal",
+                  !tglDate && "text-muted-foreground"
+                )}
+                aria-invalid={!!errors.tanggal}
+              >
+                <CalendarIcon />
+                {tglDate ? format(tglDate, "dd MMMM yyyy", { locale: idLocale }) : "Pilih tanggal"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={tglDate}
+                onSelect={(d) => {
+                  form.setValue("tanggal", d ? d.toISOString().slice(0, 10) : "", {
+                    shouldValidate: true,
+                  });
+                  setTglOpen(false);
+                }}
+                locale={idLocale}
+                autoFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <FieldError errors={err(errors.tanggal)} />
         </Field>
 
         <Field>
-          <FieldLabel>Alamat</FieldLabel>
-          <p className="text-sm text-muted-foreground">{alamat || "—"}</p>
-        </Field>
-
-        <div className="flex flex-wrap gap-4">
-          <Field data-invalid={!!errors.tanggal} className="w-44">
-            <FieldLabel>Tanggal</FieldLabel>
-            <Input type="date" aria-invalid={!!errors.tanggal} {...form.register("tanggal")} />
-            <FieldError errors={err(errors.tanggal)} />
-          </Field>
-
-          <Field data-invalid={!!errors.masaBerlaku} className="w-44">
-            <FieldLabel>Masa Berlaku (hari)</FieldLabel>
-            <Input
-              type="number"
-              min={1}
-              aria-invalid={!!errors.masaBerlaku}
-              className="font-mono tabular-nums"
-              {...form.register("masaBerlaku")}
-            />
-            <FieldError errors={err(errors.masaBerlaku)} />
-          </Field>
-        </div>
-
-        <Field>
-          <FieldLabel>Wilayah</FieldLabel>
-          <Input {...form.register("wilayah")} placeholder="Kabupaten Bandung" />
-        </Field>
-
-        <Field>
-          <FieldLabel>Jenis Investasi</FieldLabel>
-          <Select
-            value={form.watch("jenisInvestasi") || undefined}
-            onValueChange={(v) => form.setValue("jenisInvestasi", v, { shouldValidate: true })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Pilih jenis investasi" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="PMDN">PMDN</SelectItem>
-              <SelectItem value="PMA">PMA</SelectItem>
-              <SelectItem value="UMK">UMK</SelectItem>
-            </SelectContent>
-          </Select>
+          <FieldLabel>Lampiran</FieldLabel>
+          <Input {...form.register("lampiran")} placeholder="RAB dan Estimasi Waktu" />
         </Field>
       </div>
     </BuilderSection>

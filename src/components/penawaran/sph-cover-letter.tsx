@@ -10,14 +10,6 @@ function titleCase(s: string): string {
   return s.replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
 }
 
-/** Join service names naturally in Indonesian: "a", "a dan b", "a, b, dan c". */
-function joinLayanan(names: string[]): string {
-  const clean = names.map((n) => n.trim()).filter(Boolean);
-  if (clean.length === 0) return "—";
-  if (clean.length === 1) return clean[0];
-  return `${clean.slice(0, -1).join(", ")}, dan ${clean[clean.length - 1]}`;
-}
-
 function tglPanjang(iso: string): string {
   return iso
     ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
@@ -32,7 +24,6 @@ export function SphCoverLetter({
   noSph: string;
 }): React.JSX.Element {
   const total = totalPenawaran(values.items);
-  const layananList = joinLayanan(values.items.map((it) => it.nama));
 
   return (
     <div className="sph-doc mx-auto w-full max-w-[210mm] bg-white text-[var(--sph-ink)] shadow-sm">
@@ -50,13 +41,20 @@ export function SphCoverLetter({
             style={{ clipPath: "polygon(0 55%, 88% 55%, 70% 100%, 0 100%)" }}
           />
         </div>
-        {/* Right: logo placeholder + company name + tagline. */}
-        <div className="flex flex-col items-end justify-center px-8 py-3 text-right">
-          {/* Real circular SBMJ logo image drops in here. */}
-          <div className="flex size-14 items-center justify-center rounded-full border-2 border-[var(--sph-blue)] text-[var(--sph-blue)]">
-            <span className="text-sm font-bold tracking-tight">SBMJ</span>
-          </div>
-          <p className="mt-1 text-xs font-bold text-[var(--sph-blue)]">{companyProfile.nama}</p>
+        {/* Right: configurable logo + company name + tagline. The identity
+            block gets generous width so the full company name wraps to 1–2
+            lines instead of being truncated. */}
+        <div className="flex max-w-[60%] flex-col items-end justify-center px-8 py-3 text-right">
+          {companyProfile.logo ? (
+            <img src={companyProfile.logo} alt="Logo" className="size-14 object-contain" />
+          ) : (
+            <div className="flex size-14 items-center justify-center rounded-full border-2 border-[var(--sph-blue)] text-[var(--sph-blue)]">
+              <span className="text-sm font-bold tracking-tight">SBMJ</span>
+            </div>
+          )}
+          <p className="mt-1 whitespace-normal text-[11px] font-bold leading-tight text-[var(--sph-blue)]">
+            {companyProfile.nama}
+          </p>
           <p className="text-[10px] tracking-wide text-[var(--sph-blue-2)]">{companyProfile.tagline}</p>
         </div>
       </div>
@@ -74,7 +72,7 @@ export function SphCoverLetter({
             <span>Surat Penawaran Harga</span>
             <span>Lampiran</span>
             <span>:</span>
-            <span>-</span>
+            <span>{values.lampiran || "-"}</span>
           </div>
           <div className="shrink-0 text-right">
             {companyProfile.kota}, {tglPanjang(values.tanggal)}
@@ -91,11 +89,7 @@ export function SphCoverLetter({
 
         {/* 4. Pembuka */}
         <p className="mt-6">Dengan Hormat,</p>
-        <p className="mt-2 text-justify indent-8">
-          Sehubungan dengan permintaan <strong>Kegiatan</strong> {values.perusahaanNama || "—"} di
-          wilayah {values.wilayah || "—"} dengan Jenis Investasi: {values.jenisInvestasi || "—"}.
-          Kami menawarkan jasa {layananList} dengan uraian biaya sebagai berikut :
-        </p>
+        <p className="mt-2 text-justify indent-8">{values.kalimatPembuka}</p>
 
         {/* 5. Service table */}
         <table className="mt-4 w-full border-collapse border border-[var(--sph-rule)] text-sm">
@@ -103,9 +97,9 @@ export function SphCoverLetter({
             <tr className="bg-[var(--sph-blue-soft)] text-center font-bold">
               <th className="border border-[var(--sph-rule)] px-2 py-1">No</th>
               <th className="border border-[var(--sph-rule)] px-2 py-1">Uraian</th>
-              <th className="border border-[var(--sph-rule)] px-2 py-1">Harga Satuan (Rp)</th>
-              <th className="border border-[var(--sph-rule)] px-2 py-1">Vol</th>
-              <th className="border border-[var(--sph-rule)] px-2 py-1">Harga (Rp)</th>
+              <th className="border border-[var(--sph-rule)] px-2 py-1">Biaya Satuan (Rp)</th>
+              <th className="border border-[var(--sph-rule)] px-2 py-1">Banyaknya</th>
+              <th className="border border-[var(--sph-rule)] px-2 py-1">Total (Rp)</th>
             </tr>
           </thead>
           <tbody>
@@ -124,7 +118,7 @@ export function SphCoverLetter({
                     {formatRupiah(it.harga)}
                   </td>
                   <td className="border border-[var(--sph-rule)] px-2 py-1 text-center">
-                    {it.volume} {it.satuan}
+                    {it.volume}
                   </td>
                   <td className="border border-[var(--sph-rule)] px-2 py-1 text-right font-mono tabular-nums">
                     {formatRupiah((Number(it.volume) || 0) * (Number(it.harga) || 0))}
@@ -138,7 +132,7 @@ export function SphCoverLetter({
                 colSpan={4}
                 className="border border-[var(--sph-rule)] px-2 py-1 text-right font-bold"
               >
-                Total Biaya
+                TOTAL BIAYA
               </td>
               <td className="border border-[var(--sph-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
                 {formatRupiah(total)}
@@ -158,24 +152,22 @@ export function SphCoverLetter({
         <div className="mt-4">
           <p className="font-bold">Catatan:</p>
           <ul className="list-disc pl-5 text-sm">
-            <li>Penawaran harga berlaku {values.masaBerlaku || 0} hari kalender</li>
-            <li>
-              Biaya diatas dengan catatan persyaratan administratif sudah lengkap, apabila kegiatan
-              sudah berlangsung dan diwajibkan untuk dilakukan penyesuaian fisik/konstruksi IPAL atau
-              Bangunan TPS LB3 tidak termasuk biaya diatas.
-            </li>
-            <li>
-              Termin pembayaran di bagi menjadi {values.termin.length} termin:
-              <ol className="list-decimal pl-5">
-                {values.termin.map((t, i) => (
-                  <li key={i}>
-                    {t.persen}% — {t.pemicu || "—"}
-                  </li>
-                ))}
-              </ol>
-            </li>
-            {values.catatan.trim() && (
-              <li className="whitespace-pre-wrap">{values.catatan}</li>
+            {values.catatan
+              .filter((c) => c.trim())
+              .map((c, i) => (
+                <li key={i}>{c}</li>
+              ))}
+            {values.termin.length > 0 && (
+              <li>
+                Termin pembayaran di bagi menjadi {values.termin.length} tahap:
+                <ol className="list-decimal pl-5">
+                  {values.termin.map((t, i) => (
+                    <li key={i}>
+                      {t.persen}% {t.pemicu || "—"}
+                    </li>
+                  ))}
+                </ol>
+              </li>
             )}
           </ul>
         </div>

@@ -28,7 +28,6 @@ const perusahaanOptions: PerusahaanOption[] = perusahaanFixtures.map((p) => ({
   id: p.id,
   nama: p.nama,
   alamat: p.alamat,
-  pics: p.pic.map((x) => x.nama),
 }));
 
 const layananOptions: LayananOption[] = katalogFixtures.map((l) => ({
@@ -40,16 +39,14 @@ const layananOptions: LayananOption[] = katalogFixtures.map((l) => ({
 const emptyValues: SphFormValues = {
   perusahaanId: "",
   perusahaanNama: "",
-  pic: "",
   alamat: "",
-  wilayah: "",
-  jenisInvestasi: "",
   tanggal: "",
-  masaBerlaku: 14,
+  kalimatPembuka: "",
+  lampiran: "RAB dan Estimasi Waktu",
   items: [{ layananId: "", nama: "", volume: 1, harga: 0, satuan: "Paket" }],
   termin: [{ label: "Termin I", persen: 100, pemicu: "Pelunasan" }],
   rab: { personil: 0, langsung: 0 },
-  catatan: "",
+  catatan: [],
 };
 
 export function SphBuilder({ existing }: { existing?: Sph }) {
@@ -65,12 +62,10 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
       ? {
           perusahaanId: existing.perusahaanId,
           perusahaanNama: existing.perusahaanNama,
-          pic: existing.pic,
           alamat: existing.alamat,
-          wilayah: existing.wilayah,
-          jenisInvestasi: existing.jenisInvestasi,
           tanggal: existing.tanggal,
-          masaBerlaku: existing.masaBerlaku,
+          kalimatPembuka: existing.kalimatPembuka,
+          lampiran: existing.lampiran,
           items: existing.items,
           termin: existing.termin,
           rab: existing.rab,

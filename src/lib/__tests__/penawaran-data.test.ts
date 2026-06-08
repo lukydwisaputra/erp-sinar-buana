@@ -12,6 +12,6 @@ describe("listPenawaran", () => {
   });
 });
 describe("getPenawaran", () => {
-  it("returns one by id", async () => { expect((await getPenawaran("SPH/001/5.2026"))?.pic).toBe("Andi Wijaya"); });
+  it("returns one by id", async () => { expect((await getPenawaran("SPH/001/5.2026"))?.id).toBe("SPH/001/5.2026"); });
   it("returns null for unknown", async () => { expect(await getPenawaran("NOPE")).toBeNull(); });
 });

@@ -1,6 +1,9 @@
 export const companyProfile = {
   nama: "PT SINAR BUANA MANDIRI JAYA",
   tagline: "KONSULTAN LINGKUNGAN",
+  /** When empty, the document renders the "SBMJ" placeholder badge. Set to an
+      image path/URL to render the real logo. */
+  logo: "",
   kota: "Bandung",
   telepon: "0856-2483-2610",
   email: "contact.sbmj@gmail.com",
