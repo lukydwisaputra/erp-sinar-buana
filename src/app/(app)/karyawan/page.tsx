@@ -17,7 +17,7 @@ import type { Karyawan } from "@/lib/schemas/karyawan";
 const KEPEGAWAIAN: Record<Karyawan["statusKepegawaian"], { label: string; variant: "success" | "info" | "warning" }> = {
   tetap: { label: "Tetap", variant: "success" },
   kontrak: { label: "Kontrak", variant: "info" },
-  probation: { label: "Probation", variant: "warning" },
+  probation: { label: "Masa Percobaan", variant: "warning" },
 };
 
 function KepegawaianBadge({ status }: { status: Karyawan["statusKepegawaian"] }) {
