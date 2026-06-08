@@ -237,7 +237,7 @@ export function DataTable<TData, TValue>({
                     <TableHead
                       key={header.id}
                       className={cn(
-                        "text-xs font-medium tracking-wide text-muted-foreground uppercase",
+                        "px-4 text-xs font-medium tracking-wide text-muted-foreground uppercase",
                         meta?.align === "right" && "text-right"
                       )}
                     >
@@ -296,7 +296,7 @@ export function DataTable<TData, TValue>({
                     {table.getVisibleLeafColumns().map((col) => {
                       const meta = col.columnDef.meta;
                       return (
-                        <TableCell key={col.id} className="py-3">
+                        <TableCell key={col.id} className="px-4 py-3">
                           <Skeleton
                             className={cn(
                               "h-4 w-24",
@@ -330,7 +330,7 @@ export function DataTable<TData, TValue>({
                       <TableCell
                         key={cell.id}
                         className={cn(
-                          "py-3",
+                          "px-4 py-3",
                           meta?.align === "right" && "text-right",
                           meta?.mono && "font-mono tabular-nums"
                         )}
