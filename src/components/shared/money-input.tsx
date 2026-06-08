@@ -10,7 +10,13 @@ import {
 import { parseRupiah } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 
-export function MoneyInput({ defaultValue = 0 }: { defaultValue?: number }) {
+export function MoneyInput({
+  defaultValue = 0,
+  onValueChange,
+}: {
+  defaultValue?: number;
+  onValueChange?: (value: number) => void;
+}) {
   const [value, setValue] = React.useState(defaultValue);
   const [text, setText] = React.useState(
     defaultValue ? defaultValue.toLocaleString("id-ID") : ""
@@ -31,6 +37,7 @@ export function MoneyInput({ defaultValue = 0 }: { defaultValue?: number }) {
             const n = parseRupiah(e.target.value);
             setValue(n);
             setText(e.target.value);
+            onValueChange?.(n);
           }}
           onBlur={() =>
             setText(value ? value.toLocaleString("id-ID") : "")
