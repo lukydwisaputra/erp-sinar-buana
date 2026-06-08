@@ -22,7 +22,7 @@ function StatusBadge({ status }: { status: Layanan["status"] }) {
 }
 
 function harga(value: number | null) {
-  return value === null ? "Manual" : formatRupiahCompact(value);
+  return value === null ? "—" : formatRupiahCompact(value);
 }
 
 function makeColumns(onOpen: (l: Layanan) => void): ColumnDef<Layanan>[] {
@@ -52,7 +52,7 @@ function makeColumns(onOpen: (l: Layanan) => void): ColumnDef<Layanan>[] {
     { accessorKey: "kewenangan", header: "Kewenangan" },
     {
       accessorKey: "hargaStandar", header: "Harga Standar",
-      meta: { align: "right", mono: true },
+      meta: { mono: true },
       cell: ({ row }) => harga(row.original.hargaStandar),
     },
     {
