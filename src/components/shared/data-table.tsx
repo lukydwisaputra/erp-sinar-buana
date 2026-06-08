@@ -76,6 +76,8 @@ declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
     align?: "left" | "right";
     mono?: boolean;
+    /** Shrink the column to its content width (e.g. a trailing actions column). */
+    collapse?: boolean;
   }
 }
 
@@ -154,7 +156,7 @@ export function DataTable<TData, TValue>({
         header: "",
         enableSorting: false,
         enableHiding: false,
-        meta: { align: "right" },
+        meta: { align: "right", collapse: true },
         cell: ({ row }) => (
           <RowActions
             onEdit={onEdit ? () => onEdit(row.original) : undefined}
@@ -238,7 +240,8 @@ export function DataTable<TData, TValue>({
                       key={header.id}
                       className={cn(
                         "px-4 text-xs font-medium tracking-wide text-muted-foreground uppercase",
-                        meta?.align === "right" && "text-right"
+                        meta?.align === "right" && "text-right",
+                        meta?.collapse && "w-0"
                       )}
                     >
                       {header.isPlaceholder ? null : canSort ? (
@@ -332,7 +335,8 @@ export function DataTable<TData, TValue>({
                         className={cn(
                           "px-4 py-3",
                           meta?.align === "right" && "text-right",
-                          meta?.mono && "font-mono tabular-nums"
+                          meta?.mono && "font-mono tabular-nums",
+                          meta?.collapse && "w-0"
                         )}
                       >
                         {flexRender(
