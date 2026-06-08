@@ -90,7 +90,7 @@ function LayananDetail({ l }: { l: Layanan }) {
           <InfoRow label="Jenis Dokumen" value={l.jenisDokumen} />
           <InfoRow label="Kewenangan" value={l.kewenangan} />
           <InfoRow label="Dasar Hukum" value={l.dasarHukum} />
-          <InfoRow label="Template Milestone" value={l.templateMilestone ?? "—"} />
+          <InfoRow label="Tahapan Proyek" value={l.templateMilestone ?? "—"} />
         </InfoList>
       </section>
     </div>
