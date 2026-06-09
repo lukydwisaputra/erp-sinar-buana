@@ -5,11 +5,10 @@ import type { SphFormValues } from "@/lib/schemas/penawaran";
 
 /** Full internal SPH package: cover letter (client-facing) + per-service RAB + schedule pages. */
 export function SphDocumentPackage({ values, noSph }: { values: SphFormValues; noSph: string }) {
-  const services = values.items.filter((it) => it.nama.trim().length > 0);
-  // The toggle is the sole control: when on, every service gets its RAB +
-  // Estimasi Waktu appendix page (even if still empty, so the user can fill it);
-  // when off, none are emitted. No service selected → nothing to append.
-  const appendix = values.rincianAktif ? services : [];
+  // The toggle is the SOLE control: when on, every line item gets its RAB +
+  // Estimasi Waktu appendix page (even an unnamed/empty one, so the user sees
+  // and fills the template); when off, none are emitted.
+  const appendix = values.rincianAktif ? values.items : [];
   return (
     <div className="space-y-8">
       <SphCoverLetter values={values} noSph={noSph} />
