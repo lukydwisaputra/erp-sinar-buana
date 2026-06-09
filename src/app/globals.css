@@ -248,13 +248,25 @@
 }
 .sph-doc table { border-color: var(--sph-rule); }
 
-/* SPH document print isolation — only the .sph-print package prints, one page per .sph-doc */
+/* SPH document print isolation — only the .sph-print package prints; each
+ * .sph-doc fills exactly one A4 sheet (footer pinned to the bottom). @page
+ * margin is 0 so the full 210×297mm is available (the letterhead + footer are
+ * full-bleed by design; body content keeps its own padding). */
 @media print {
   body { background: #ffffff; }
   body * { visibility: hidden; }
   .sph-print, .sph-print * { visibility: visible; }
   .sph-print { position: absolute; inset: 0; width: 100%; }
-  .sph-print .sph-doc { page-break-after: always; box-shadow: none !important; border: none !important; width: auto !important; min-height: 0 !important; margin: 0 !important; }
-  .sph-print .sph-doc:last-child { page-break-after: auto; }
+  .sph-print .sph-doc {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    overflow: hidden;
+    box-shadow: none !important;
+    break-after: page;
+    break-inside: avoid;
+  }
+  .sph-print .sph-doc:last-child { break-after: auto; }
 }
-@page { size: A4; margin: 12mm; }
+@page { size: A4; margin: 0; }
