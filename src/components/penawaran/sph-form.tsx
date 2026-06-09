@@ -110,13 +110,6 @@ export function SphForm({
         <FieldError className="mt-2" errors={err(form.formState.errors.items)} />
       </BuilderSection>
 
-      <BuilderSection title="Skema Termin">
-        <TerminEditor
-          termin={values.termin}
-          onChange={(v) => form.setValue("termin", v, { shouldValidate: true })}
-        />
-      </BuilderSection>
-
       <RabSection form={form} />
 
       <BuilderSection title="Catatan & Ketentuan">
@@ -127,6 +120,13 @@ export function SphForm({
             onChange={(v) => form.setValue("catatan", v, { shouldValidate: true })}
           />
         </div>
+      </BuilderSection>
+
+      <BuilderSection title="Skema Termin">
+        <TerminEditor
+          termin={values.termin}
+          onChange={(v) => form.setValue("termin", v, { shouldValidate: true })}
+        />
       </BuilderSection>
     </div>
   );
