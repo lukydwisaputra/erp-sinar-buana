@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -66,6 +67,9 @@ const emptyValues: SphFormValues = {
 
 export function SphBuilder({ existing }: { existing?: Sph }) {
   const [fs, setFs] = React.useState(false);
+  // Portal target only exists after mount (SSR has no document).
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
   const noSph = existing?.id ?? "SPH/006/6.2026";
 
   const form = useForm<SphFormValues>({
@@ -168,16 +172,20 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
         </DialogContent>
       </Dialog>
 
-      {/* Hidden print container — outside the Dialog so window.print() always
-          emits the full package regardless of dialog state. */}
-      <div className="sph-print hidden print:block">
-        <SphDocumentPackage values={values} noSph={noSph} />
-        {/* Running footer: pinned to the bottom of every printed page (the
-            per-page tfoot only reserves space; see globals.css print block). */}
-        <div className="sph-print-footer" aria-hidden>
-          <SphFooter />
-        </div>
-      </div>
+      {/* Print container — portaled to <body> so it's a direct body child the
+          print stylesheet can isolate (everything else is display:none). This
+          keeps the tall app tree out of the print flow (no blank pages). */}
+      {mounted &&
+        createPortal(
+          <div className="sph-print hidden print:block">
+            <SphDocumentPackage values={values} noSph={noSph} />
+            {/* Running footer: pinned to the bottom of every printed page. */}
+            <div className="sph-print-footer" aria-hidden>
+              <SphFooter />
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

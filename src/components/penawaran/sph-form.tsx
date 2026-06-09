@@ -64,6 +64,14 @@ export function SphForm({
       </BuilderSection>
 
       <BuilderSection title="Baris Layanan">
+        <label className="mb-4 flex items-center gap-2 border-b border-border pb-4 text-sm">
+          <Checkbox
+            checked={values.rincianAktif}
+            onCheckedChange={(c) => form.setValue("rincianAktif", c === true)}
+          />
+          Kelola RAB &amp; Estimasi Jadwal (sertakan sebagai lampiran)
+        </label>
+
         <LineItemEditor
           items={values.items}
           options={layananOptions as ServiceOption[]}
@@ -106,14 +114,6 @@ export function SphForm({
           </p>
         </div>
         <FieldError className="mt-2" errors={err(form.formState.errors.items)} />
-
-        <label className="mt-4 flex items-center gap-2 border-t border-border pt-4 text-sm">
-          <Checkbox
-            checked={values.rincianAktif}
-            onCheckedChange={(c) => form.setValue("rincianAktif", c === true)}
-          />
-          Kelola RAB &amp; Estimasi Jadwal (sertakan sebagai lampiran)
-        </label>
       </BuilderSection>
 
       <BuilderSection title="Catatan & Ketentuan">

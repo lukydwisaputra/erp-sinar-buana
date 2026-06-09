@@ -260,45 +260,42 @@
  * full-bleed by design; body content keeps its own padding). */
 @media print {
   body { background: #ffffff; }
-  body * { visibility: hidden; }
-  .sph-print, .sph-print * { visibility: visible; }
-  .sph-print { position: absolute; inset: 0; width: 100%; }
+  /* The print package is portaled to <body>; hide every OTHER body child (the
+   * whole app tree, Radix/sonner portals) so only the document occupies the
+   * print flow. visibility:hidden would keep the tall app in layout and emit
+   * blank pages — display:none removes it entirely. */
+  body > :not(.sph-print) { display: none !important; }
+  .sph-print { display: block !important; position: static; width: 100%; }
+
   .sph-print .sph-doc {
     width: 210mm !important;
     /* Natural height in print — the on-screen 297mm min-height would force
-     * full-page blocks that spill into phantom blank pages. The running footer
-     * (.sph-print-footer) keeps the footer pinned to the bottom regardless. */
+     * full-page blocks that spill into phantom blank pages. */
     min-height: 0 !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     box-shadow: none !important;
     break-after: page;
   }
+  .sph-print .sph-doc:last-child { break-after: auto; }
   /* In print the page table need not stretch to fill a 297mm card. */
   .sph-print .sph-page-table { flex: none !important; }
-  .sph-print .sph-doc:last-child { break-after: auto; }
+
+  /* Repeat the letterhead on every overflow page + a gap beneath it (#1). */
   .sph-print .sph-page-head { display: table-header-group; }
-  /* The tfoot stays in flow so it RESERVES + REPEATS the footer's height on
-   * every printed page (content can never collide with the footer band), but
-   * its paint is hidden — the visible footer is drawn by the fixed band below
-   * so it pins to the physical bottom even on a short last page. */
-  .sph-print .sph-page-foot { display: table-footer-group; }
-  /* Hide the tfoot band AND its children (.sph-print * would otherwise force
-   * them visible again) — it only reserves the footer's repeating height. */
-  .sph-print .sph-page-foot,
-  .sph-print .sph-page-foot * { visibility: hidden; }
-  /* Vertical breathing room on overflow pages: gap under the repeated header
-   * and above the reserved footer so content isn't flush against either band. */
   .sph-print .sph-page-head > tr > td { padding-bottom: 8mm; }
-  .sph-print .sph-page-foot > tr > td { padding-top: 8mm; }
-  /* Single running footer, pinned to the bottom of every printed page. */
+
+  /* The per-card footer (tfoot) is screen-only. In print the running footer
+   * below is the single visible footer; @page margin-bottom reserves its band
+   * on every page so content never collides and it pins to the page bottom. */
+  .sph-print .sph-page-foot { display: none; }
   .sph-print-footer {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    visibility: visible;
     --sph-blue: #1f4e96;
     --sph-blue-soft: #dcebf7;
   }
 }
-@page { size: A4; margin: 0; }
+/* A4 with a bottom band reserved for the fixed running footer. */
+@page { size: A4; margin: 0 0 26mm 0; }
