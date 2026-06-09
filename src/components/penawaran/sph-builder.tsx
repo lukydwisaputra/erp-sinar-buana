@@ -110,9 +110,6 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
             <Button variant="secondary" onClick={onSimpan}>
               <Save className="size-4" /> Simpan Draf
             </Button>
-            <Button onClick={onKirim}>
-              <Send className="size-4" /> Kirim
-            </Button>
           </>
         }
         form={
