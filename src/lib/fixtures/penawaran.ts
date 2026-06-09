@@ -11,7 +11,7 @@ function itemRab(tweak?: (r: { personil: RabRow[]; langsung: RabRow[] }) => void
 
 export const penawaranFixtures: Sph[] = [
   {
-    id: "SPH/001/5.2026", status: "deal",
+    id: "SPH/001/5.2026", status: "deal", rincianAktif: true,
     perusahaanId: "PRSH-001", perusahaanNama: "PT Maju Bersama Industri",
     alamat: "Gedung Menara Sentosa Lantai 12, Jl. Jenderal Gatot Subroto Kav. 21-22, Jakarta Selatan",
     tanggal: "2026-05-04",
@@ -43,7 +43,7 @@ export const penawaranFixtures: Sph[] = [
     ],
   },
   {
-    id: "SPH/002/5.2026", status: "terkirim",
+    id: "SPH/002/5.2026", status: "terkirim", rincianAktif: true,
     perusahaanId: "PRSH-003", perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
     tanggal: "2026-05-12",
@@ -70,7 +70,7 @@ export const penawaranFixtures: Sph[] = [
     ],
   },
   {
-    id: "SPH/003/5.2026", status: "draft",
+    id: "SPH/003/5.2026", status: "draft", rincianAktif: true,
     perusahaanId: "PRSH-005", perusahaanNama: "CV Bahari Sentosa",
     alamat: "Jl. Bypass Ngurah Rai No. 200, Sanur, Denpasar",
     tanggal: "2026-05-20",
@@ -93,7 +93,7 @@ export const penawaranFixtures: Sph[] = [
     ],
   },
   {
-    id: "SPH/004/6.2026", status: "draft",
+    id: "SPH/004/6.2026", status: "draft", rincianAktif: true,
     perusahaanId: "PRSH-006", perusahaanNama: "PT Cahaya Teknik Mandiri",
     alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
     tanggal: "2026-06-02",
@@ -119,7 +119,7 @@ export const penawaranFixtures: Sph[] = [
     ],
   },
   {
-    id: "SPH/005/6.2026", status: "terkirim",
+    id: "SPH/005/6.2026", status: "terkirim", rincianAktif: true,
     perusahaanId: "PRSH-002", perusahaanNama: "CV Sumber Rejeki Pangan",
     alamat: "Jl. Soekarno Hatta No. 88, Kiaracondong, Bandung",
     tanggal: "2026-06-05",

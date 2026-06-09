@@ -44,6 +44,8 @@ export const sphFormSchema = z.object({
   masaBerlakuHari: z.coerce.number(),
   kalimatPembuka: z.string(),
   lampiran: z.string(),
+  /** Whether the RAB & Estimasi Jadwal appendix pages are managed/included. */
+  rincianAktif: z.boolean().default(true),
   items: z.array(sphItemSchema).min(1, "Tambahkan minimal satu layanan."),
   termin: z.array(sphTerminSchema),
   catatan: z.array(z.string()),

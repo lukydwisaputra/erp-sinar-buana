@@ -68,25 +68,38 @@ export function SphForm({
           items={values.items}
           options={layananOptions as ServiceOption[]}
           onChange={(v) => form.setValue("items", v, { shouldValidate: true })}
-          renderRowExtra={(it, i, update) => (
-            <ServiceRabJadwalEditor
-              serviceName={it.nama}
-              rab={it.rab}
-              jadwal={it.jadwal}
-              previous={
-                i > 0
-                  ? { rab: values.items[i - 1].rab, jadwal: values.items[i - 1].jadwal }
-                  : undefined
-              }
-              onChange={(patch) => update(i, patch)}
-              trigger={
-                <Button type="button" variant="outline" size="sm">
-                  <SlidersHorizontal className="size-4" /> Kelola RAB &amp; Jadwal
-                </Button>
-              }
-            />
-          )}
+          renderRowExtra={
+            values.rincianAktif
+              ? (it, i, update) => (
+                  <ServiceRabJadwalEditor
+                    serviceName={it.nama}
+                    rab={it.rab}
+                    jadwal={it.jadwal}
+                    previous={
+                      i > 0
+                        ? { rab: values.items[i - 1].rab, jadwal: values.items[i - 1].jadwal }
+                        : undefined
+                    }
+                    onChange={(patch) => update(i, patch)}
+                    trigger={
+                      <Button type="button" variant="outline" size="sm">
+                        <SlidersHorizontal className="size-4" /> Kelola RAB &amp; Jadwal
+                      </Button>
+                    }
+                  />
+                )
+              : undefined
+          }
         />
+
+        <label className="mt-3 flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={values.rincianAktif}
+            onCheckedChange={(c) => form.setValue("rincianAktif", c === true)}
+          />
+          Kelola RAB &amp; Estimasi Jadwal (sertakan sebagai lampiran)
+        </label>
+
         <div className="mt-3 text-right">
           <div className="text-sm">
             <span className="text-muted-foreground">Total Penawaran: </span>

@@ -275,7 +275,11 @@
    * every printed page (content can never collide with the footer band), but
    * its paint is hidden — the visible footer is drawn by the fixed band below
    * so it pins to the physical bottom even on a short last page. */
-  .sph-print .sph-page-foot { display: table-footer-group; visibility: hidden; }
+  .sph-print .sph-page-foot { display: table-footer-group; }
+  /* Hide the tfoot band AND its children (.sph-print * would otherwise force
+   * them visible again) — it only reserves the footer's repeating height. */
+  .sph-print .sph-page-foot,
+  .sph-print .sph-page-foot * { visibility: hidden; }
   /* Vertical breathing room on overflow pages: gap under the repeated header
    * and above the reserved footer so content isn't flush against either band. */
   .sph-print .sph-page-head > tr > td { padding-bottom: 8mm; }

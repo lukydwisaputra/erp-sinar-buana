@@ -48,6 +48,7 @@ const emptyValues: SphFormValues = {
   masaBerlakuHari: 30,
   kalimatPembuka: "",
   lampiran: "RAB dan Estimasi Waktu",
+  rincianAktif: false,
   items: [
     {
       layananId: "",
@@ -82,6 +83,7 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
           masaBerlakuHari: existing.masaBerlakuHari,
           kalimatPembuka: existing.kalimatPembuka,
           lampiran: existing.lampiran,
+          rincianAktif: existing.rincianAktif,
           items: existing.items,
           termin: existing.termin,
           catatan: existing.catatan,

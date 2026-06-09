@@ -74,7 +74,7 @@ export function SphCoverLetter({
             <span>Surat Penawaran Harga</span>
             <span>Lampiran</span>
             <span>:</span>
-            <span>{values.lampiran || "-"}</span>
+            <span>{values.rincianAktif ? values.lampiran || "-" : "-"}</span>
           </div>
           <div className="shrink-0 text-right">
             <div>
