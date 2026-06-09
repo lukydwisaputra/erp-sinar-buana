@@ -13,9 +13,13 @@ import { terbilang } from "@/lib/terbilang";
 export function MoneyInput({
   defaultValue = 0,
   onValueChange,
+  showTerbilang = true,
+  className,
 }: {
   defaultValue?: number;
   onValueChange?: (value: number) => void;
+  showTerbilang?: boolean;
+  className?: string;
 }) {
   const [value, setValue] = React.useState(defaultValue);
   const [text, setText] = React.useState(
@@ -23,7 +27,7 @@ export function MoneyInput({
   );
 
   return (
-    <div className="w-72">
+    <div className={className ?? "w-72"}>
       <InputGroup>
         <InputGroupAddon>
           <InputGroupText>Rp</InputGroupText>
@@ -44,9 +48,11 @@ export function MoneyInput({
           }
         />
       </InputGroup>
-      <p className="mt-1 text-xs capitalize text-muted-foreground">
-        {value ? `${terbilang(value)} rupiah` : "—"}
-      </p>
+      {showTerbilang && (
+        <p className="mt-1 text-xs capitalize text-muted-foreground">
+          {value ? `${terbilang(value)} rupiah` : "—"}
+        </p>
+      )}
     </div>
   );
 }

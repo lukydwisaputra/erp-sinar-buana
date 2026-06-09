@@ -51,10 +51,10 @@ export function LineItemEditor({ items, options, onChange, renderRowExtra }: {
   return (
     <div className="space-y-3">
       {items.map((it, i) => (
-        <div key={i} className="space-y-2 rounded-md border border-border p-3">
+        <div key={i} className="space-y-3 rounded-md border border-border p-3">
           <ServicePicker value={it} options={options}
             onPick={(opt) => update(i, { layananId: opt.id, nama: opt.nama, harga: opt.harga })} />
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-wrap items-end gap-3">
             <div className="w-20">
               <label className="text-xs text-muted-foreground">Volume</label>
               <Input type="number" min={1} value={it.volume}
@@ -66,8 +66,10 @@ export function LineItemEditor({ items, options, onChange, renderRowExtra }: {
             </div>
             <div className="w-44">
               <label className="text-xs text-muted-foreground">Harga Satuan</label>
-              <MoneyInput defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} />
+              <MoneyInput defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} showTerbilang={false} className="w-full" />
             </div>
+          </div>
+          <div className="flex items-center gap-2">
             {renderRowExtra?.(it, i, update)}
             <Button type="button" variant="ghost" size="icon" aria-label="Hapus baris" onClick={() => removeRow(i)}>
               <Trash2Icon className="size-4 text-destructive" />

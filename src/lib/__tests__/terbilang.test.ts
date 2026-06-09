@@ -18,4 +18,9 @@ describe("terbilang", () => {
     expect(terbilang(1000000)).toBe("satu juta");
     expect(terbilang(1250000)).toBe("satu juta dua ratus lima puluh ribu");
   });
+  it("handles miliar and triliun (not 'ribu miliar')", () => {
+    expect(terbilang(1_000_000_000)).toBe("satu miliar");
+    expect(terbilang(1_000_000_000_000)).toBe("satu triliun");
+    expect(terbilang(2_500_000_000_000)).toBe("dua triliun lima ratus miliar");
+  });
 });

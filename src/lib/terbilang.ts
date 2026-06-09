@@ -9,8 +9,9 @@ function toWords(n: number): string {
   if (n < 2000) return `seribu ${toWords(n - 1000)}`.trim();
   if (n < 1_000_000) return `${toWords(Math.floor(n / 1000))} ribu ${toWords(n % 1000)}`.trim();
   if (n < 1_000_000_000) return `${toWords(Math.floor(n / 1_000_000))} juta ${toWords(n % 1_000_000)}`.trim();
-  const m = 1_000_000_000;
-  return `${toWords(Math.floor(n / m))} miliar ${toWords(n % m)}`.trim();
+  if (n < 1_000_000_000_000) return `${toWords(Math.floor(n / 1_000_000_000))} miliar ${toWords(n % 1_000_000_000)}`.trim();
+  const t = 1_000_000_000_000;
+  return `${toWords(Math.floor(n / t))} triliun ${toWords(n % t)}`.trim();
 }
 
 export function terbilang(n: number): string {

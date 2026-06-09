@@ -46,7 +46,7 @@ export function ServiceRabJadwalEditor({
   return (
     <Dialog>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-[95vw] overflow-y-auto !max-w-[min(95vw,1400px)] sm:max-w-[min(95vw,1400px)]">
         <DialogHeader>
           <DialogTitle>
             Kelola RAB &amp; Jadwal — {serviceName || "Layanan"}
@@ -167,6 +167,8 @@ function RabRowsEditor({
                 key={i}
                 defaultValue={row.hargaSatuan}
                 onValueChange={(n) => update(i, { hargaSatuan: n })}
+                showTerbilang={false}
+                className="w-44"
               />
             </div>
             <div className="w-36 pb-2 text-right">
