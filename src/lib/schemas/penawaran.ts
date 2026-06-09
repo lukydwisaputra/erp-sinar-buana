@@ -16,6 +16,7 @@ export const itemRabSchema = z.object({
 export const itemJadwalSchema = z.object({
   kegiatan: z.array(z.string()),
   highlights: z.array(z.array(z.number())),
+  bulan: z.coerce.number().min(1),
 });
 
 export const sphItemSchema = z.object({

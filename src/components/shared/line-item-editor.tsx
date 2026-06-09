@@ -20,7 +20,7 @@ export type LineItem = {
   harga: number;
   satuan: string;
   rab: { personil: RabRow[]; langsung: RabRow[] };
-  jadwal: { kegiatan: string[]; highlights: number[][] };
+  jadwal: { kegiatan: string[]; highlights: number[][]; bulan: number };
 };
 
 export function LineItemEditor({ items, options, onChange, renderRowExtra }: {

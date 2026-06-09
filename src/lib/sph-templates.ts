@@ -53,15 +53,29 @@ export function jadwalTemplate(serviceName: string): { kegiatan: string[]; highl
   return { kegiatan, highlights };
 }
 
-/** Fresh per-item RAB copy so each line item owns its own rows. */
+/** Fresh per-item RAB for a NEW service — starts EMPTY (user adds rows). */
 export function defaultItemRab(): { personil: RabRow[]; langsung: RabRow[] } {
+  return { personil: [], langsung: [] };
+}
+
+/** Fresh per-item Estimasi Jadwal for a NEW service — starts EMPTY, one month. */
+export function defaultItemJadwal(
+  _serviceName?: string,
+): { kegiatan: string[]; highlights: number[][]; bulan: number } {
+  return { kegiatan: [], highlights: [], bulan: 1 };
+}
+
+/** Filled sample RAB (the old standard template) — used to seed demo fixtures. */
+export function sampleItemRab(): { personil: RabRow[]; langsung: RabRow[] } {
   return {
     personil: rabTemplate.personil.map((r) => ({ ...r })),
     langsung: rabTemplate.langsung.map((r) => ({ ...r })),
   };
 }
 
-/** Fresh per-item Estimasi Jadwal for a service. */
-export function defaultItemJadwal(serviceName: string): { kegiatan: string[]; highlights: number[][] } {
-  return jadwalTemplate(serviceName);
+/** Filled sample Estimasi Jadwal (old 12-week template) over 3 months — for demo fixtures. */
+export function sampleItemJadwal(
+  serviceName: string,
+): { kegiatan: string[]; highlights: number[][]; bulan: number } {
+  return { ...jadwalTemplate(serviceName), bulan: 3 };
 }

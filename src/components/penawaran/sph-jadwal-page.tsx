@@ -15,16 +15,16 @@ function LetterheadStrip(): React.JSX.Element {
   );
 }
 
-const WEEKS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-
 export function SphJadwalPage({
   serviceName,
   jadwal,
 }: {
   serviceName: string;
-  jadwal: { kegiatan: string[]; highlights: number[][] };
+  jadwal: { kegiatan: string[]; highlights: number[][]; bulan: number };
 }): React.JSX.Element {
-  const { kegiatan, highlights } = jadwal;
+  const { kegiatan, highlights, bulan } = jadwal;
+  const months = Array.from({ length: bulan }, (_, i) => i + 1);
+  const weeks = Array.from({ length: bulan * 4 }, (_, i) => i + 1);
 
   return (
     <div className="sph-doc mx-auto w-full max-w-[210mm] bg-white text-[var(--sph-ink)] shadow-sm">
@@ -48,31 +48,23 @@ export function SphJadwalPage({
                 <th rowSpan={3} className="border border-[var(--sph-rule)] px-2 py-1">
                   KEGIATAN
                 </th>
-                <th colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
-                  BULAN - 1
-                </th>
-                <th colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
-                  BULAN - 2
-                </th>
-                <th colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
-                  BULAN - 3
-                </th>
+                {months.map((m) => (
+                  <th key={m} colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
+                    BULAN - {m}
+                  </th>
+                ))}
               </tr>
               <tr>
-                <th colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
-                  MINGGU
-                </th>
-                <th colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
-                  MINGGU
-                </th>
-                <th colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
-                  MINGGU
-                </th>
+                {months.map((m) => (
+                  <th key={m} colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
+                    MINGGU
+                  </th>
+                ))}
               </tr>
               <tr>
-                {[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4].map((w, i) => (
-                  <th key={i} className="w-6 border border-[var(--sph-rule)] px-1 py-1 text-center">
-                    {w}
+                {weeks.map((week) => (
+                  <th key={week} className="w-6 border border-[var(--sph-rule)] px-1 py-1 text-center">
+                    {((week - 1) % 4) + 1}
                   </th>
                 ))}
               </tr>
@@ -86,13 +78,13 @@ export function SphJadwalPage({
                       {rowIndex + 1}
                     </td>
                     <td className="border border-[var(--sph-rule)] px-2 py-1">{nama}</td>
-                    {WEEKS.map((week) => {
+                    {weeks.map((week) => {
                       const on = shaded.includes(week);
                       return (
                         <td
                           key={week}
                           className="w-6 border border-[var(--sph-rule)] px-1 py-1 text-center"
-                          style={on ? { background: "#ffe680" } : undefined}
+                          style={on ? { background: "#ffe9a8" } : undefined}
                         />
                       );
                     })}

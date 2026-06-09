@@ -1,10 +1,10 @@
 import type { Sph } from "@/lib/schemas/penawaran";
-import { defaultItemRab, defaultItemJadwal, type RabRow } from "@/lib/sph-templates";
+import { sampleItemRab, sampleItemJadwal, type RabRow } from "@/lib/sph-templates";
 
-/** Per-item RAB seeded from the standard template; `tweak` lets a service vary
+/** Per-item RAB seeded from the filled sample template; `tweak` lets a service vary
  * a few personil rates so the per-service totals differ a little. */
 function itemRab(tweak?: (r: { personil: RabRow[]; langsung: RabRow[] }) => void) {
-  const rab = defaultItemRab();
+  const rab = sampleItemRab();
   tweak?.(rab);
   return rab;
 }
@@ -23,12 +23,12 @@ export const penawaranFixtures: Sph[] = [
       {
         layananId: "LYN-001", nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil[0].hargaSatuan = 5_000_000; }),
-        jadwal: defaultItemJadwal("Penyusunan Pertek Air Limbah"),
+        jadwal: sampleItemJadwal("Penyusunan Pertek Air Limbah"),
       },
       {
         layananId: "LYN-004", nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 2, harga: 25_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.langsung[3].hargaSatuan = 4_000_000; }),
-        jadwal: defaultItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
+        jadwal: sampleItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
       },
     ],
     termin: [
@@ -55,7 +55,7 @@ export const penawaranFixtures: Sph[] = [
       {
         layananId: "LYN-002", nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 6)); }),
-        jadwal: defaultItemJadwal("Dokumen AMDAL"),
+        jadwal: sampleItemJadwal("Dokumen AMDAL"),
       },
     ],
     termin: [
@@ -82,7 +82,7 @@ export const penawaranFixtures: Sph[] = [
       {
         layananId: "LYN-003", nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
-        jadwal: defaultItemJadwal("Dokumen UKL-UPL"),
+        jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },
     ],
     termin: [{ label: "Termin I", persen: 100, pemicu: "Pelunasan" }],
@@ -105,7 +105,7 @@ export const penawaranFixtures: Sph[] = [
       {
         layananId: "LYN-005", nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.langsung[2].hargaSatuan = 1_500_000; }),
-        jadwal: defaultItemJadwal("Persetujuan Teknis Emisi Udara"),
+        jadwal: sampleItemJadwal("Persetujuan Teknis Emisi Udara"),
       },
     ],
     termin: [
@@ -131,12 +131,12 @@ export const penawaranFixtures: Sph[] = [
       {
         layananId: "LYN-003", nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
-        jadwal: defaultItemJadwal("Dokumen UKL-UPL"),
+        jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },
       {
         layananId: "LYN-004", nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 1)); }),
-        jadwal: defaultItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
+        jadwal: sampleItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
       },
     ],
     termin: [
