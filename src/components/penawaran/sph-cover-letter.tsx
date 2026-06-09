@@ -44,7 +44,7 @@ export function SphCoverLetter({
         {/* Right: configurable logo + company name + tagline. The identity
             block gets generous width so the full company name wraps to 1–2
             lines instead of being truncated. */}
-        <div className="flex max-w-[60%] flex-col items-end justify-center px-8 py-3 text-right">
+        <div className="flex flex-col items-end justify-center px-8 py-3 text-right">
           {companyProfile.logo ? (
             <img src={companyProfile.logo} alt="Logo" className="size-14 object-contain" />
           ) : (
@@ -52,7 +52,7 @@ export function SphCoverLetter({
               <span className="text-sm font-bold tracking-tight">SBMJ</span>
             </div>
           )}
-          <p className="mt-1 whitespace-normal text-[11px] font-bold leading-tight text-[var(--sph-blue)]">
+          <p className="mt-1 whitespace-nowrap text-[11px] font-bold leading-tight text-[var(--sph-blue)]">
             {companyProfile.nama}
           </p>
           <p className="text-[10px] tracking-wide text-[var(--sph-blue-2)]">{companyProfile.tagline}</p>
@@ -155,7 +155,7 @@ export function SphCoverLetter({
           <p className="font-bold">Catatan:</p>
           <ul className="list-disc pl-5 text-sm">
             {values.masaBerlakuAktif && (
-              <li>Penawaran Harga berlaku {values.masaBerlakuHari} hari kalender</li>
+              <li>Penawaran harga berlaku {values.masaBerlakuHari} hari kalender</li>
             )}
             {values.catatan
               .filter((c) => c.trim())
