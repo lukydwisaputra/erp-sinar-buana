@@ -42,6 +42,8 @@ const emptyValues: SphFormValues = {
   perusahaanNama: "",
   alamat: "",
   tanggal: "",
+  masaBerlakuAktif: false,
+  masaBerlakuSampai: "",
   kalimatPembuka: "",
   lampiran: "RAB dan Estimasi Waktu",
   items: [
@@ -55,7 +57,7 @@ const emptyValues: SphFormValues = {
       jadwal: defaultItemJadwal(""),
     },
   ],
-  termin: [{ label: "Termin I", persen: 100, pemicu: "Pelunasan" }],
+  termin: [{ label: "Termin I", persen: 0, pemicu: "" }],
   catatan: [],
 };
 
@@ -74,6 +76,8 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
           perusahaanNama: existing.perusahaanNama,
           alamat: existing.alamat,
           tanggal: existing.tanggal,
+          masaBerlakuAktif: existing.masaBerlakuAktif,
+          masaBerlakuSampai: existing.masaBerlakuSampai,
           kalimatPembuka: existing.kalimatPembuka,
           lampiran: existing.lampiran,
           items: existing.items,

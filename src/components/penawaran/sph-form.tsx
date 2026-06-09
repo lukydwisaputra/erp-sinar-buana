@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Command,
   CommandEmpty,
@@ -174,11 +175,18 @@ function TujuanSection({
 }) {
   const perusahaanId = form.watch("perusahaanId");
   const tanggal = form.watch("tanggal");
+  const masaBerlakuAktif = form.watch("masaBerlakuAktif");
+  const masaBerlakuSampai = form.watch("masaBerlakuSampai");
   const selected = perusahaanOptions.find((p) => p.id === perusahaanId);
   const errors = form.formState.errors;
 
   const [tglOpen, setTglOpen] = React.useState(false);
-  const tglDate = tanggal ? new Date(tanggal) : undefined;
+  const [masaOpen, setMasaOpen] = React.useState(false);
+  // Parse stored yyyy-MM-dd as LOCAL midnight to avoid the UTC off-by-one shift.
+  const tglDate = tanggal ? new Date(tanggal + "T00:00:00") : undefined;
+  const masaDate = masaBerlakuSampai
+    ? new Date(masaBerlakuSampai + "T00:00:00")
+    : undefined;
 
   return (
     <BuilderSection title="Tujuan Penawaran">
@@ -219,7 +227,7 @@ function TujuanSection({
                 mode="single"
                 selected={tglDate}
                 onSelect={(d) => {
-                  form.setValue("tanggal", d ? d.toISOString().slice(0, 10) : "", {
+                  form.setValue("tanggal", d ? format(d, "yyyy-MM-dd") : "", {
                     shouldValidate: true,
                   });
                   setTglOpen(false);
@@ -230,6 +238,53 @@ function TujuanSection({
             </PopoverContent>
           </Popover>
           <FieldError errors={err(errors.tanggal)} />
+        </Field>
+
+        <Field>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={masaBerlakuAktif}
+              onCheckedChange={(c) => {
+                const on = c === true;
+                form.setValue("masaBerlakuAktif", on);
+                if (!on) form.setValue("masaBerlakuSampai", "");
+              }}
+            />
+            Masa Berlaku
+          </label>
+          {masaBerlakuAktif && (
+            <Popover open={masaOpen} onOpenChange={setMasaOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    "w-56 justify-start font-normal",
+                    !masaDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon />
+                  {masaDate
+                    ? format(masaDate, "dd MMMM yyyy", { locale: idLocale })
+                    : "Berlaku sampai"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={masaDate}
+                  onSelect={(d) => {
+                    form.setValue("masaBerlakuSampai", d ? format(d, "yyyy-MM-dd") : "", {
+                      shouldValidate: true,
+                    });
+                    setMasaOpen(false);
+                  }}
+                  locale={idLocale}
+                  autoFocus
+                />
+              </PopoverContent>
+            </Popover>
+          )}
         </Field>
 
         <Field>
@@ -318,14 +373,19 @@ function TerminEditor({
             <label className="text-xs text-muted-foreground">Persen (%)</label>
             <Input
               type="number"
-              value={t.persen}
-              onChange={(e) => update(i, { persen: Number(e.target.value) })}
+              value={t.persen ? String(t.persen) : ""}
+              onChange={(e) => update(i, { persen: Number(e.target.value) || 0 })}
+              placeholder="100"
               className="text-right font-mono tabular-nums"
             />
           </div>
           <div className="min-w-40 flex-1">
             <label className="text-xs text-muted-foreground">Pemicu</label>
-            <Input value={t.pemicu} onChange={(e) => update(i, { pemicu: e.target.value })} />
+            <Input
+              value={t.pemicu}
+              onChange={(e) => update(i, { pemicu: e.target.value })}
+              placeholder="Pelunasan"
+            />
           </div>
           <Button
             type="button"

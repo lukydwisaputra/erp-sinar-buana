@@ -75,7 +75,12 @@ export function SphCoverLetter({
             <span>{values.lampiran || "-"}</span>
           </div>
           <div className="shrink-0 text-right">
-            {companyProfile.kota}, {tglPanjang(values.tanggal)}
+            <div>
+              {companyProfile.kota}, {tglPanjang(values.tanggal)}
+            </div>
+            {values.masaBerlakuAktif && values.masaBerlakuSampai && (
+              <div>Berlaku s/d : {tglPanjang(values.masaBerlakuSampai)}</div>
+            )}
           </div>
         </div>
 
@@ -118,7 +123,7 @@ export function SphCoverLetter({
                     {formatRupiah(it.harga)}
                   </td>
                   <td className="border border-[var(--sph-rule)] px-2 py-1 text-center">
-                    {it.volume}
+                    {it.volume} {it.satuan}
                   </td>
                   <td className="border border-[var(--sph-rule)] px-2 py-1 text-right font-mono tabular-nums">
                     {formatRupiah((Number(it.volume) || 0) * (Number(it.harga) || 0))}

@@ -39,6 +39,8 @@ export const sphFormSchema = z.object({
   perusahaanNama: z.string(),
   alamat: z.string(),
   tanggal: z.string().min(1, "Tanggal wajib diisi."),
+  masaBerlakuAktif: z.boolean(),
+  masaBerlakuSampai: z.string(),
   kalimatPembuka: z.string(),
   lampiran: z.string(),
   items: z.array(sphItemSchema).min(1, "Tambahkan minimal satu layanan."),
