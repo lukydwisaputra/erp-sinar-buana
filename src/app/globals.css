@@ -284,10 +284,15 @@
   .sph-print .sph-page-head { display: table-header-group; }
   .sph-print .sph-page-head > tr > td { padding-bottom: 8mm; }
 
-  /* The per-card footer (tfoot) is screen-only. In print the running footer
-   * below is the single visible footer; @page margin-bottom reserves its band
-   * on every page so content never collides and it pins to the page bottom. */
-  .sph-print .sph-page-foot { display: none; }
+  /* The tfoot stays in flow as an invisible spacer: it RESERVES + REPEATS the
+   * footer's height on every page (content can't collide with the band) while
+   * its paint is hidden. The single visible footer is the fixed band below,
+   * pinned to the physical page bottom (@page margin is 0, so bottom:0 is the
+   * paper edge — no floating gap). A gap above it gives breathing room (#1). */
+  .sph-print .sph-page-foot { display: table-footer-group; }
+  .sph-print .sph-page-foot,
+  .sph-print .sph-page-foot * { visibility: hidden; }
+  .sph-print .sph-page-foot > tr > td { padding-top: 8mm; }
   .sph-print-footer {
     position: fixed;
     bottom: 0;
@@ -297,5 +302,4 @@
     --sph-blue-soft: #dcebf7;
   }
 }
-/* A4 with a bottom band reserved for the fixed running footer. */
-@page { size: A4; margin: 0 0 26mm 0; }
+@page { size: A4; margin: 0; }

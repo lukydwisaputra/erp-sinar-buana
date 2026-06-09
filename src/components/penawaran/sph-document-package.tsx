@@ -6,19 +6,15 @@ import type { SphFormValues } from "@/lib/schemas/penawaran";
 /** Full internal SPH package: cover letter (client-facing) + per-service RAB + schedule pages. */
 export function SphDocumentPackage({ values, noSph }: { values: SphFormValues; noSph: string }) {
   const services = values.items.filter((it) => it.nama.trim().length > 0);
-  // Only emit appendix pages when the feature is on AND the section has content,
-  // so an unchecked toggle (or an empty RAB/Jadwal) never yields a blank page.
-  const rabServices = values.rincianAktif
-    ? services.filter((it) => it.rab.personil.length > 0 || it.rab.langsung.length > 0)
-    : [];
-  const jadwalServices = values.rincianAktif
-    ? services.filter((it) => it.jadwal.kegiatan.length > 0)
-    : [];
+  // The toggle is the sole control: when on, every service gets its RAB +
+  // Estimasi Waktu appendix page (even if still empty, so the user can fill it);
+  // when off, none are emitted. No service selected → nothing to append.
+  const appendix = values.rincianAktif ? services : [];
   return (
     <div className="space-y-8">
       <SphCoverLetter values={values} noSph={noSph} />
-      {rabServices.map((it, i) => <SphRabPage key={`rab-${i}`} serviceName={it.nama} rab={it.rab} />)}
-      {jadwalServices.map((it, i) => <SphJadwalPage key={`jad-${i}`} serviceName={it.nama} jadwal={it.jadwal} />)}
+      {appendix.map((it, i) => <SphRabPage key={`rab-${i}`} serviceName={it.nama} rab={it.rab} />)}
+      {appendix.map((it, i) => <SphJadwalPage key={`jad-${i}`} serviceName={it.nama} jadwal={it.jadwal} />)}
     </div>
   );
 }

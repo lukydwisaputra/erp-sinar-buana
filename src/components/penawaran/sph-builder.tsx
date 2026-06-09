@@ -48,7 +48,7 @@ const emptyValues: SphFormValues = {
   masaBerlakuAktif: false,
   masaBerlakuHari: 30,
   kalimatPembuka: "",
-  lampiran: "RAB dan Estimasi Waktu",
+  lampiran: "",
   rincianAktif: false,
   items: [
     {

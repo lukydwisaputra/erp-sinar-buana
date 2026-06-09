@@ -69,7 +69,7 @@ export function SphForm({
             checked={values.rincianAktif}
             onCheckedChange={(c) => form.setValue("rincianAktif", c === true)}
           />
-          Kelola RAB &amp; Estimasi Jadwal (sertakan sebagai lampiran)
+          Kelola RAB &amp; Estimasi Waktu (sertakan sebagai lampiran)
         </label>
 
         <LineItemEditor
@@ -283,7 +283,7 @@ function TujuanSection({
 
         <Field>
           <FieldLabel>Lampiran</FieldLabel>
-          <Input {...form.register("lampiran")} placeholder="RAB dan Estimasi Waktu" />
+          <Input {...form.register("lampiran")} placeholder="Dokumen pendukung" />
         </Field>
       </div>
     </BuilderSection>

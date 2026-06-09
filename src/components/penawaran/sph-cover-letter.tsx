@@ -25,6 +25,13 @@ export function SphCoverLetter({
 }): React.JSX.Element {
   const total = totalPenawaran(values.items);
 
+  // Lampiran line: the typed "Dokumen pendukung" plus the RAB & Estimasi Waktu
+  // appendix (only when the toggle is on), joined by ", ". Empty → long dash.
+  const lampiranText =
+    [values.lampiran.trim(), values.rincianAktif ? "RAB dan Estimasi Waktu" : ""]
+      .filter(Boolean)
+      .join(", ") || "—";
+
   /* 1. Letterhead band ------------------------------------------------- */
   const letterhead = (
     <div className="relative flex items-stretch justify-between overflow-hidden">
@@ -74,7 +81,7 @@ export function SphCoverLetter({
             <span>Surat Penawaran Harga</span>
             <span>Lampiran</span>
             <span>:</span>
-            <span>{values.rincianAktif ? values.lampiran || "-" : "-"}</span>
+            <span>{lampiranText}</span>
           </div>
           <div className="shrink-0 text-right">
             <div>
