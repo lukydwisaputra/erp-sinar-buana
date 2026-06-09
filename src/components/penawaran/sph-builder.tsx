@@ -58,7 +58,7 @@ const emptyValues: SphFormValues = {
       jadwal: defaultItemJadwal(""),
     },
   ],
-  termin: [{ label: "Termin I", persen: 0, pemicu: "" }],
+  termin: [],
   catatan: [],
 };
 
