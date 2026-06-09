@@ -364,7 +364,15 @@ function TerminEditor({
             <Input
               type="number"
               value={t.persen ? String(t.persen) : ""}
-              onChange={(e) => update(i, { persen: Number(e.target.value) || 0 })}
+              onChange={(e) => {
+                const entered = Math.max(0, Number(e.target.value) || 0);
+                const othersTotal = termin.reduce(
+                  (s, x, idx) => (idx === i ? s : s + (Number(x.persen) || 0)),
+                  0,
+                );
+                const max = Math.max(0, 100 - othersTotal);
+                update(i, { persen: Math.min(entered, max) });
+              }}
               placeholder="100"
               className="text-right font-mono tabular-nums"
             />
