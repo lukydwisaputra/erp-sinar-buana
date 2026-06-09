@@ -115,11 +115,13 @@ export function SphForm({
       <RabSection form={form} />
 
       <BuilderSection title="Catatan & Ketentuan">
-        <MasaBerlakuField form={form} />
-        <CatatanEditor
-          catatan={values.catatan}
-          onChange={(v) => form.setValue("catatan", v, { shouldValidate: true })}
-        />
+        <div className="space-y-4">
+          <MasaBerlakuField form={form} />
+          <CatatanEditor
+            catatan={values.catatan}
+            onChange={(v) => form.setValue("catatan", v, { shouldValidate: true })}
+          />
+        </div>
       </BuilderSection>
     </div>
   );
