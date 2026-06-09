@@ -80,6 +80,11 @@ export function SphForm({
               serviceName={it.nama}
               rab={it.rab}
               jadwal={it.jadwal}
+              previous={
+                i > 0
+                  ? { rab: values.items[i - 1].rab, jadwal: values.items[i - 1].jadwal }
+                  : undefined
+              }
               onChange={(patch) => update(i, patch)}
               trigger={
                 <Button type="button" variant="outline" size="sm">
