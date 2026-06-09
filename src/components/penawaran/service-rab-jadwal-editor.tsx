@@ -286,6 +286,7 @@ function JadwalEditor({
         </div>
       </div>
 
+      {kegiatan.length > 0 && (
       <div className="overflow-x-auto">
         <table className="border-collapse text-sm">
           <thead>
@@ -365,6 +366,7 @@ function JadwalEditor({
           </tbody>
         </table>
       </div>
+      )}
 
       <Button type="button" variant="outline" size="sm" onClick={addKegiatan}>
         <Plus className="size-4" /> Tambah Kegiatan
