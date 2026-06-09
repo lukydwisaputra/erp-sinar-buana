@@ -135,7 +135,7 @@ function RabRowsEditor({
             key={i}
             className="flex flex-wrap items-end gap-3 rounded-md border border-border p-3"
           >
-            <div className="flex-[0_0_50%] w-[280px] max-w-[50%]">
+            <div className="flex-1 min-w-[280px]">
               <label className="text-xs text-muted-foreground">Uraian</label>
               <Input
                 value={row.uraian}
@@ -168,10 +168,10 @@ function RabRowsEditor({
                 defaultValue={row.hargaSatuan}
                 onValueChange={(n) => update(i, { hargaSatuan: n })}
                 showTerbilang={false}
-                className="w-44"
+                className="w-40"
               />
             </div>
-            <div className="w-36 pb-2 text-right">
+            <div className="w-28 pb-2 text-right">
               <span className="text-xs text-muted-foreground">Jumlah: </span>
               <span className="font-mono tabular-nums">
                 {formatRupiah((Number(row.vol) || 0) * (Number(row.hargaSatuan) || 0))}
@@ -287,10 +287,13 @@ function JadwalEditor({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
+        <table className="border-collapse text-sm">
           <thead>
             <tr className="text-center text-xs text-muted-foreground">
-              <th className="px-1 py-1 text-left font-medium">Kegiatan</th>
+              <th className="px-1 py-1 text-left font-medium">
+                <span className="inline-block w-5" />
+                Kegiatan
+              </th>
               {Array.from({ length: bulan }, (_, m) => (
                 <th key={m} colSpan={4} className="px-1 py-1 font-medium">
                   BULAN - {m + 1}
@@ -313,7 +316,7 @@ function JadwalEditor({
               const shaded = highlights[rowIndex] ?? [];
               return (
                 <tr key={rowIndex}>
-                  <td className="py-1.5 pr-2">
+                  <td className="py-1.5 pr-3">
                     <div className="flex items-center gap-1.5">
                       <span className="w-5 text-right text-xs text-muted-foreground">
                         {rowIndex + 1}
@@ -322,7 +325,7 @@ function JadwalEditor({
                         value={nama}
                         onChange={(e) => updateKegiatan(rowIndex, e.target.value)}
                         placeholder="Nama kegiatan…"
-                        className="w-[280px] max-w-[50%]"
+                        className="w-[280px]"
                       />
                     </div>
                   </td>
@@ -335,12 +338,11 @@ function JadwalEditor({
                           aria-label={`Minggu ${week} ${on ? "aktif" : "nonaktif"}`}
                           aria-pressed={on}
                           onClick={() => toggleWeek(rowIndex, week)}
-                          style={on ? { background: "#ffe9a8" } : undefined}
                           className={cn(
                             "size-6 rounded-sm border transition-colors",
                             on
-                              ? "border-amber-300 hover:!bg-amber-300/70"
-                              : "border-border bg-transparent hover:bg-amber-300/70"
+                              ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                              : "border-border bg-transparent hover:bg-primary/30"
                           )}
                         />
                       </td>

@@ -15,7 +15,7 @@ export const penawaranFixtures: Sph[] = [
     perusahaanId: "PRSH-001", perusahaanNama: "PT Maju Bersama Industri",
     alamat: "Gedung Menara Sentosa Lantai 12, Jl. Jenderal Gatot Subroto Kav. 21-22, Jakarta Selatan",
     tanggal: "2026-05-04",
-    masaBerlakuAktif: true, masaBerlakuSampai: "2026-06-04",
+    masaBerlakuAktif: true, masaBerlakuHari: 30,
     lampiran: "RAB dan Estimasi Waktu",
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Penyusunan Pertek Air Limbah dan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
@@ -47,7 +47,7 @@ export const penawaranFixtures: Sph[] = [
     perusahaanId: "PRSH-003", perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
     tanggal: "2026-05-12",
-    masaBerlakuAktif: false, masaBerlakuSampai: "",
+    masaBerlakuAktif: false, masaBerlakuHari: 30,
     lampiran: "RAB dan Estimasi Waktu",
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen AMDAL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
@@ -74,7 +74,7 @@ export const penawaranFixtures: Sph[] = [
     perusahaanId: "PRSH-005", perusahaanNama: "CV Bahari Sentosa",
     alamat: "Jl. Bypass Ngurah Rai No. 200, Sanur, Denpasar",
     tanggal: "2026-05-20",
-    masaBerlakuAktif: false, masaBerlakuSampai: "",
+    masaBerlakuAktif: false, masaBerlakuHari: 30,
     lampiran: "RAB dan Estimasi Waktu",
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
@@ -97,7 +97,7 @@ export const penawaranFixtures: Sph[] = [
     perusahaanId: "PRSH-006", perusahaanNama: "PT Cahaya Teknik Mandiri",
     alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
     tanggal: "2026-06-02",
-    masaBerlakuAktif: false, masaBerlakuSampai: "",
+    masaBerlakuAktif: false, masaBerlakuHari: 30,
     lampiran: "RAB dan Estimasi Waktu",
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Persetujuan Teknis Emisi Udara. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
@@ -123,7 +123,7 @@ export const penawaranFixtures: Sph[] = [
     perusahaanId: "PRSH-002", perusahaanNama: "CV Sumber Rejeki Pangan",
     alamat: "Jl. Soekarno Hatta No. 88, Kiaracondong, Bandung",
     tanggal: "2026-06-05",
-    masaBerlakuAktif: false, masaBerlakuSampai: "",
+    masaBerlakuAktif: false, masaBerlakuHari: 30,
     lampiran: "RAB dan Estimasi Waktu",
     kalimatPembuka:
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL dan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",

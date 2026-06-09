@@ -115,12 +115,48 @@ export function SphForm({
       <RabSection form={form} />
 
       <BuilderSection title="Catatan & Ketentuan">
+        <MasaBerlakuField form={form} />
         <CatatanEditor
           catatan={values.catatan}
           onChange={(v) => form.setValue("catatan", v, { shouldValidate: true })}
         />
       </BuilderSection>
     </div>
+  );
+}
+
+/* ---------- Masa Berlaku (day-count) ---------- */
+function MasaBerlakuField({ form }: { form: UseFormReturn<SphFormValues> }) {
+  const masaBerlakuAktif = form.watch("masaBerlakuAktif");
+  const masaBerlakuHari = form.watch("masaBerlakuHari");
+
+  return (
+    <Field>
+      <label className="flex items-center gap-2 text-sm">
+        <Checkbox
+          checked={masaBerlakuAktif}
+          onCheckedChange={(c) => form.setValue("masaBerlakuAktif", c === true)}
+        />
+        Masa Berlaku
+      </label>
+      {masaBerlakuAktif && (
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min={1}
+            value={masaBerlakuHari ? String(masaBerlakuHari) : ""}
+            onChange={(e) =>
+              form.setValue("masaBerlakuHari", Number(e.target.value) || 0, {
+                shouldValidate: true,
+              })
+            }
+            placeholder="30"
+            className="w-24 text-right font-mono tabular-nums"
+          />
+          <span className="text-sm text-muted-foreground">hari kalender</span>
+        </div>
+      )}
+    </Field>
   );
 }
 
@@ -175,18 +211,12 @@ function TujuanSection({
 }) {
   const perusahaanId = form.watch("perusahaanId");
   const tanggal = form.watch("tanggal");
-  const masaBerlakuAktif = form.watch("masaBerlakuAktif");
-  const masaBerlakuSampai = form.watch("masaBerlakuSampai");
   const selected = perusahaanOptions.find((p) => p.id === perusahaanId);
   const errors = form.formState.errors;
 
   const [tglOpen, setTglOpen] = React.useState(false);
-  const [masaOpen, setMasaOpen] = React.useState(false);
   // Parse stored yyyy-MM-dd as LOCAL midnight to avoid the UTC off-by-one shift.
   const tglDate = tanggal ? new Date(tanggal + "T00:00:00") : undefined;
-  const masaDate = masaBerlakuSampai
-    ? new Date(masaBerlakuSampai + "T00:00:00")
-    : undefined;
 
   return (
     <BuilderSection title="Tujuan Penawaran">
@@ -238,53 +268,6 @@ function TujuanSection({
             </PopoverContent>
           </Popover>
           <FieldError errors={err(errors.tanggal)} />
-        </Field>
-
-        <Field>
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={masaBerlakuAktif}
-              onCheckedChange={(c) => {
-                const on = c === true;
-                form.setValue("masaBerlakuAktif", on);
-                if (!on) form.setValue("masaBerlakuSampai", "");
-              }}
-            />
-            Masa Berlaku
-          </label>
-          {masaBerlakuAktif && (
-            <Popover open={masaOpen} onOpenChange={setMasaOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "w-56 justify-start font-normal",
-                    !masaDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon />
-                  {masaDate
-                    ? format(masaDate, "dd MMMM yyyy", { locale: idLocale })
-                    : "Berlaku sampai"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={masaDate}
-                  onSelect={(d) => {
-                    form.setValue("masaBerlakuSampai", d ? format(d, "yyyy-MM-dd") : "", {
-                      shouldValidate: true,
-                    });
-                    setMasaOpen(false);
-                  }}
-                  locale={idLocale}
-                  autoFocus
-                />
-              </PopoverContent>
-            </Popover>
-          )}
         </Field>
 
         <Field>

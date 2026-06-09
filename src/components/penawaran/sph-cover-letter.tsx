@@ -78,9 +78,6 @@ export function SphCoverLetter({
             <div>
               {companyProfile.kota}, {tglPanjang(values.tanggal)}
             </div>
-            {values.masaBerlakuAktif && values.masaBerlakuSampai && (
-              <div>Berlaku s/d : {tglPanjang(values.masaBerlakuSampai)}</div>
-            )}
           </div>
         </div>
 
@@ -157,6 +154,9 @@ export function SphCoverLetter({
         <div className="mt-4">
           <p className="font-bold">Catatan:</p>
           <ul className="list-disc pl-5 text-sm">
+            {values.masaBerlakuAktif && (
+              <li>Penawaran Harga berlaku {values.masaBerlakuHari} hari kalender</li>
+            )}
             {values.catatan
               .filter((c) => c.trim())
               .map((c, i) => (

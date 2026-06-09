@@ -1,4 +1,5 @@
 import { companyProfile } from "@/lib/company-profile";
+import { cn } from "@/lib/utils";
 
 /** Compact SBMJ letterhead strip shared by the RAB / Jadwal pages. */
 function LetterheadStrip(): React.JSX.Element {
@@ -83,8 +84,10 @@ export function SphJadwalPage({
                       return (
                         <td
                           key={week}
-                          className="w-6 border border-[var(--sph-rule)] px-1 py-1 text-center"
-                          style={on ? { background: "#ffe9a8" } : undefined}
+                          className={cn(
+                            "w-6 border border-[var(--sph-rule)] px-1 py-1 text-center",
+                            on && "bg-primary/25",
+                          )}
                         />
                       );
                     })}
