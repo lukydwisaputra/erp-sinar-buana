@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Maximize2, Save, Send } from "lucide-react";
+import { Download, Maximize2, Save, Send, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -125,26 +125,36 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
       />
 
       <Dialog open={fs} onOpenChange={setFs}>
-        <DialogContent className="max-h-[95vh] max-w-3xl overflow-y-auto p-0">
+        <DialogContent
+          showCloseButton={false}
+          className="flex h-[92vh] w-[92vw] flex-col overflow-hidden p-0 !max-w-[92vw]"
+        >
           <DialogTitle className="sr-only">Pratinjau SPH</DialogTitle>
-          <div className="bg-muted/40 p-4 sm:p-6">
+          {/* Toolbar lives inside the preview content (not the modal corner). */}
+          <div className="flex shrink-0 items-center justify-end gap-2 border-b border-border bg-background px-4 py-2">
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Download className="size-4" /> Unduh
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setFs(false);
+                onKirim();
+              }}
+            >
+              <Send className="size-4" /> Kirim
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Tutup"
+              onClick={() => setFs(false)}
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-muted/40 p-4 sm:p-6">
             <SphDocumentPackage values={values} noSph={noSph} />
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setFs(false)}>
-                Tutup
-              </Button>
-              <Button variant="outline" onClick={() => window.print()}>
-                Unduh
-              </Button>
-              <Button
-                onClick={() => {
-                  setFs(false);
-                  onKirim();
-                }}
-              >
-                Kirim
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
