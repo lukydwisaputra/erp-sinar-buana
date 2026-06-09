@@ -171,7 +171,7 @@ function RabRowsEditor({
                 className="w-40"
               />
             </div>
-            <div className="w-28 pb-2 text-right">
+            <div className="ml-auto w-28 pb-2 text-right">
               <span className="text-xs text-muted-foreground">Jumlah: </span>
               <span className="font-mono tabular-nums">
                 {formatRupiah((Number(row.vol) || 0) * (Number(row.hargaSatuan) || 0))}
