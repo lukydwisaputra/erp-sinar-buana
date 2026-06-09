@@ -2,6 +2,9 @@ import { companyProfile } from "@/lib/company-profile";
 import { cn } from "@/lib/utils";
 import { SphPage } from "@/components/penawaran/sph-page";
 
+/** Max months shown on a single Estimasi Jadwal sheet; the rest continue on new pages. */
+const MAX_MONTHS_PER_PAGE = 6;
+
 /** Compact SBMJ letterhead strip shared by the RAB / Jadwal pages. */
 function LetterheadStrip(): React.JSX.Element {
   return (
@@ -17,39 +20,49 @@ function LetterheadStrip(): React.JSX.Element {
   );
 }
 
-export function SphJadwalPage({
+/** One sheet of the schedule matrix for a chunk of months (same activity rows, different months). */
+function JadwalSheet({
   serviceName,
-  jadwal,
+  kegiatan,
+  highlights,
+  startMonth,
+  endMonth,
+  pageInfo,
 }: {
   serviceName: string;
-  jadwal: { kegiatan: string[]; highlights: number[][]; bulan: number };
+  kegiatan: string[];
+  highlights: number[][];
+  startMonth: number;
+  endMonth: number;
+  pageInfo?: { page: number; total: number };
 }): React.JSX.Element {
-  const { kegiatan, highlights, bulan } = jadwal;
-  const months = Array.from({ length: bulan }, (_, i) => i + 1);
-  const weeks = Array.from({ length: bulan * 4 }, (_, i) => i + 1);
+  const months: number[] = [];
+  for (let m = startMonth; m <= endMonth; m++) months.push(m);
+  // Global week numbers (1-based, continuous across all months) for this chunk.
+  const weeks: number[] = [];
+  for (const m of months) for (let w = 1; w <= 4; w++) weeks.push((m - 1) * 4 + w);
 
   return (
     <SphPage>
       <LetterheadStrip />
-
       <div className="px-8 py-6 text-sm">
-        {/* Title */}
         <div className="text-center font-bold leading-snug">
           <p>ESTIMASI JADWAL RENCANA KEGIATAN</p>
           <p>{serviceName.toUpperCase()}</p>
+          {pageInfo && (
+            <p className="text-xs font-normal text-[var(--sph-blue-2)]">
+              Halaman {pageInfo.page} dari {pageInfo.total} — Bulan {startMonth}
+              {endMonth > startMonth ? `–${endMonth}` : ""}
+            </p>
+          )}
         </div>
 
-        {/* Matrix */}
         <div className="mt-6 overflow-x-auto">
           <table className="w-full border-collapse border border-[var(--sph-rule)] text-xs">
             <thead className="bg-[var(--sph-blue-soft)] text-center font-bold">
               <tr>
-                <th rowSpan={3} className="border border-[var(--sph-rule)] px-2 py-1">
-                  NO
-                </th>
-                <th rowSpan={3} className="border border-[var(--sph-rule)] px-2 py-1">
-                  KEGIATAN
-                </th>
+                <th rowSpan={3} className="border border-[var(--sph-rule)] px-2 py-1">NO</th>
+                <th rowSpan={3} className="border border-[var(--sph-rule)] px-2 py-1">KEGIATAN</th>
                 {months.map((m) => (
                   <th key={m} colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
                     BULAN - {m}
@@ -76,22 +89,17 @@ export function SphJadwalPage({
                 const shaded = highlights[rowIndex] ?? [];
                 return (
                   <tr key={rowIndex}>
-                    <td className="border border-[var(--sph-rule)] px-2 py-1 text-center">
-                      {rowIndex + 1}
-                    </td>
+                    <td className="border border-[var(--sph-rule)] px-2 py-1 text-center">{rowIndex + 1}</td>
                     <td className="border border-[var(--sph-rule)] px-2 py-1">{nama}</td>
-                    {weeks.map((week) => {
-                      const on = shaded.includes(week);
-                      return (
-                        <td
-                          key={week}
-                          className={cn(
-                            "w-6 border border-[var(--sph-rule)] px-1 py-1 text-center",
-                            on && "bg-primary/25",
-                          )}
-                        />
-                      );
-                    })}
+                    {weeks.map((week) => (
+                      <td
+                        key={week}
+                        className={cn(
+                          "w-6 border border-[var(--sph-rule)] px-1 py-1 text-center",
+                          shaded.includes(week) && "bg-primary/25",
+                        )}
+                      />
+                    ))}
                   </tr>
                 );
               })}
@@ -100,5 +108,36 @@ export function SphJadwalPage({
         </div>
       </div>
     </SphPage>
+  );
+}
+
+export function SphJadwalPage({
+  serviceName,
+  jadwal,
+}: {
+  serviceName: string;
+  jadwal: { kegiatan: string[]; highlights: number[][]; bulan: number };
+}): React.JSX.Element {
+  const { kegiatan, highlights, bulan } = jadwal;
+  const pageCount = Math.max(1, Math.ceil(bulan / MAX_MONTHS_PER_PAGE));
+
+  return (
+    <>
+      {Array.from({ length: pageCount }, (_, p) => {
+        const startMonth = p * MAX_MONTHS_PER_PAGE + 1;
+        const endMonth = Math.min(bulan || 1, startMonth + MAX_MONTHS_PER_PAGE - 1);
+        return (
+          <JadwalSheet
+            key={p}
+            serviceName={serviceName}
+            kegiatan={kegiatan}
+            highlights={highlights}
+            startMonth={startMonth}
+            endMonth={endMonth}
+            pageInfo={pageCount > 1 ? { page: p + 1, total: pageCount } : undefined}
+          />
+        );
+      })}
+    </>
   );
 }
