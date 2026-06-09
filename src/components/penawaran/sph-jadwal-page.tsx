@@ -1,24 +1,9 @@
-import { companyProfile } from "@/lib/company-profile";
 import { cn } from "@/lib/utils";
-import { SphPage } from "@/components/penawaran/sph-page";
+import { DocumentPage } from "@/components/shared/document/document-page";
+import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
 
 /** Max months shown on a single Estimasi Jadwal sheet; the rest continue on new pages. */
 const MAX_MONTHS_PER_PAGE = 6;
-
-/** Compact SBMJ letterhead strip shared by the RAB / Jadwal pages. */
-function LetterheadStrip(): React.JSX.Element {
-  return (
-    <div className="flex items-center gap-3 border-b border-[var(--sph-rule)] px-8 py-3">
-      <div className="flex size-10 items-center justify-center rounded-full border-2 border-[var(--sph-blue)] text-[var(--sph-blue)]">
-        <span className="text-[11px] font-bold tracking-tight">SBMJ</span>
-      </div>
-      <div>
-        <p className="text-xs font-bold text-[var(--sph-blue)]">{companyProfile.nama}</p>
-        <p className="text-[10px] tracking-wide text-[var(--sph-blue-2)]">{companyProfile.tagline}</p>
-      </div>
-    </div>
-  );
-}
 
 /** One sheet of the schedule matrix for a chunk of months (same activity rows, different months). */
 function JadwalSheet({
@@ -43,13 +28,13 @@ function JadwalSheet({
   for (const m of months) for (let w = 1; w <= 4; w++) weeks.push((m - 1) * 4 + w);
 
   return (
-    <SphPage header={<LetterheadStrip />}>
+    <DocumentPage header={<DocumentLetterhead variant="strip" />}>
       <div className="px-8 py-6 text-sm">
         <div className="text-center font-bold leading-snug">
           <p>ESTIMASI JADWAL RENCANA KEGIATAN</p>
           <p>{serviceName.toUpperCase()}</p>
           {pageInfo && (
-            <p className="text-xs font-normal text-[var(--sph-blue-2)]">
+            <p className="text-xs font-normal text-[var(--doc-blue-2)]">
               Halaman {pageInfo.page} dari {pageInfo.total} — Bulan {startMonth}
               {endMonth > startMonth ? `–${endMonth}` : ""}
             </p>
@@ -57,27 +42,27 @@ function JadwalSheet({
         </div>
 
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full border-collapse border border-[var(--sph-rule)] text-xs">
-            <thead className="bg-[var(--sph-blue-soft)] text-center font-bold">
+          <table className="w-full border-collapse border border-[var(--doc-rule)] text-xs">
+            <thead className="bg-[var(--doc-blue-soft)] text-center font-bold">
               <tr>
-                <th rowSpan={3} className="border border-[var(--sph-rule)] px-2 py-1">NO</th>
-                <th rowSpan={3} className="border border-[var(--sph-rule)] px-2 py-1">KEGIATAN</th>
+                <th rowSpan={3} className="border border-[var(--doc-rule)] px-2 py-1">NO</th>
+                <th rowSpan={3} className="border border-[var(--doc-rule)] px-2 py-1">KEGIATAN</th>
                 {months.map((m) => (
-                  <th key={m} colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
+                  <th key={m} colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1">
                     BULAN - {m}
                   </th>
                 ))}
               </tr>
               <tr>
                 {months.map((m) => (
-                  <th key={m} colSpan={4} className="border border-[var(--sph-rule)] px-2 py-1">
+                  <th key={m} colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1">
                     MINGGU
                   </th>
                 ))}
               </tr>
               <tr>
                 {weeks.map((week) => (
-                  <th key={week} className="w-6 border border-[var(--sph-rule)] px-1 py-1 text-center">
+                  <th key={week} className="w-6 border border-[var(--doc-rule)] px-1 py-1 text-center">
                     {((week - 1) % 4) + 1}
                   </th>
                 ))}
@@ -88,13 +73,13 @@ function JadwalSheet({
                 const shaded = highlights[rowIndex] ?? [];
                 return (
                   <tr key={rowIndex}>
-                    <td className="border border-[var(--sph-rule)] px-2 py-1 text-center">{rowIndex + 1}</td>
-                    <td className="border border-[var(--sph-rule)] px-2 py-1">{nama}</td>
+                    <td className="border border-[var(--doc-rule)] px-2 py-1 text-center">{rowIndex + 1}</td>
+                    <td className="border border-[var(--doc-rule)] px-2 py-1">{nama}</td>
                     {weeks.map((week) => (
                       <td
                         key={week}
                         className={cn(
-                          "w-6 border border-[var(--sph-rule)] px-1 py-1 text-center",
+                          "w-6 border border-[var(--doc-rule)] px-1 py-1 text-center",
                           shaded.includes(week) && "bg-primary/25",
                         )}
                       />
@@ -106,7 +91,7 @@ function JadwalSheet({
           </table>
         </div>
       </div>
-    </SphPage>
+    </DocumentPage>
   );
 }
 

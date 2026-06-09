@@ -232,30 +232,30 @@
 }
 
 /* ---------------------------------------------------------------------------
- * SPH document branding — SBMJ blue letterhead palette.
- * Intentionally NOT part of the app token system: the SPH document is a real
+ * Document branding — SBMJ blue letterhead palette.
+ * Intentionally NOT part of the app token system: the document is a real
  * branded artifact (its letterhead/footer differ from the green app chrome).
- * Scoped to .sph-doc so it never leaks into app components.
+ * Scoped to .doc-page so it never leaks into app components.
  * ------------------------------------------------------------------------- */
-.sph-doc {
-  --sph-blue: #1f4e96;        /* deep royal blue — company name, headings */
-  --sph-blue-2: #2e78c7;      /* medium blue — bands, tagline */
-  --sph-blue-soft: #dcebf7;   /* light blue — header/footer band background */
-  --sph-ink: #1a1a1a;         /* near-black document text */
-  --sph-rule: #b8b8b8;        /* table/border gray */
-  color: var(--sph-ink);
+.doc-page {
+  --doc-blue: #1f4e96;        /* deep royal blue — company name, headings */
+  --doc-blue-2: #2e78c7;      /* medium blue — bands, tagline */
+  --doc-blue-soft: #dcebf7;   /* light blue — header/footer band background */
+  --doc-ink: #1a1a1a;         /* near-black document text */
+  --doc-rule: #b8b8b8;        /* table/border gray */
+  color: var(--doc-ink);
   background: #ffffff;
 }
-.sph-doc table { border-color: var(--sph-rule); }
+.doc-page table { border-color: var(--doc-rule); }
 
 /* A4 page table: header (thead) + footer (tfoot) + body (tbody). On screen the
  * table fills the 297mm card so the footer sits at the bottom; in print the
  * thead/tfoot repeat on every page the content overflows onto. */
-.sph-page-table { width: 100%; table-layout: auto; }
-.sph-page-table > tbody > tr > td { vertical-align: top; height: 100%; }
+.doc-page-table { width: 100%; table-layout: auto; }
+.doc-page-table > tbody > tr > td { vertical-align: top; height: 100%; }
 
-/* SPH document print isolation — only the .sph-print package prints; each
- * .sph-doc fills exactly one A4 sheet (footer pinned to the bottom). @page
+/* Document print isolation — only the .doc-print package prints; each
+ * .doc-page fills exactly one A4 sheet (footer pinned to the bottom). @page
  * margin is 0 so the full 210×297mm is available (the letterhead + footer are
  * full-bleed by design; body content keeps its own padding). */
 @media print {
@@ -264,10 +264,10 @@
    * whole app tree, Radix/sonner portals) so only the document occupies the
    * print flow. visibility:hidden would keep the tall app in layout and emit
    * blank pages — display:none removes it entirely. */
-  body > :not(.sph-print) { display: none !important; }
-  .sph-print { display: block !important; position: static; width: 100%; }
+  body > :not(.doc-print) { display: none !important; }
+  .doc-print { display: block !important; position: static; width: 100%; }
 
-  .sph-print .sph-doc {
+  .doc-print .doc-page {
     width: 210mm !important;
     /* Natural height in print — the on-screen 297mm min-height would force
      * full-page blocks that spill into phantom blank pages. */
@@ -276,30 +276,30 @@
     box-shadow: none !important;
     break-after: page;
   }
-  .sph-print .sph-doc:last-child { break-after: auto; }
+  .doc-print .doc-page:last-child { break-after: auto; }
   /* In print the page table need not stretch to fill a 297mm card. */
-  .sph-print .sph-page-table { flex: none !important; }
+  .doc-print .doc-page-table { flex: none !important; }
 
   /* Repeat the letterhead on every overflow page + a gap beneath it (#1). */
-  .sph-print .sph-page-head { display: table-header-group; }
-  .sph-print .sph-page-head > tr > td { padding-bottom: 8mm; }
+  .doc-print .doc-page-head { display: table-header-group; }
+  .doc-print .doc-page-head > tr > td { padding-bottom: 8mm; }
 
   /* The tfoot stays in flow as an invisible spacer: it RESERVES + REPEATS the
    * footer's height on every page (content can't collide with the band) while
    * its paint is hidden. The single visible footer is the fixed band below,
    * pinned to the physical page bottom (@page margin is 0, so bottom:0 is the
    * paper edge — no floating gap). A gap above it gives breathing room (#1). */
-  .sph-print .sph-page-foot { display: table-footer-group; }
-  .sph-print .sph-page-foot,
-  .sph-print .sph-page-foot * { visibility: hidden; }
-  .sph-print .sph-page-foot > tr > td { padding-top: 8mm; }
-  .sph-print-footer {
+  .doc-print .doc-page-foot { display: table-footer-group; }
+  .doc-print .doc-page-foot,
+  .doc-print .doc-page-foot * { visibility: hidden; }
+  .doc-print .doc-page-foot > tr > td { padding-top: 8mm; }
+  .doc-print-footer {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    --sph-blue: #1f4e96;
-    --sph-blue-soft: #dcebf7;
+    --doc-blue: #1f4e96;
+    --doc-blue-soft: #dcebf7;
   }
 }
 @page { size: A4; margin: 0; }

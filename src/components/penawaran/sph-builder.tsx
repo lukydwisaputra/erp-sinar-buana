@@ -1,17 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { delay } from "@/lib/data/_delay";
 import { usePending } from "@/lib/use-pending";
-import { Download, Maximize2, Save, Send, X } from "lucide-react";
+import { Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { BuilderLayout } from "@/components/shared/builder-layout";
+import { DocumentBuilder } from "@/components/shared/document/document-builder";
 import { ScaleToFit } from "@/components/shared/scale-to-fit";
 import {
   SphForm,
@@ -20,7 +18,6 @@ import {
 } from "@/components/penawaran/sph-form";
 import { SphCoverLetter } from "@/components/penawaran/sph-cover-letter";
 import { SphDocumentPackage } from "@/components/penawaran/sph-document-package";
-import { SphFooter } from "@/components/penawaran/sph-page";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { katalogFixtures } from "@/lib/fixtures/katalog";
 import { defaultItemRab, defaultItemJadwal } from "@/lib/sph-templates";
@@ -68,10 +65,6 @@ const emptyValues: SphFormValues = {
 };
 
 export function SphBuilder({ existing }: { existing?: Sph }) {
-  const [fs, setFs] = React.useState(false);
-  // Portal target only exists after mount (SSR has no document).
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
   const noSph = existing?.id ?? "SPH/006/6.2026";
 
   const form = useForm<SphFormValues>({
@@ -100,7 +93,6 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
   const values = form.watch();
 
   const [saving, runSave] = usePending();
-  const [sending, runSend] = usePending();
   const onSimpan = () =>
     runSave(
       form.handleSubmit(async () => {
@@ -108,91 +100,25 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
         toast.success("Demo: draf tidak benar-benar disimpan");
       }),
     );
-  const onKirim = () =>
-    runSend(
-      form.handleSubmit(async () => {
-        await delay();
-        toast.success("Demo: SPH tidak benar-benar dikirim");
-        setFs(false);
-      }),
-    );
+  const onKirim = form.handleSubmit(async () => {
+    await delay();
+    toast.success("Demo: SPH tidak benar-benar dikirim");
+  });
 
   return (
-    <>
-      <BuilderLayout
-        title={existing ? existing.id : "Buat SPH"}
-        subtitle="Susun Surat Penawaran Harga. Pratinjau diperbarui otomatis."
-        actions={
-          <>
-            <Button variant="outline" onClick={() => setFs(true)}>
-              <Maximize2 className="size-4" /> Pratinjau Layar Penuh
-            </Button>
-            <Button variant="secondary" loading={saving} onClick={onSimpan}>
-              <Save className="size-4" /> Simpan Draf
-            </Button>
-          </>
-        }
-        form={
-          <SphForm
-            form={form}
-            perusahaanOptions={perusahaanOptions}
-            layananOptions={layananOptions}
-          />
-        }
-        preview={
-          <ScaleToFit>
-            <SphCoverLetter values={values} noSph={noSph} />
-          </ScaleToFit>
-        }
-      />
-
-      <Dialog open={fs} onOpenChange={setFs}>
-        <DialogContent
-          showCloseButton={false}
-          className="flex h-[92vh] w-[92vw] flex-col overflow-hidden p-0 !max-w-[92vw]"
-        >
-          <DialogTitle className="sr-only">Pratinjau SPH</DialogTitle>
-          {/* Toolbar lives inside the preview content (not the modal corner). */}
-          <div className="flex shrink-0 items-center justify-end gap-2 border-b border-border bg-background px-4 py-2">
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
-              <Download className="size-4" /> Unduh
-            </Button>
-            <Button size="sm" loading={sending} onClick={onKirim}>
-              <Send className="size-4" /> Kirim
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Tutup"
-              onClick={() => setFs(false)}
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-          <div className="flex-1 overflow-y-auto bg-muted/40 p-4 sm:p-6">
-            <div className="mx-auto max-w-[210mm]">
-              <ScaleToFit>
-                <SphDocumentPackage values={values} noSph={noSph} />
-              </ScaleToFit>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Print container — portaled to <body> so it's a direct body child the
-          print stylesheet can isolate (everything else is display:none). This
-          keeps the tall app tree out of the print flow (no blank pages). */}
-      {mounted &&
-        createPortal(
-          <div className="sph-print hidden print:block">
-            <SphDocumentPackage values={values} noSph={noSph} />
-            {/* Running footer: pinned to the bottom of every printed page. */}
-            <div className="sph-print-footer" aria-hidden>
-              <SphFooter />
-            </div>
-          </div>,
-          document.body,
-        )}
-    </>
+    <DocumentBuilder
+      title={existing ? existing.id : "Buat SPH"}
+      subtitle="Susun Surat Penawaran Harga. Pratinjau diperbarui otomatis."
+      previewTitle="Pratinjau SPH"
+      actions={
+        <Button variant="secondary" loading={saving} onClick={onSimpan}>
+          <Save className="size-4" /> Simpan Draf
+        </Button>
+      }
+      form={<SphForm form={form} perusahaanOptions={perusahaanOptions} layananOptions={layananOptions} />}
+      sidePreview={<ScaleToFit><SphCoverLetter values={values} noSph={noSph} /></ScaleToFit>}
+      doc={<SphDocumentPackage values={values} noSph={noSph} />}
+      onKirim={onKirim}
+    />
   );
 }

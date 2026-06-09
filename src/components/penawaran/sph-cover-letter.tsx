@@ -3,7 +3,8 @@ import { formatRupiah } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { totalPenawaran } from "@/lib/sph";
 import type { SphFormValues } from "@/lib/schemas/penawaran";
-import { SphPage } from "@/components/penawaran/sph-page";
+import { DocumentPage } from "@/components/shared/document/document-page";
+import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
 
 /** Title-case a (space-separated) string — used on the terbilang amount. */
 function titleCase(s: string): string {
@@ -32,42 +33,8 @@ export function SphCoverLetter({
       .filter(Boolean)
       .join(", ") || "—";
 
-  /* 1. Letterhead band ------------------------------------------------- */
-  const letterhead = (
-    <div className="relative flex items-stretch justify-between overflow-hidden">
-        {/* Angled blue bars on the left ~60% (approximates the real angled
-            letterhead; the actual logo image / brand bar drops in here). */}
-        <div className="relative h-24 w-3/5">
-          <div
-            className="absolute inset-0 bg-[var(--sph-blue)]"
-            style={{ clipPath: "polygon(0 0, 100% 0, 78% 100%, 0 100%)" }}
-          />
-          <div
-            className="absolute inset-0 bg-[var(--sph-blue-2)]"
-            style={{ clipPath: "polygon(0 55%, 88% 55%, 70% 100%, 0 100%)" }}
-          />
-        </div>
-        {/* Right: configurable logo + company name + tagline. The identity
-            block gets generous width so the full company name wraps to 1–2
-            lines instead of being truncated. */}
-        <div className="flex flex-col items-end justify-center px-8 py-3 text-right">
-          {companyProfile.logo ? (
-            <img src={companyProfile.logo} alt="Logo" className="size-14 object-contain" />
-          ) : (
-            <div className="flex size-14 items-center justify-center rounded-full border-2 border-[var(--sph-blue)] text-[var(--sph-blue)]">
-              <span className="text-sm font-bold tracking-tight">SBMJ</span>
-            </div>
-          )}
-          <p className="mt-1 whitespace-nowrap text-[11px] font-bold leading-tight text-[var(--sph-blue)]">
-            {companyProfile.nama}
-          </p>
-          <p className="text-[10px] tracking-wide text-[var(--sph-blue-2)]">{companyProfile.tagline}</p>
-        </div>
-    </div>
-  );
-
   return (
-    <SphPage header={letterhead}>
+    <DocumentPage header={<DocumentLetterhead />}>
       {/* Body -------------------------------------------------------------- */}
       <div className="px-8 pt-6 text-sm leading-relaxed">
         {/* 2. Letter meta */}
@@ -103,35 +70,35 @@ export function SphCoverLetter({
         <p className="mt-2 text-justify indent-8">{values.kalimatPembuka}</p>
 
         {/* 5. Service table */}
-        <table className="mt-4 w-full border-collapse border border-[var(--sph-rule)] text-sm">
+        <table className="mt-4 w-full border-collapse border border-[var(--doc-rule)] text-sm">
           <thead>
-            <tr className="bg-[var(--sph-blue-soft)] text-center font-bold">
-              <th className="border border-[var(--sph-rule)] px-2 py-1">No</th>
-              <th className="border border-[var(--sph-rule)] px-2 py-1">Uraian</th>
-              <th className="border border-[var(--sph-rule)] px-2 py-1">Biaya Satuan (Rp)</th>
-              <th className="border border-[var(--sph-rule)] px-2 py-1">Volume</th>
-              <th className="border border-[var(--sph-rule)] px-2 py-1">Total (Rp)</th>
+            <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
+              <th className="border border-[var(--doc-rule)] px-2 py-1">No</th>
+              <th className="border border-[var(--doc-rule)] px-2 py-1">Uraian</th>
+              <th className="border border-[var(--doc-rule)] px-2 py-1">Biaya Satuan (Rp)</th>
+              <th className="border border-[var(--doc-rule)] px-2 py-1">Volume</th>
+              <th className="border border-[var(--doc-rule)] px-2 py-1">Total (Rp)</th>
             </tr>
           </thead>
           <tbody>
             {values.items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="border border-[var(--sph-rule)] px-2 py-4 text-center">
+                <td colSpan={5} className="border border-[var(--doc-rule)] px-2 py-4 text-center">
                   Tambahkan layanan…
                 </td>
               </tr>
             ) : (
               values.items.map((it, i) => (
                 <tr key={i}>
-                  <td className="border border-[var(--sph-rule)] px-2 py-1 text-center">{i + 1}</td>
-                  <td className="border border-[var(--sph-rule)] px-2 py-1">{it.nama || "—"}</td>
-                  <td className="border border-[var(--sph-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-center">{i + 1}</td>
+                  <td className="border border-[var(--doc-rule)] px-2 py-1">{it.nama || "—"}</td>
+                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
                     {formatRupiah(it.harga)}
                   </td>
-                  <td className="border border-[var(--sph-rule)] px-2 py-1 text-center">
+                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-center">
                     {it.volume} {it.satuan}
                   </td>
-                  <td className="border border-[var(--sph-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
                     {formatRupiah((Number(it.volume) || 0) * (Number(it.harga) || 0))}
                   </td>
                 </tr>
@@ -141,17 +108,17 @@ export function SphCoverLetter({
             <tr>
               <td
                 colSpan={4}
-                className="border border-[var(--sph-rule)] px-2 py-1 text-right font-bold"
+                className="border border-[var(--doc-rule)] px-2 py-1 text-right font-bold"
               >
                 TOTAL BIAYA
               </td>
-              <td className="border border-[var(--sph-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
+              <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
                 {formatRupiah(total)}
               </td>
             </tr>
             {/* Terbilang */}
             <tr>
-              <td colSpan={5} className="border border-[var(--sph-rule)] px-2 py-1 text-center">
+              <td colSpan={5} className="border border-[var(--doc-rule)] px-2 py-1 text-center">
                 <span className="font-semibold">Terbilang: </span>
                 <span className="font-bold italic">{titleCase(terbilang(total))} Rupiah</span>
               </td>
@@ -196,13 +163,13 @@ export function SphCoverLetter({
         <div className="mt-8 flex flex-col items-end text-right">
           <p>Hormat Kami,</p>
           {/* Approximates the round company stamp. */}
-          <div className="my-2 flex size-20 rotate-[-8deg] items-center justify-center rounded-full border-2 border-[var(--sph-blue)]/60 text-[var(--sph-blue)]/70">
+          <div className="my-2 flex size-20 rotate-[-8deg] items-center justify-center rounded-full border-2 border-[var(--doc-blue)]/60 text-[var(--doc-blue)]/70">
             <span className="text-base font-bold tracking-tight">SBMJ</span>
           </div>
           <p className="font-bold underline">{companyProfile.direktur.nama}</p>
           <p className="font-bold">{companyProfile.direktur.jabatan}</p>
         </div>
       </div>
-    </SphPage>
+    </DocumentPage>
   );
 }
