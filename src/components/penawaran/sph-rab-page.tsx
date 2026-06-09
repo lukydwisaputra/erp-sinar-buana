@@ -3,6 +3,7 @@ import { formatRupiah } from "@/lib/format";
 import { rabTotalOf } from "@/lib/sph";
 import { rabRowTotal, type RabRow } from "@/lib/sph-templates";
 import { terbilang } from "@/lib/terbilang";
+import { SphPage } from "@/components/penawaran/sph-page";
 
 /** "satu juta" → "Satu Juta" */
 function titleCase(s: string): string {
@@ -59,7 +60,7 @@ export function SphRabPage({
   const grandTotal = rabTotalOf(rab);
 
   return (
-    <div className="sph-doc mx-auto w-full max-w-[210mm] bg-white text-[var(--sph-ink)] shadow-sm">
+    <SphPage>
       <LetterheadStrip />
 
       <div className="px-8 py-6 text-sm">
@@ -152,6 +153,6 @@ export function SphRabPage({
           Terbilang : {titleCase(terbilang(grandTotal))} Rupiah
         </p>
       </div>
-    </div>
+    </SphPage>
   );
 }

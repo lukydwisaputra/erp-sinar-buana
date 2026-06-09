@@ -1,9 +1,9 @@
-import { Globe, Mail, MapPin, Phone } from "lucide-react";
 import { companyProfile } from "@/lib/company-profile";
 import { formatRupiah } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { totalPenawaran } from "@/lib/sph";
 import type { SphFormValues } from "@/lib/schemas/penawaran";
+import { SphPage } from "@/components/penawaran/sph-page";
 
 /** Title-case a (space-separated) string — used on the terbilang amount. */
 function titleCase(s: string): string {
@@ -26,7 +26,7 @@ export function SphCoverLetter({
   const total = totalPenawaran(values.items);
 
   return (
-    <div className="sph-doc mx-auto w-full max-w-[210mm] bg-white text-[var(--sph-ink)] shadow-sm">
+    <SphPage>
       {/* 1. Letterhead band ----------------------------------------------- */}
       <div className="relative flex items-stretch justify-between overflow-hidden">
         {/* Angled blue bars on the left ~60% (approximates the real angled
@@ -194,22 +194,6 @@ export function SphCoverLetter({
           <p className="font-bold">{companyProfile.direktur.jabatan}</p>
         </div>
       </div>
-
-      {/* 9. Footer band ---------------------------------------------------- */}
-      <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 bg-[var(--sph-blue-soft)] px-8 py-3 text-[11px] text-[var(--sph-blue)]">
-        <span className="inline-flex items-center gap-1">
-          <Phone className="size-3.5" /> {companyProfile.telepon}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Mail className="size-3.5" /> {companyProfile.email}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <MapPin className="size-3.5" /> {companyProfile.alamat.join(" / ")}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Globe className="size-3.5" /> {companyProfile.website}
-        </span>
-      </div>
-    </div>
+    </SphPage>
   );
 }

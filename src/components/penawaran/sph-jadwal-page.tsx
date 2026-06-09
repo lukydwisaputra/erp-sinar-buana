@@ -1,5 +1,6 @@
 import { companyProfile } from "@/lib/company-profile";
 import { cn } from "@/lib/utils";
+import { SphPage } from "@/components/penawaran/sph-page";
 
 /** Compact SBMJ letterhead strip shared by the RAB / Jadwal pages. */
 function LetterheadStrip(): React.JSX.Element {
@@ -28,7 +29,7 @@ export function SphJadwalPage({
   const weeks = Array.from({ length: bulan * 4 }, (_, i) => i + 1);
 
   return (
-    <div className="sph-doc mx-auto w-full max-w-[210mm] bg-white text-[var(--sph-ink)] shadow-sm">
+    <SphPage>
       <LetterheadStrip />
 
       <div className="px-8 py-6 text-sm">
@@ -98,6 +99,6 @@ export function SphJadwalPage({
           </table>
         </div>
       </div>
-    </div>
+    </SphPage>
   );
 }
