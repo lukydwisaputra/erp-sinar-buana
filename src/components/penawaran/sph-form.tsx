@@ -138,8 +138,8 @@ function MasaBerlakuField({ form }: { form: UseFormReturn<SphFormValues> }) {
   const masaBerlakuHari = form.watch("masaBerlakuHari");
 
   return (
-    <Field>
-      <label className="flex items-center gap-2 text-sm">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+      <label className="flex items-center gap-2">
         <Checkbox
           checked={masaBerlakuAktif}
           onCheckedChange={(c) => form.setValue("masaBerlakuAktif", c === true)}
@@ -160,10 +160,10 @@ function MasaBerlakuField({ form }: { form: UseFormReturn<SphFormValues> }) {
             placeholder="30"
             className="w-24 text-right font-mono tabular-nums"
           />
-          <span className="text-sm text-muted-foreground">hari kalender</span>
+          <span className="text-muted-foreground">hari kalender</span>
         </div>
       )}
-    </Field>
+    </div>
   );
 }
 
