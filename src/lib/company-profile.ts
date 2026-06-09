@@ -13,4 +13,9 @@ export const companyProfile = {
     "Grand Cinunuk Residence C.10, Kab. Bandung",
   ],
   direktur: { nama: "Dini Mardiani, SE.,MBA", jabatan: "Direktur" },
+  bank: {
+    nama: "BNI",
+    atasNama: "SINAR BUANA MANDIRI JAYA",
+    noRekening: "0559332815",
+  },
 } as const;
