@@ -10,13 +10,7 @@ import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { BuilderSection } from "@/components/shared/builder-layout";
 import { LineItemEditor, type ServiceOption } from "@/components/shared/line-item-editor";
 import { ServiceRabJadwalEditor } from "@/components/penawaran/service-rab-jadwal-editor";
-import {
-  totalPenawaran,
-  totalRab,
-  margin,
-  terminPersenTotal,
-  isTerminValid,
-} from "@/lib/sph";
+import { totalPenawaran, terminPersenTotal, isTerminValid } from "@/lib/sph";
 import { formatRupiah } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { cn } from "@/lib/utils";
@@ -25,7 +19,6 @@ import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -109,8 +102,6 @@ export function SphForm({
         </div>
         <FieldError className="mt-2" errors={err(form.formState.errors.items)} />
       </BuilderSection>
-
-      <RabSection form={form} />
 
       <BuilderSection title="Catatan & Ketentuan">
         <div className="space-y-4">
@@ -418,42 +409,5 @@ function TerminEditor({
         </Alert>
       )}
     </div>
-  );
-}
-
-/* ---------- 4. RAB Internal (read-only summary; detail dikelola per layanan) ---------- */
-function RabSection({ form }: { form: UseFormReturn<SphFormValues> }) {
-  const items = form.watch("items");
-  const total = totalRab(items);
-  const m = margin(items);
-
-  return (
-    <BuilderSection
-      title="RAB Internal"
-      action={<Badge variant="secondary">Internal — tidak tampil ke klien</Badge>}
-    >
-      <div className="space-y-3 text-sm">
-        <div className="space-y-1 border-b border-border pb-3">
-          <div>
-            <span className="text-muted-foreground">Total RAB: </span>
-            <span className="font-mono tabular-nums">{formatRupiah(total)}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Estimasi Margin: </span>
-            <span
-              className={cn(
-                "font-mono tabular-nums font-semibold",
-                m >= 0 ? "text-success" : "text-destructive"
-              )}
-            >
-              {formatRupiah(m)}
-            </span>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          RAB rinci dikelola per layanan (lihat Baris Layanan).
-        </p>
-      </div>
-    </BuilderSection>
   );
 }

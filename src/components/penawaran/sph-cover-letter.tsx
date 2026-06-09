@@ -102,7 +102,7 @@ export function SphCoverLetter({
               <th className="border border-[var(--sph-rule)] px-2 py-1">No</th>
               <th className="border border-[var(--sph-rule)] px-2 py-1">Uraian</th>
               <th className="border border-[var(--sph-rule)] px-2 py-1">Biaya Satuan (Rp)</th>
-              <th className="border border-[var(--sph-rule)] px-2 py-1">Banyaknya</th>
+              <th className="border border-[var(--sph-rule)] px-2 py-1">Volume</th>
               <th className="border border-[var(--sph-rule)] px-2 py-1">Total (Rp)</th>
             </tr>
           </thead>

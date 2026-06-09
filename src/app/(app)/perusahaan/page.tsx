@@ -131,7 +131,7 @@ const perusahaanCreateSchema = z.object({
   nama: z.string().min(1, "Nama perusahaan wajib diisi."),
   alamat: z.string().min(1, "Alamat wajib diisi."),
   kota: z.string().min(1, "Kota wajib diisi."),
-  npwp: z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka."),
+  npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]),
   email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
   pic: z
     .array(
@@ -229,7 +229,7 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
 
             <PhoneField id={`p-pic-${i}-telepon`} error={errors.pic?.[i]?.telepon} {...register(`pic.${i}.telepon`)} />
 
-            <EmailField id={`p-pic-${i}-email`} label="Email" error={errors.pic?.[i]?.email} {...register(`pic.${i}.email`)} />
+            <EmailField id={`p-pic-${i}-email`} label="Email (opsional)" error={errors.pic?.[i]?.email} {...register(`pic.${i}.email`)} />
           </div>
         ))}
       </div>

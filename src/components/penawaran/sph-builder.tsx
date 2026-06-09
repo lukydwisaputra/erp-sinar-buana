@@ -17,6 +17,7 @@ import {
 } from "@/components/penawaran/sph-form";
 import { SphCoverLetter } from "@/components/penawaran/sph-cover-letter";
 import { SphDocumentPackage } from "@/components/penawaran/sph-document-package";
+import { SphFooter } from "@/components/penawaran/sph-page";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { katalogFixtures } from "@/lib/fixtures/katalog";
 import { defaultItemRab, defaultItemJadwal } from "@/lib/sph-templates";
@@ -169,6 +170,11 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
           emits the full package regardless of dialog state. */}
       <div className="sph-print hidden print:block">
         <SphDocumentPackage values={values} noSph={noSph} />
+        {/* Running footer: pinned to the bottom of every printed page (the
+            per-page tfoot only reserves space; see globals.css print block). */}
+        <div className="sph-print-footer" aria-hidden>
+          <SphFooter />
+        </div>
       </div>
     </>
   );

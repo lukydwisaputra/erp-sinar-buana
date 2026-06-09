@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Users, Wallet, HandCoins, Gauge, CalendarDays, Plus } from "lucide-react";
+import { Users, Wallet, CalendarDays, Plus } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
@@ -95,8 +95,6 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
         <SectionLabel>Ringkasan</SectionLabel>
         <div className="grid grid-cols-2 gap-2">
           <StatTile label="Gaji Pokok" value={formatRupiahCompact(k.gajiPokok)} title={formatRupiah(k.gajiPokok)} icon={Wallet} mono />
-          <StatTile label="Tunjangan" value={formatRupiahCompact(k.tunjangan)} title={formatRupiah(k.tunjangan)} icon={HandCoins} mono />
-          <StatTile label="Pengali" value={`${k.pengali.toLocaleString("id-ID")}×`} icon={Gauge} mono />
           <StatTile label="Masa Kerja" value={masaKerja(k.tanggalMasuk)} icon={CalendarDays} />
         </div>
       </section>
@@ -123,16 +121,14 @@ const karyawanCreateSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi."),
   jabatan: z.string().min(1, "Jabatan wajib diisi."),
   statusKepegawaian: z.enum(["tetap", "kontrak", "probation"]),
-  pengali: z.coerce.number().min(0, "Pengali tidak valid."),
   gajiPokok: z.coerce.number({ message: "Gaji pokok wajib diisi." }).min(1, "Gaji pokok wajib diisi."),
-  tunjangan: z.coerce.number().min(0, "Tunjangan tidak valid."),
   bank: z.object({
     nama: z.string().min(1, "Nama bank wajib diisi."),
     nomor: z.string().regex(/^\d+$/, "Nomor rekening harus angka."),
     atasNama: z.string().min(1, "Atas nama wajib diisi."),
   }),
   npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]),
-  email: z.string().email("Format email tidak valid."),
+  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
   telepon: z.string().min(1, "Nomor HP wajib."),
   tanggalMasuk: z.string().min(1, "Tanggal masuk wajib diisi."),
 });
@@ -143,7 +139,7 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
     resolver: zodResolver(karyawanCreateSchema),
     defaultValues: {
       nama: "", jabatan: "", statusKepegawaian: "tetap",
-      pengali: 1, gajiPokok: undefined, tunjangan: 0,
+      gajiPokok: undefined,
       bank: { nama: "", nomor: "", atasNama: "" },
       npwp: "", email: "", telepon: "", tanggalMasuk: "",
     },
@@ -195,12 +191,6 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
         <FieldError errors={errors.statusKepegawaian ? [errors.statusKepegawaian] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.pengali}>
-        <FieldLabel htmlFor="k-pengali">Pengali</FieldLabel>
-        <Input id="k-pengali" type="number" step="any" inputMode="decimal" placeholder="1 atau 0.8" aria-invalid={!!errors.pengali} {...register("pengali")} />
-        <FieldError errors={errors.pengali ? [errors.pengali] : undefined} />
-      </Field>
-
       <Field data-invalid={!!errors.gajiPokok}>
         <FieldLabel htmlFor="k-gaji">Gaji Pokok</FieldLabel>
         <InputGroup>
@@ -208,15 +198,6 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
           <InputGroupInput id="k-gaji" type="number" inputMode="numeric" placeholder="12000000" aria-invalid={!!errors.gajiPokok} className="text-right font-mono tabular-nums" {...register("gajiPokok")} />
         </InputGroup>
         <FieldError errors={errors.gajiPokok ? [errors.gajiPokok] : undefined} />
-      </Field>
-
-      <Field data-invalid={!!errors.tunjangan}>
-        <FieldLabel htmlFor="k-tunjangan">Tunjangan</FieldLabel>
-        <InputGroup>
-          <InputGroupAddon><InputGroupText>Rp</InputGroupText></InputGroupAddon>
-          <InputGroupInput id="k-tunjangan" type="number" inputMode="numeric" placeholder="2000000" aria-invalid={!!errors.tunjangan} className="text-right font-mono tabular-nums" {...register("tunjangan")} />
-        </InputGroup>
-        <FieldError errors={errors.tunjangan ? [errors.tunjangan] : undefined} />
       </Field>
 
       <div className="space-y-3 border-t border-border pt-4">

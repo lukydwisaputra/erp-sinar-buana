@@ -14,7 +14,7 @@ const errs = (e: FieldErr) => (e ? [e] : undefined);
  */
 export function NpwpField({
   id,
-  label = "NPWP",
+  label = "NPWP (opsional)",
   error,
   ...props
 }: { id: string; label?: string; error?: FieldErr } & React.ComponentProps<typeof Input>) {
@@ -61,7 +61,7 @@ export function PhoneField({
  */
 export function EmailField({
   id,
-  label = "Email",
+  label = "Email (opsional)",
   error,
   ...props
 }: { id: string; label?: string; error?: FieldErr } & React.ComponentProps<typeof Input>) {

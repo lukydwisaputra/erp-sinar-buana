@@ -28,7 +28,7 @@ import { useKatalogList } from "@/lib/query/katalog";
 import type { Layanan } from "@/lib/schemas/katalog";
 
 const JENIS_DOKUMEN = ["Pertek", "AMDAL", "UKL-UPL", "SPPL", "Laporan"] as const;
-const KEWENANGAN = ["Pusat (KLHK)", "Provinsi", "Kabupaten/Kota"] as const;
+const KEWENANGAN = ["Pusat (KLHK)", "Provinsi", "Kabupaten/Kota", "Kawasan Industri"] as const;
 
 function StatusBadge({ status }: { status: Layanan["status"] }) {
   return status === "aktif" ? (
@@ -106,8 +106,7 @@ function LayananDetail({ l }: { l: Layanan }) {
         <InfoList>
           <InfoRow label="Jenis Dokumen" value={l.jenisDokumen} />
           <InfoRow label="Kewenangan" value={l.kewenangan} />
-          <InfoRow label="Dasar Hukum" value={l.dasarHukum} />
-          <InfoRow label="Tahapan Proyek" value={l.templateMilestone ?? "—"} />
+          <InfoRow label="Dasar Hukum" value={l.dasarHukum || "—"} />
         </InfoList>
       </section>
     </div>
@@ -120,17 +119,16 @@ const layananCreateSchema = z.object({
   nama: z.string().min(1, "Nama layanan wajib diisi."),
   jenisDokumen: z.string().min(1, "Jenis dokumen wajib dipilih."),
   kewenangan: z.string().min(1, "Kewenangan wajib dipilih."),
-  dasarHukum: z.string().min(1, "Dasar hukum wajib diisi."),
+  dasarHukum: z.string(),
   hargaStandar: z.string(),
   tags: z.string(),
-  templateMilestone: z.string(),
 });
 type LayananCreate = z.infer<typeof layananCreateSchema>;
 
 function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const form = useForm<LayananCreate>({
     resolver: zodResolver(layananCreateSchema),
-    defaultValues: { nama: "", jenisDokumen: "", kewenangan: "", dasarHukum: "", hargaStandar: "", tags: "", templateMilestone: "" },
+    defaultValues: { nama: "", jenisDokumen: "", kewenangan: "", dasarHukum: "", hargaStandar: "", tags: "" },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
@@ -192,10 +190,9 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
         <FieldError errors={errors.kewenangan ? [errors.kewenangan] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.dasarHukum}>
-        <FieldLabel htmlFor="l-dasar">Dasar Hukum</FieldLabel>
-        <Input id="l-dasar" placeholder="PP No. 22 Tahun 2021" aria-invalid={!!errors.dasarHukum} {...register("dasarHukum")} />
-        <FieldError errors={errors.dasarHukum ? [errors.dasarHukum] : undefined} />
+      <Field>
+        <FieldLabel htmlFor="l-dasar">Dasar Hukum (opsional)</FieldLabel>
+        <Input id="l-dasar" placeholder="PP No. 22 Tahun 2021" {...register("dasarHukum")} />
       </Field>
 
       <Field>
@@ -213,11 +210,6 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
         <FieldLabel htmlFor="l-tags">Tag (opsional)</FieldLabel>
         <Input id="l-tags" placeholder="Pisahkan dengan koma, Air Limbah, Berulang" {...register("tags")} />
         <FieldDescription>Pisahkan dengan koma.</FieldDescription>
-      </Field>
-
-      <Field>
-        <FieldLabel htmlFor="l-tahapan">Tahapan Proyek (opsional)</FieldLabel>
-        <Input id="l-tahapan" placeholder="Pertek 5 Tahap" {...register("templateMilestone")} />
       </Field>
     </FormSheet>
   );
