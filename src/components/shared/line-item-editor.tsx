@@ -66,7 +66,7 @@ export function LineItemEditor({ items, options, onChange, renderRowExtra }: {
             </div>
             <div className="w-44">
               <label className="text-xs text-muted-foreground">Harga Satuan</label>
-              <MoneyInput defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} showTerbilang={false} className="w-full" />
+              <MoneyInput key={`${i}:${it.layananId}`} defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} showTerbilang={false} className="w-full" />
             </div>
           </div>
           <div className="flex items-center gap-2">
