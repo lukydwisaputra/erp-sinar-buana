@@ -22,14 +22,39 @@ export function SphFooter(): React.JSX.Element {
 }
 
 /**
- * A single A4 page: fixed 210mm width, ≥297mm tall, white, with the SBMJ
- * footer pinned to the bottom. `children` render the page header + body.
+ * A single A4 page: fixed 210mm width, ≥297mm tall, white. Built as a single
+ * `<table>` so the letterhead (`thead`) and footer (`tfoot`) repeat on every
+ * sheet the body overflows onto when printed. On screen the table fills the
+ * 297mm card so the footer sits pinned at the bottom.
  */
-export function SphPage({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function SphPage({
+  header,
+  children,
+}: {
+  header: React.ReactNode;
+  children: React.ReactNode;
+}): React.JSX.Element {
   return (
-    <div className="sph-doc mx-auto flex min-h-[297mm] w-[210mm] flex-col bg-white text-[var(--sph-ink)] shadow-sm print:shadow-none">
-      <div className="flex flex-1 flex-col">{children}</div>
-      <SphFooter />
+    <div className="sph-doc sph-page mx-auto flex min-h-[297mm] w-[210mm] flex-col bg-white text-[var(--sph-ink)] shadow-sm print:shadow-none">
+      <table className="sph-page-table w-full flex-1 border-collapse">
+        <thead className="sph-page-head">
+          <tr>
+            <td className="p-0">{header}</td>
+          </tr>
+        </thead>
+        <tfoot className="sph-page-foot">
+          <tr>
+            <td className="p-0">
+              <SphFooter />
+            </td>
+          </tr>
+        </tfoot>
+        <tbody>
+          <tr>
+            <td className="p-0 align-top">{children}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

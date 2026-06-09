@@ -43,8 +43,7 @@ function JadwalSheet({
   for (const m of months) for (let w = 1; w <= 4; w++) weeks.push((m - 1) * 4 + w);
 
   return (
-    <SphPage>
-      <LetterheadStrip />
+    <SphPage header={<LetterheadStrip />}>
       <div className="px-8 py-6 text-sm">
         <div className="text-center font-bold leading-snug">
           <p>ESTIMASI JADWAL RENCANA KEGIATAN</p>

@@ -60,9 +60,7 @@ export function SphRabPage({
   const grandTotal = rabTotalOf(rab);
 
   return (
-    <SphPage>
-      <LetterheadStrip />
-
+    <SphPage header={<LetterheadStrip />}>
       <div className="px-8 py-6 text-sm">
         {/* Title */}
         <div className="text-center font-bold leading-snug">

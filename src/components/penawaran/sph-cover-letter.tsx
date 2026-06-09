@@ -25,10 +25,9 @@ export function SphCoverLetter({
 }): React.JSX.Element {
   const total = totalPenawaran(values.items);
 
-  return (
-    <SphPage>
-      {/* 1. Letterhead band ----------------------------------------------- */}
-      <div className="relative flex items-stretch justify-between overflow-hidden">
+  /* 1. Letterhead band ------------------------------------------------- */
+  const letterhead = (
+    <div className="relative flex items-stretch justify-between overflow-hidden">
         {/* Angled blue bars on the left ~60% (approximates the real angled
             letterhead; the actual logo image / brand bar drops in here). */}
         <div className="relative h-24 w-3/5">
@@ -57,8 +56,11 @@ export function SphCoverLetter({
           </p>
           <p className="text-[10px] tracking-wide text-[var(--sph-blue-2)]">{companyProfile.tagline}</p>
         </div>
-      </div>
+    </div>
+  );
 
+  return (
+    <SphPage header={letterhead}>
       {/* Body -------------------------------------------------------------- */}
       <div className="px-8 pt-6 text-sm leading-relaxed">
         {/* 2. Letter meta */}
