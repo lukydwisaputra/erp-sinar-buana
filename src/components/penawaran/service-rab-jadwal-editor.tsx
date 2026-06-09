@@ -135,7 +135,7 @@ function RabRowsEditor({
             key={i}
             className="flex flex-wrap items-end gap-3 rounded-md border border-border p-3"
           >
-            <div className="flex-1 min-w-[280px]">
+            <div className="w-3/4 min-w-[240px]">
               <label className="text-xs text-muted-foreground">Uraian</label>
               <Input
                 value={row.uraian}
