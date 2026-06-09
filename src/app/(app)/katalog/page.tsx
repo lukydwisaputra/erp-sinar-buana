@@ -25,6 +25,7 @@ import {
 import { StatTile, InfoRow, InfoList, SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKatalogList } from "@/lib/query/katalog";
+import { delay } from "@/lib/data/_delay";
 import type { Layanan } from "@/lib/schemas/katalog";
 
 const JENIS_DOKUMEN = ["Pertek", "AMDAL", "UKL-UPL", "SPPL", "Laporan"] as const;
@@ -132,7 +133,8 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
-  const onSubmit = handleSubmit(() => {
+  const onSubmit = handleSubmit(async () => {
+    await delay();
     toast.success("Demo: data tidak benar-benar disimpan");
     onOpenChange(false);
     reset();

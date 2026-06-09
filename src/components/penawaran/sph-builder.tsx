@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { delay } from "@/lib/data/_delay";
+import { usePending } from "@/lib/use-pending";
 import { Download, Maximize2, Save, Send, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -97,12 +99,23 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
 
   const values = form.watch();
 
-  const onSimpan = form.handleSubmit(() =>
-    toast.success("Demo: draf tidak benar-benar disimpan"),
-  );
-  const onKirim = form.handleSubmit(() =>
-    toast.success("Demo: SPH tidak benar-benar dikirim"),
-  );
+  const [saving, runSave] = usePending();
+  const [sending, runSend] = usePending();
+  const onSimpan = () =>
+    runSave(
+      form.handleSubmit(async () => {
+        await delay();
+        toast.success("Demo: draf tidak benar-benar disimpan");
+      }),
+    );
+  const onKirim = () =>
+    runSend(
+      form.handleSubmit(async () => {
+        await delay();
+        toast.success("Demo: SPH tidak benar-benar dikirim");
+        setFs(false);
+      }),
+    );
 
   return (
     <>
@@ -114,7 +127,7 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
             <Button variant="outline" onClick={() => setFs(true)}>
               <Maximize2 className="size-4" /> Pratinjau Layar Penuh
             </Button>
-            <Button variant="secondary" onClick={onSimpan}>
+            <Button variant="secondary" loading={saving} onClick={onSimpan}>
               <Save className="size-4" /> Simpan Draf
             </Button>
           </>
@@ -144,13 +157,7 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Download className="size-4" /> Unduh
             </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setFs(false);
-                onKirim();
-              }}
-            >
+            <Button size="sm" loading={sending} onClick={onKirim}>
               <Send className="size-4" /> Kirim
             </Button>
             <Button

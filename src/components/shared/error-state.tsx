@@ -1,8 +1,10 @@
+"use client";
 import * as React from "react";
 import { CircleAlertIcon, RotateCwIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { usePending } from "@/lib/use-pending";
 
 export type ErrorStateProps = {
   /** Called when the user clicks "Coba lagi". */
@@ -25,6 +27,7 @@ export function ErrorState({
   retryLabel = "Coba lagi",
   className,
 }: ErrorStateProps) {
+  const [retrying, run] = usePending();
   return (
     <div
       role="alert"
@@ -40,8 +43,8 @@ export function ErrorState({
           {description}
         </p>
       </div>
-      <Button variant="outline" size="sm" onClick={onRetry}>
-        <RotateCwIcon />
+      <Button variant="outline" size="sm" loading={retrying} onClick={() => run(onRetry)}>
+        {!retrying && <RotateCwIcon />}
         {retryLabel}
       </Button>
     </div>

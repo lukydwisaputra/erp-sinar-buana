@@ -27,6 +27,7 @@ import {
 import { StatTile, InfoRow, InfoList, SectionLabel, initials } from "@/components/shared/detail-drawer";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKaryawanList } from "@/lib/query/karyawan";
+import { delay } from "@/lib/data/_delay";
 import type { Karyawan } from "@/lib/schemas/karyawan";
 
 const KEPEGAWAIAN_OPTIONS = [
@@ -146,7 +147,8 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
-  const onSubmit = handleSubmit(() => {
+  const onSubmit = handleSubmit(async () => {
+    await delay();
     toast.success("Demo: data tidak benar-benar disimpan");
     onOpenChange(false);
     reset();

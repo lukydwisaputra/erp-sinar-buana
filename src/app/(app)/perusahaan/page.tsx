@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
+import { delay } from "@/lib/data/_delay";
 import type { Perusahaan } from "@/lib/schemas/perusahaan";
 
 function StatusBadge({ status }: { status: Perusahaan["status"] }) {
@@ -156,7 +157,8 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "pic" });
 
-  const onSubmit = handleSubmit(() => {
+  const onSubmit = handleSubmit(async () => {
+    await delay();
     toast.success("Demo: data tidak benar-benar disimpan");
     onOpenChange(false);
     reset();

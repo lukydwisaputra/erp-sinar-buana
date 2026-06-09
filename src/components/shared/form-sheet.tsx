@@ -8,6 +8,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { usePending } from "@/lib/use-pending";
 
 /**
  * Presentational shell for the "Tambah" create forms.
@@ -30,6 +31,7 @@ export function FormSheet({
   submitLabel?: string;
   children: React.ReactNode;
 }) {
+  const [submitting, run] = usePending();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex flex-col overflow-hidden sm:max-w-md">
@@ -37,15 +39,15 @@ export function FormSheet({
           <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+        <form onSubmit={(e) => run(() => onSubmit(e))} className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-2">
             {children}
           </div>
           <SheetFooter className="flex-row justify-end gap-2 border-t border-border">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" disabled={submitting} onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit">{submitLabel}</Button>
+            <Button type="submit" loading={submitting}>{submitLabel}</Button>
           </SheetFooter>
         </form>
       </SheetContent>
