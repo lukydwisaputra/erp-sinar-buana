@@ -389,7 +389,13 @@ function TerminEditor({
         </div>
       ))}
 
-      <Button type="button" variant="outline" size="sm" onClick={addRow}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={addRow}
+        disabled={total >= 100}
+      >
         Tambah Termin
       </Button>
 
