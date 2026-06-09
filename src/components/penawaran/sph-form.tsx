@@ -83,7 +83,7 @@ export function SphForm({
                     onChange={(patch) => update(i, patch)}
                     trigger={
                       <Button type="button" variant="outline" size="sm">
-                        <SlidersHorizontal className="size-4" /> Kelola RAB &amp; Jadwal
+                        <SlidersHorizontal className="size-4" /> RAB &amp; Jadwal
                       </Button>
                     }
                   />
@@ -91,14 +91,6 @@ export function SphForm({
               : undefined
           }
         />
-
-        <label className="mt-3 flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={values.rincianAktif}
-            onCheckedChange={(c) => form.setValue("rincianAktif", c === true)}
-          />
-          Kelola RAB &amp; Estimasi Jadwal (sertakan sebagai lampiran)
-        </label>
 
         <div className="mt-3 text-right">
           <div className="text-sm">
@@ -114,6 +106,14 @@ export function SphForm({
           </p>
         </div>
         <FieldError className="mt-2" errors={err(form.formState.errors.items)} />
+
+        <label className="mt-4 flex items-center gap-2 border-t border-border pt-4 text-sm">
+          <Checkbox
+            checked={values.rincianAktif}
+            onCheckedChange={(c) => form.setValue("rincianAktif", c === true)}
+          />
+          Kelola RAB &amp; Estimasi Jadwal (sertakan sebagai lampiran)
+        </label>
       </BuilderSection>
 
       <BuilderSection title="Catatan & Ketentuan">

@@ -265,10 +265,16 @@
   .sph-print { position: absolute; inset: 0; width: 100%; }
   .sph-print .sph-doc {
     width: 210mm !important;
+    /* Natural height in print — the on-screen 297mm min-height would force
+     * full-page blocks that spill into phantom blank pages. The running footer
+     * (.sph-print-footer) keeps the footer pinned to the bottom regardless. */
+    min-height: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
     break-after: page;
   }
+  /* In print the page table need not stretch to fill a 297mm card. */
+  .sph-print .sph-page-table { flex: none !important; }
   .sph-print .sph-doc:last-child { break-after: auto; }
   .sph-print .sph-page-head { display: table-header-group; }
   /* The tfoot stays in flow so it RESERVES + REPEATS the footer's height on

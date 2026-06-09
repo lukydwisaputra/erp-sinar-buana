@@ -68,16 +68,16 @@ export function LineItemEditor({ items, options, onChange, renderRowExtra }: {
               <label className="text-xs text-muted-foreground">Harga Satuan</label>
               <MoneyInput key={`${i}:${it.layananId}`} defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} showTerbilang={false} className="w-full" />
             </div>
+            {renderRowExtra?.(it, i, update)}
           </div>
           <div className="flex items-center gap-2">
-            {renderRowExtra?.(it, i, update)}
-            <Button type="button" variant="ghost" size="icon" aria-label="Hapus baris" onClick={() => removeRow(i)}>
-              <Trash2Icon className="size-4 text-destructive" />
-            </Button>
-            <div className="ml-auto text-right text-sm">
+            <div className="text-sm">
               <span className="text-muted-foreground">Jumlah: </span>
               <span className="font-mono tabular-nums">{formatRupiah(it.volume * it.harga)}</span>
             </div>
+            <Button type="button" variant="ghost" size="icon" className="ml-auto" aria-label="Hapus baris" onClick={() => removeRow(i)}>
+              <Trash2Icon className="size-4 text-destructive" />
+            </Button>
           </div>
         </div>
       ))}
