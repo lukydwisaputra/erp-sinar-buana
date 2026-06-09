@@ -9,6 +9,7 @@ import { Download, Maximize2, Save, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { BuilderLayout } from "@/components/shared/builder-layout";
+import { ScaleToFit } from "@/components/shared/scale-to-fit";
 import {
   SphForm,
   type PerusahaanOption,
@@ -121,7 +122,11 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
             layananOptions={layananOptions}
           />
         }
-        preview={<SphCoverLetter values={values} noSph={noSph} />}
+        preview={
+          <ScaleToFit>
+            <SphCoverLetter values={values} noSph={noSph} />
+          </ScaleToFit>
+        }
       />
 
       <Dialog open={fs} onOpenChange={setFs}>
@@ -154,7 +159,11 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
             </Button>
           </div>
           <div className="flex-1 overflow-y-auto bg-muted/40 p-4 sm:p-6">
-            <SphDocumentPackage values={values} noSph={noSph} />
+            <div className="mx-auto max-w-[210mm]">
+              <ScaleToFit>
+                <SphDocumentPackage values={values} noSph={noSph} />
+              </ScaleToFit>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
