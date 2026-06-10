@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   FileText, Plus, EllipsisVerticalIcon, SquarePenIcon, Trash2Icon,
+  SendIcon, CircleCheckIcon, FileIcon, BanIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable } from "@/components/shared/data-table";
@@ -11,7 +12,7 @@ import { ErrorState } from "@/components/shared/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -20,20 +21,26 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatRupiah } from "@/lib/format";
 import { totalPenawaran } from "@/lib/sph";
-import { usePenawaranList, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
+import {
+  usePenawaranList, useUpdatePenawaranStatus, useDeletePenawaran,
+} from "@/lib/query/penawaran";
+import { useDeleteFakturBySph } from "@/lib/query/faktur";
 import type { Sph, SphStatus } from "@/lib/schemas/penawaran";
 
 const STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
-  draft: { label: "Draft", variant: "info" },
-  terkirim: { label: "Leads - Terkirim", variant: "warning" },
-  deal: { label: "Convert - Deal", variant: "success" },
-  ditolak: { label: "Ditolak", variant: "destructive" },
+  draft:      { label: "Draf",       variant: "info" },
+  terkirim:   { label: "Terkirim",   variant: "warning" },
+  deal:       { label: "Disetujui",  variant: "success" },
+  ditolak:    { label: "Ditolak",    variant: "destructive" },
   dibatalkan: { label: "Dibatalkan", variant: "secondary" },
 };
 
-const NEXT_STATUS: Partial<Record<SphStatus, { label: string; next: SphStatus }>> = {
-  draft: { label: "Tandai Terkirim", next: "terkirim" },
-  terkirim: { label: "Tandai Deal", next: "deal" },
+const STATUS_DIALOG: Record<SphStatus, { title: string; description: string; action: string; destructive?: boolean }> = {
+  draft:      { title: "Ubah ke Draf?",       description: "Status penawaran akan dikembalikan ke Draf.",                               action: "Ubah ke Draf" },
+  terkirim:   { title: "Ubah ke Terkirim?",   description: "Penawaran akan ditandai sebagai sudah dikirimkan ke klien.",                action: "Ubah ke Terkirim" },
+  deal:       { title: "Ubah ke Disetujui?",  description: "Faktur termin akan dibuat otomatis. Tindakan ini tidak dapat dibatalkan.",  action: "Disetujui" },
+  ditolak:    { title: "Batalkan penawaran?",  description: "Status berubah ke Ditolak. Tindakan ini tidak dapat dibatalkan.",          action: "Batalkan", destructive: true },
+  dibatalkan: { title: "Batalkan penawaran?",  description: "Status berubah ke Dibatalkan.",                                            action: "Batalkan", destructive: true },
 };
 
 function tanggalID(iso: string) {
@@ -45,10 +52,12 @@ function tanggalID(iso: string) {
 export default function PenawaranPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = usePenawaranList();
-  const updateStatus = useUpdatePenawaranStatus();
+  const updateStatus    = useUpdatePenawaranStatus();
+  const deletePenawaran = useDeletePenawaran();
+  const deleteFakturBySph = useDeleteFakturBySph();
 
+  const [statusTarget, setStatusTarget] = React.useState<{ sph: Sph; nextStatus: SphStatus } | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Sph | null>(null);
-  const [dealTarget, setDealTarget] = React.useState<Sph | null>(null);
 
   const columns: ColumnDef<Sph>[] = [
     {
@@ -81,8 +90,11 @@ export default function PenawaranPage() {
       meta: { align: "right", collapse: true },
       cell: ({ row }) => {
         const sph = row.original;
-        if (sph.status === "deal") return null;
-        const nextAction = NEXT_STATUS[sph.status];
+        const isDeal       = sph.status === "deal";
+        const isDibatalkan = sph.status === "dibatalkan";
+        const isDitolak    = sph.status === "ditolak";
+        const isLocked     = isDeal || isDibatalkan || isDitolak;
+
         return (
           <div className="flex justify-end">
             <DropdownMenu>
@@ -91,30 +103,54 @@ export default function PenawaranPage() {
                   <EllipsisVerticalIcon className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                {nextAction && (
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      if (nextAction.next === "deal") {
-                        setDealTarget(sph);
-                      } else {
-                        updateStatus.mutate(
-                          { id: sph.id, status: nextAction.next },
-                          { onSuccess: () => toast.success(`Status diubah: ${nextAction.label}`) },
-                        );
-                      }
-                    }}
-                  >
-                    {nextAction.label}
-                  </DropdownMenuItem>
-                )}
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel className="text-xs font-semibold">Status</DropdownMenuLabel>
+
+                {/* Draf — always disabled (current state or can't go back) */}
+                <DropdownMenuItem disabled>
+                  <FileIcon className="mr-2 size-4" /> Draf
+                </DropdownMenuItem>
+
+                {/* Terkirim — enabled only from draft */}
                 <DropdownMenuItem
+                  disabled={sph.status !== "draft"}
+                  onSelect={() => setStatusTarget({ sph, nextStatus: "terkirim" })}
+                >
+                  <SendIcon className="mr-2 size-4" /> Terkirim
+                </DropdownMenuItem>
+
+                {/* Disetujui — enabled only from terkirim */}
+                <DropdownMenuItem
+                  disabled={sph.status !== "terkirim"}
+                  onSelect={() => setStatusTarget({ sph, nextStatus: "deal" })}
+                >
+                  <CircleCheckIcon className="mr-2 size-4" /> Disetujui
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {/* Ubah — disabled when locked */}
+                <DropdownMenuItem
+                  disabled={isLocked}
                   onSelect={() => router.push(`/penawaran/${encodeURIComponent(sph.id)}`)}
                 >
                   <SquarePenIcon className="mr-2 size-4" /> Ubah
                 </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
+
+                {/* Batalkan → Ditolak — enabled only for draft or terkirim */}
                 <DropdownMenuItem
+                  disabled={sph.status !== "draft" && sph.status !== "terkirim"}
+                  variant="destructive"
+                  onSelect={(e) => { e.preventDefault(); setStatusTarget({ sph, nextStatus: "ditolak" }); }}
+                >
+                  <BanIcon className="mr-2 size-4" /> Batalkan
+                </DropdownMenuItem>
+
+                {/* Hapus — disabled only when deal */}
+                <DropdownMenuItem
+                  disabled={isDeal}
                   variant="destructive"
                   onSelect={(e) => { e.preventDefault(); setDeleteTarget(sph); }}
                 >
@@ -127,6 +163,8 @@ export default function PenawaranPage() {
       },
     },
   ];
+
+  const dialogInfo = statusTarget ? STATUS_DIALOG[statusTarget.nextStatus] : null;
 
   return (
     <div className="space-y-4">
@@ -154,13 +192,45 @@ export default function PenawaranPage() {
         />
       )}
 
+      {/* Confirm: Status change (Terkirim / Disetujui / Batalkan) */}
+      <AlertDialog open={!!statusTarget} onOpenChange={(o) => !o && setStatusTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{dialogInfo?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{dialogInfo?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              variant={dialogInfo?.destructive ? "destructive" : "default"}
+              onClick={() => {
+                if (!statusTarget) return;
+                updateStatus.mutate(
+                  { id: statusTarget.sph.id, status: statusTarget.nextStatus },
+                  {
+                    onSuccess: () => {
+                      toast.success(`Status diubah: ${STATUS[statusTarget.nextStatus].label}`);
+                      setStatusTarget(null);
+                    },
+                  },
+                );
+              }}
+            >
+              {dialogInfo?.action}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Confirm: Hapus */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus {deleteTarget?.id}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tindakan ini tidak dapat dibatalkan. (Demo: data tidak benar-benar dihapus.)
+              {deleteTarget?.status === "dibatalkan"
+                ? "Semua faktur terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan."
+                : "Tindakan ini tidak dapat dibatalkan."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -168,43 +238,23 @@ export default function PenawaranPage() {
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
-                toast.success("Demo: data tidak dihapus");
-                setDeleteTarget(null);
+                if (!deleteTarget) return;
+                const doDelete = () => {
+                  deletePenawaran.mutate(deleteTarget.id, {
+                    onSuccess: () => {
+                      toast.success(`${deleteTarget.id} dihapus.`);
+                      setDeleteTarget(null);
+                    },
+                  });
+                };
+                if (deleteTarget.status === "dibatalkan") {
+                  deleteFakturBySph.mutate(deleteTarget.id, { onSuccess: doDelete });
+                } else {
+                  doDelete();
+                }
               }}
             >
               Hapus
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Confirm: Tandai Deal */}
-      <AlertDialog open={!!dealTarget} onOpenChange={(o) => !o && setDealTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tandai sebagai Deal?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Mengubah ke Deal akan membuat faktur otomatis untuk{" "}
-              {dealTarget?.termin.length ?? 0} termin. Tindakan ini tidak dapat dibatalkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (!dealTarget) return;
-                updateStatus.mutate(
-                  { id: dealTarget.id, status: "deal" },
-                  {
-                    onSuccess: () => {
-                      toast.success("SPH diubah ke Deal. Faktur termin dibuat otomatis.");
-                      setDealTarget(null);
-                    },
-                  },
-                );
-              }}
-            >
-              Tandai Deal
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
