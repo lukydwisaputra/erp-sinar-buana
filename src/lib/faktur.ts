@@ -59,19 +59,25 @@ export function afterTaxAmount(
   return nilaiTermin + ppn - pph23;
 }
 
-/** A faktur is overdue when its due date passed and it isn't paid yet. */
+/** A faktur is overdue when its due date passed and it isn't paid or cancelled. */
 export function isFakturOverdue(f: Pick<Faktur, "status" | "jatuhTempo">): boolean {
-  return f.status !== "lunas" && !!f.jatuhTempo && new Date(f.jatuhTempo + "T23:59:59") < new Date();
+  return (
+    f.status !== "lunas" &&
+    f.status !== "dibatalkan" &&
+    !!f.jatuhTempo &&
+    new Date(f.jatuhTempo + "T23:59:59") < new Date()
+  );
 }
 
 /** Payment status of a single termin, derived from its faktur (or none). */
-export type TerminPaymentStatus = "lunas" | "menunggu" | "draft" | "belum";
+export type TerminPaymentStatus = "lunas" | "menunggu" | "draft" | "belum" | "dibatalkan";
 
 function terminStatusOf(f: Faktur | null): TerminPaymentStatus {
   if (!f) return "belum";
   if (f.status === "lunas") return "lunas";
+  if (f.status === "dibatalkan") return "dibatalkan";
   if (f.status === "draft") return "draft";
-  return "menunggu"; // terkirim, awaiting payment
+  return "menunggu";
 }
 
 export type DealTerminRow = {

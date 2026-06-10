@@ -11,10 +11,11 @@ import { Button } from "@/components/ui/button";
 type BadgeVariant = "success" | "warning" | "info" | "secondary" | "destructive";
 
 const TERMIN_BADGE: Record<TerminPaymentStatus, { label: string; variant: BadgeVariant }> = {
-  lunas: { label: "Lunas", variant: "success" },
-  menunggu: { label: "Menunggu Bayar", variant: "warning" },
-  draft: { label: "Draft", variant: "info" },
-  belum: { label: "Belum Difakturkan", variant: "secondary" },
+  lunas:      { label: "Lunas",              variant: "success" },
+  menunggu:   { label: "Menunggu Bayar",     variant: "warning" },
+  draft:      { label: "Draf",              variant: "info" },
+  belum:      { label: "Belum Difakturkan",  variant: "secondary" },
+  dibatalkan: { label: "Dibatalkan",         variant: "destructive" },
 };
 
 export function DealTerminCard({ deal, currentId }: { deal: DealRekap; currentId?: string }) {
