@@ -120,6 +120,7 @@ export const penawaranFixtures: Sph[] = [
       "Biaya diatas belum termasuk PPN 11%.",
       "Rincian Anggaran Biaya dan Estimasi Waktu Pekerjaan Terlampir.",
     ],
+    ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
   },
   {
     id: "SPH/005/6.2026", status: "terkirim", rincianAktif: true,
