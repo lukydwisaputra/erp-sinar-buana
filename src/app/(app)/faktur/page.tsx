@@ -4,10 +4,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ReceiptText, Plus } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
-import { FakturRekap } from "@/components/faktur/faktur-rekap";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatRupiah } from "@/lib/format";
 import { computeFaktur, isFakturOverdue } from "@/lib/faktur";
 import { useFakturList } from "@/lib/query/faktur";
@@ -67,24 +65,9 @@ export default function FakturPage() {
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : (
-        <Tabs defaultValue="rekap">
-          <TabsList>
-            <TabsTrigger value="rekap">Rekap Termin per Deal</TabsTrigger>
-            <TabsTrigger value="semua">Semua Faktur</TabsTrigger>
-          </TabsList>
-          <TabsContent value="rekap" className="mt-4">
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">Memuat…</p>
-            ) : (
-              <FakturRekap fakturs={data ?? []} />
-            )}
-          </TabsContent>
-          <TabsContent value="semua" className="mt-4">
-            <DataTable columns={columns} data={data ?? []} loading={isLoading}
-              searchColumn="perusahaanNama" searchPlaceholder="Cari perusahaan…" emptyMessage="Belum ada faktur"
-              onEdit={(row) => router.push(`/faktur/${encodeURIComponent(row.id)}`)} />
-          </TabsContent>
-        </Tabs>
+        <DataTable columns={columns} data={data ?? []} loading={isLoading}
+          searchColumn="perusahaanNama" searchPlaceholder="Cari perusahaan…" emptyMessage="Belum ada faktur"
+          onEdit={(row) => router.push(`/faktur/${encodeURIComponent(row.id)}`)} />
       )}
     </div>
   );
