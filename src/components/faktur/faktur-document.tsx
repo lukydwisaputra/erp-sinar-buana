@@ -24,7 +24,7 @@ export function FakturDocument({
 
   return (
     <DocumentPage header={<DocumentLetterhead />}>
-      <div className="px-8 pt-6 text-sm leading-relaxed">
+      <div className="px-8 pt-4 text-sm leading-snug">
         {/* Meta */}
         <div className="flex items-start justify-between gap-6">
           <div>
@@ -39,7 +39,7 @@ export function FakturDocument({
         </div>
 
         {/* Title */}
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <p className="text-lg font-bold tracking-[0.3em]">INVOICE</p>
           <p className="font-semibold">
             TERMIN {toRoman(values.terminIndex + 1)}
@@ -49,7 +49,7 @@ export function FakturDocument({
         </div>
 
         {/* Table */}
-        <table className="mt-4 w-full border-collapse border border-[var(--doc-rule)] text-sm">
+        <table className="mt-3 w-full border-collapse border border-[var(--doc-rule)] text-sm">
           <thead>
             <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
               <th className={cell}>No.</th>
@@ -94,7 +94,7 @@ export function FakturDocument({
         </table>
 
         {/* Catatan / bank */}
-        <div className="mt-4">
+        <div className="mt-3">
           <p className="font-bold">Catatan:</p>
           <p>Pembayaran dapat dilakukan melalui</p>
           <div className="grid grid-cols-[auto_auto_1fr] gap-x-2">
@@ -111,9 +111,9 @@ export function FakturDocument({
         </div>
 
         {/* Signature */}
-        <div className="mt-10 flex flex-col items-end text-right">
+        <div className="mt-5 flex flex-col items-end text-right">
           <p>Hormat Kami,</p>
-          <div className="h-16" />
+          <div className="h-10" />
           <p className="font-bold underline">{companyProfile.direktur.nama}</p>
           <p className="font-bold">{companyProfile.direktur.jabatan}</p>
         </div>

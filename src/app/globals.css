@@ -274,9 +274,12 @@
     min-height: 0 !important;
     margin: 0 auto !important;
     box-shadow: none !important;
-    break-after: page;
   }
-  .doc-print .doc-page:last-child { break-after: auto; }
+  /* Break BETWEEN consecutive pages only — never after the last one. Using
+   * break-after + :last-child fails when the document's .doc-page is followed
+   * by the fixed footer sibling (it's never :last-child), so a single-page
+   * document like the invoice would emit a trailing blank page. */
+  .doc-print .doc-page ~ .doc-page { break-before: page; }
   /* In print the page table need not stretch to fill a 297mm card. */
   .doc-print .doc-page-table { flex: none !important; }
 
