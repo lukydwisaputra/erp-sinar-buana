@@ -132,6 +132,25 @@ export function SphForm({
           onChange={(v) => form.setValue("termin", v, { shouldValidate: true })}
         />
       </BuilderSection>
+
+      <BuilderSection title="Pajak">
+        <div className="space-y-3">
+          <PajakRow
+            label="PPN"
+            aktif={values.ppnAktif}
+            persen={values.ppnPersen}
+            onToggle={(c) => form.setValue("ppnAktif", c)}
+            onPersen={(n) => form.setValue("ppnPersen", n)}
+          />
+          <PajakRow
+            label="PPh 23"
+            aktif={values.pph23Aktif}
+            persen={values.pph23Persen}
+            onToggle={(c) => form.setValue("pph23Aktif", c)}
+            onPersen={(n) => form.setValue("pph23Persen", n)}
+          />
+        </div>
+      </BuilderSection>
     </div>
   );
 }
@@ -420,6 +439,43 @@ function TerminEditor({
         <Alert variant="destructive">
           <AlertTitle>Total persentase termin harus 100%.</AlertTitle>
         </Alert>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Pajak Row ---------- */
+function PajakRow({
+  label,
+  aktif,
+  persen,
+  onToggle,
+  onPersen,
+}: {
+  label: string;
+  aktif: boolean;
+  persen: number;
+  onToggle: (v: boolean) => void;
+  onPersen: (v: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+      <label className="flex w-32 items-center gap-2">
+        <Checkbox checked={aktif} onCheckedChange={(c) => onToggle(c === true)} />
+        {label}
+      </label>
+      {aktif && (
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={persen ? String(persen) : ""}
+            onChange={(e) => onPersen(Number(e.target.value) || 0)}
+            className="w-20 text-right font-mono tabular-nums"
+          />
+          <span className="text-muted-foreground">%</span>
+        </div>
       )}
     </div>
   );
