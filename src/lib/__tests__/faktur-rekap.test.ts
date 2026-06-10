@@ -6,7 +6,8 @@ describe("groupFakturByDeal", () => {
   it("derives termin statuses + 70% paid for deal SPH/001", () => {
     const d = groupFakturByDeal(fakturFixtures).find((g) => g.sphId === "SPH/001/5.2026")!;
     expect(d.termins.map((t) => t.status)).toEqual(["lunas", "lunas", "menunggu"]);
-    expect(d.terbayar).toBe(87_500_000);
+    // terbayar now uses after-tax amounts (T1 + T2 lunas after-tax)
+    expect(d.terbayar).toBe(95_375_000);
     expect(d.totalBiaya).toBe(125_000_000);
     expect(Math.round(d.persenTerbayar)).toBe(70);
   });
@@ -23,5 +24,40 @@ describe("groupFakturByDeal", () => {
     const c = deals.find((g) => g.sphId === "SPH/004/6.2026")!;
     expect(c.termins[0].overdue).toBe(true);
     expect(c.termins[1].canCreate).toBe(false);
+  });
+});
+
+describe("groupFakturByDeal — after-tax", () => {
+  it("terbayar is sum of after-tax amounts for lunas termins (deal A)", () => {
+    const d = groupFakturByDeal(fakturFixtures).find((g) => g.sphId === "SPH/001/5.2026")!;
+    // T1: 40% of 125M = 50M; dpp=11/12*50M=45_833_333; ppn=round(12%*dpp)=5_500_000; pph=2%*50M=1_000_000 → 54_500_000
+    // T2: 30% of 125M = 37.5M; dpp=34_375_000; ppn=4_125_000; pph=750_000 → 40_875_000
+    expect(d.terbayar).toBe(95_375_000); // T1 + T2 lunas after-tax
+    expect(d.totalAfterTax).toBe(136_250_000); // T1 + T2 + T3
+    expect(Math.round(d.persenTerbayar)).toBe(70);
+  });
+
+  it("nilaiAfterTax per termin matches computeFaktur", () => {
+    const d = groupFakturByDeal(fakturFixtures).find((g) => g.sphId === "SPH/001/5.2026")!;
+    expect(d.termins[0].nilaiAfterTax).toBe(54_500_000);
+    expect(d.termins[1].nilaiAfterTax).toBe(40_875_000);
+    expect(d.termins[2].nilaiAfterTax).toBe(40_875_000);
+  });
+
+  it("latestFaktur is the issued termin with highest terminIndex", () => {
+    const d = groupFakturByDeal(fakturFixtures).find((g) => g.sphId === "SPH/001/5.2026")!;
+    expect(d.latestFaktur?.id).toBe("INV/001/2026-T3");
+  });
+
+  it("deal B: T2 draft is locked while T1 lunas", () => {
+    const b = groupFakturByDeal(fakturFixtures).find((g) => g.sphId === "SPH/002/5.2026")!;
+    expect(b.termins[1].status).toBe("draft");
+    expect(b.latestFaktur?.id).toBe("INV/002/2026-T1");
+  });
+
+  it("deal C: T1 overdue, T2 draft stays locked", () => {
+    const c = groupFakturByDeal(fakturFixtures).find((g) => g.sphId === "SPH/004/6.2026")!;
+    expect(c.termins[0].overdue).toBe(true);
+    expect(c.termins[1].status).toBe("draft");
   });
 });

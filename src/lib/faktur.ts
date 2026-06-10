@@ -63,6 +63,7 @@ export type DealTerminRow = {
   persen: number;
   pemicu: string;
   nilai: number;
+  nilaiAfterTax: number;
   faktur: Faktur | null;
   status: TerminPaymentStatus;
   overdue: boolean;
@@ -75,6 +76,8 @@ export type DealRekap = {
   sphId: string;
   perusahaanNama: string;
   totalBiaya: number;
+  totalAfterTax: number;
+  latestFaktur: Faktur | null;
   termins: DealTerminRow[];
   terbayar: number;
   persenTerbayar: number;
@@ -98,12 +101,16 @@ export function groupFakturByDeal(fakturs: Faktur[]): DealRekap[] {
     const total = totalBiaya(rep.items);
     const termins: DealTerminRow[] = rep.terminList.map((t, index) => {
       const faktur = arr.find((f) => f.terminIndex === index) ?? null;
+      const nilai = (num(t.persen) / 100) * total;
+      // Use computeFaktur for the actual faktur if one exists; otherwise estimate
+      const nilaiAfterTax = faktur ? computeFaktur(faktur).total : nilai;
       return {
         index,
         label: t.label,
         persen: num(t.persen),
         pemicu: t.pemicu,
-        nilai: (num(t.persen) / 100) * total,
+        nilai,
+        nilaiAfterTax,
         faktur,
         status: terminStatusOf(faktur),
         overdue: faktur ? isFakturOverdue(faktur) : false,
@@ -119,15 +126,25 @@ export function groupFakturByDeal(fakturs: Faktur[]): DealRekap[] {
       t.canCreate = (t.status === "belum" || t.status === "draft") && prevAllLunas;
       prevAllLunas = prevAllLunas && t.status === "lunas";
     }
-    const terbayar = termins.filter((t) => t.status === "lunas").reduce((s, t) => s + t.nilai, 0);
+    const terbayar = termins
+      .filter((t) => t.status === "lunas")
+      .reduce((s, t) => s + t.nilaiAfterTax, 0);
+    const totalAfterTax = termins.reduce((s, t) => s + t.nilaiAfterTax, 0);
+    const issuedFakturs = arr.filter((f) => f.tanggal !== "");
+    const latestFaktur =
+      issuedFakturs.length > 0
+        ? issuedFakturs.reduce((max, f) => (f.terminIndex > max.terminIndex ? f : max))
+        : null;
     return {
       key,
       sphId: rep.sphId,
       perusahaanNama: rep.perusahaanNama,
       totalBiaya: total,
+      totalAfterTax,
+      latestFaktur,
       termins,
       terbayar,
-      persenTerbayar: total ? (terbayar / total) * 100 : 0,
+      persenTerbayar: totalAfterTax ? (terbayar / totalAfterTax) * 100 : 0,
     };
   });
 }
