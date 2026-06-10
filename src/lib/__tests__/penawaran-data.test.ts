@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { listPenawaran, getPenawaran, updatePenawaranStatus } from "@/lib/data/penawaran";
+import { listPenawaran, getPenawaran, updatePenawaranStatus, deletePenawaran } from "@/lib/data/penawaran";
 import { listFaktur } from "@/lib/data/faktur";
 
 describe("listPenawaran", () => {
@@ -34,5 +34,20 @@ describe("updatePenawaranStatus", () => {
 
   it("throws for unknown id", async () => {
     await expect(updatePenawaranStatus("SPH/999/0.0000", "deal")).rejects.toThrow();
+  });
+});
+
+describe("deletePenawaran", () => {
+  it("removes an SPH from the store", async () => {
+    const before = await listPenawaran();
+    const target = before.find((s) => s.id === "SPH/005/6.2026");
+    expect(target).toBeDefined();
+    await deletePenawaran("SPH/005/6.2026");
+    const after = await listPenawaran();
+    expect(after.find((s) => s.id === "SPH/005/6.2026")).toBeUndefined();
+  });
+
+  it("throws for unknown id", async () => {
+    await expect(deletePenawaran("SPH/999/0.0000")).rejects.toThrow();
   });
 });

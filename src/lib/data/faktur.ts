@@ -1,6 +1,6 @@
 import { delay } from "@/lib/data/_delay";
 import { fakturFixtures } from "@/lib/fixtures/faktur";
-import { fakturSchema, type Faktur } from "@/lib/schemas/faktur";
+import { fakturSchema, type Faktur, type FakturStatus } from "@/lib/schemas/faktur";
 import { sphIdToInvBase, terminFakturId } from "@/lib/faktur-id";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import type { Sph } from "@/lib/schemas/penawaran";
@@ -65,8 +65,29 @@ export function createFakturSetFromSph(sph: Sph): void {
       status: "draft",
       catatan: [],
       tanggalBayar: "",
+      bankNama: "",
+      bankAtasNama: "",
+      bankNoRekening: "",
+      jabatanPenerima: "Direktur",
+      picAktif: false,
+      picNama: "",
+      picJabatan: "",
     };
 
     fakturFixtures.push(faktur);
+  }
+}
+
+export async function updateFakturStatus(id: string, newStatus: FakturStatus): Promise<void> {
+  await delay(300);
+  const idx = fakturFixtures.findIndex((f) => f.id === id);
+  if (idx === -1) throw new Error(`Faktur ${id} not found`);
+  fakturFixtures[idx] = { ...fakturFixtures[idx], status: newStatus };
+}
+
+export async function deleteAllFakturBySph(sphId: string): Promise<void> {
+  await delay(300);
+  for (let i = fakturFixtures.length - 1; i >= 0; i--) {
+    if (fakturFixtures[i].sphId === sphId) fakturFixtures.splice(i, 1);
   }
 }

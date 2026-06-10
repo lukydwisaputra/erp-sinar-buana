@@ -30,3 +30,10 @@ export async function updatePenawaranStatus(id: string, newStatus: SphStatus): P
     createFakturSetFromSph(penawaranFixtures[idx]);
   }
 }
+
+export async function deletePenawaran(id: string): Promise<void> {
+  await delay(300);
+  const idx = penawaranFixtures.findIndex((s) => s.id === id);
+  if (idx === -1) throw new Error(`SPH ${id} not found`);
+  penawaranFixtures.splice(idx, 1);
+}
