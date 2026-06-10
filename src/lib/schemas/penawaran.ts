@@ -49,6 +49,10 @@ export const sphFormSchema = z.object({
   items: z.array(sphItemSchema).min(1, "Tambahkan minimal satu layanan."),
   termin: z.array(sphTerminSchema),
   catatan: z.array(z.string()),
+  ppnAktif: z.boolean().default(false),
+  ppnPersen: z.coerce.number().default(12),
+  pph23Aktif: z.boolean().default(false),
+  pph23Persen: z.coerce.number().default(2),
 });
 export type SphFormValues = z.infer<typeof sphFormSchema>;
 

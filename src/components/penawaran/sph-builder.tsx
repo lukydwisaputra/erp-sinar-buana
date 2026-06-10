@@ -62,6 +62,10 @@ const emptyValues: SphFormValues = {
   ],
   termin: [],
   catatan: [],
+  ppnAktif: false,
+  ppnPersen: 12,
+  pph23Aktif: false,
+  pph23Persen: 2,
 };
 
 export function SphBuilder({ existing }: { existing?: Sph }) {
@@ -86,6 +90,10 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
           items: existing.items,
           termin: existing.termin,
           catatan: existing.catatan,
+          ppnAktif: existing.ppnAktif,
+          ppnPersen: existing.ppnPersen,
+          pph23Aktif: existing.pph23Aktif,
+          pph23Persen: existing.pph23Persen,
         }
       : emptyValues,
   });

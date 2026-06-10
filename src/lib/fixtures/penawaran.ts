@@ -41,6 +41,7 @@ export const penawaranFixtures: Sph[] = [
       "Biaya diatas belum termasuk PPN 11%.",
       "Rincian Anggaran Biaya dan Estimasi Waktu Pekerjaan Terlampir.",
     ],
+    ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
   },
   {
     id: "SPH/002/5.2026", status: "deal", rincianAktif: true,
@@ -68,6 +69,7 @@ export const penawaranFixtures: Sph[] = [
       "Termasuk pendampingan sidang AMDAL.",
       "Rincian Anggaran Biaya dan Estimasi Waktu Pekerjaan Terlampir.",
     ],
+    ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
   },
   {
     id: "SPH/003/5.2026", status: "draft", rincianAktif: true,
@@ -91,6 +93,7 @@ export const penawaranFixtures: Sph[] = [
       "Biaya diatas belum termasuk PPN 11%.",
       "Rincian Anggaran Biaya dan Estimasi Waktu Pekerjaan Terlampir.",
     ],
+    ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
   },
   {
     id: "SPH/004/6.2026", status: "deal", rincianAktif: true,
@@ -148,5 +151,6 @@ export const penawaranFixtures: Sph[] = [
       "Biaya diatas belum termasuk PPN 11%.",
       "Rincian Anggaran Biaya dan Estimasi Waktu Pekerjaan Terlampir.",
     ],
+    ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
   },
 ];
