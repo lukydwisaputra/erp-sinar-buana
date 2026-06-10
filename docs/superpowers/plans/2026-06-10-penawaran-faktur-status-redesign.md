@@ -832,7 +832,62 @@ function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string })
 }
 ```
 
-- [ ] **Step 2: Update SphBuilder routing**
+- [ ] **Step 2: Update SphCancelledView to handle both ditolak and dibatalkan**
+
+The component receives `status` so it can show the right alert message:
+
+```typescript
+function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string }) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
+  const values = sphToFormValues(existing);
+  const isDitolak = existing.status === "ditolak";
+
+  return (
+    <>
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <XCircle className="size-4" />
+          <AlertTitle>{isDitolak ? "Ditolak" : "Dibatalkan"}</AlertTitle>
+          <AlertDescription>
+            {isDitolak
+              ? "Penawaran ini telah ditolak dan tidak dapat diubah."
+              : "Penawaran ini telah dibatalkan dan tidak dapat diubah."}
+          </AlertDescription>
+        </Alert>
+        <div className="overflow-hidden rounded-lg border border-border">
+          <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
+            <p className="text-sm font-semibold">{noSph} — Pratinjau Dokumen</p>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Download className="size-4" /> Unduh
+            </Button>
+          </div>
+          <div className="p-4">
+            <div className="mx-auto max-w-[794px]">
+              <ScaleToFit>
+                <SphCoverLetter values={values} noSph={noSph} />
+              </ScaleToFit>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {mounted && createPortal(
+        <div className="doc-print hidden print:block">
+          <SphDocumentPackage values={values} noSph={noSph} />
+          <div className="doc-print-footer" aria-hidden>
+            <DocumentFooter />
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+```
+
+- [ ] **Step 3: Update SphBuilder routing**
 
 In `src/components/penawaran/sph-builder.tsx`, replace the routing block inside `SphBuilder` (currently lines 186–188):
 
@@ -844,24 +899,24 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
     return <SphDealView existing={existing} noSph={noSph} />;
   }
 
-  if (existing?.status === "dibatalkan") {
+  if (existing?.status === "dibatalkan" || existing?.status === "ditolak") {
     return <SphCancelledView existing={existing} noSph={noSph} />;
   }
 
   // ... rest of SphBuilder unchanged (form path)
 ```
 
-- [ ] **Step 3: Run tests — expect all pass**
+- [ ] **Step 4: Run tests — expect all pass**
 
 ```bash
 npx vitest run
 ```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/components/penawaran/sph-builder.tsx
-git commit -m "feat(sph-builder): replace Pratinjau Penuh with Unduh; add SphCancelledView"
+git commit -m "feat(sph-builder): replace Pratinjau Penuh with Unduh; add SphCancelledView for ditolak/dibatalkan"
 ```
 
 ---
@@ -1113,6 +1168,7 @@ git commit -m "feat(faktur-builder): add FakturReadOnlyView; Batalkan button wit
 **Spec coverage check:**
 - [x] SPH Deal: "Pratinjau Penuh" → "Unduh" — Task 6
 - [x] SPH Dibatalkan: read-only, Unduh only — Task 6 (SphCancelledView)
+- [x] SPH Ditolak: read-only, Unduh only — Task 6 (SphCancelledView, same component)
 - [x] Status labels: Draf / Terkirim / Disetujui / Ditolak / Dibatalkan — Task 5
 - [x] Row action menu redesign with Status label + disabled logic — Task 5
 - [x] All status changes via confirmation dialog — Task 5
