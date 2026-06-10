@@ -120,7 +120,9 @@ export function groupFakturByDeal(fakturs: Faktur[]): DealRekap[] {
       const faktur = arr.find((f) => f.terminIndex === index) ?? null;
       const nilai = (num(t.persen) / 100) * total;
       // Use computeFaktur for the actual faktur if one exists; otherwise estimate
-      const nilaiAfterTax = faktur ? computeFaktur(faktur).total : nilai;
+      const nilaiAfterTax = faktur
+        ? computeFaktur(faktur).total
+        : afterTaxAmount(nilai, rep.ppnAktif, rep.ppnPersen, rep.pph23Aktif, rep.pph23Persen);
       return {
         index,
         label: t.label,

@@ -60,4 +60,12 @@ describe("groupFakturByDeal — after-tax", () => {
     expect(c.termins[0].overdue).toBe(true);
     expect(c.termins[1].status).toBe("draft");
   });
+
+  it("draft termin nilaiAfterTax uses afterTaxAmount estimate", () => {
+    // Deal B: total = 350M; T2 draft (50%) = 175M pre-tax
+    // dpp = 11/12 * 175M = 160_416_666; ppn = round(12% * dpp) = 19_250_000; pph = 2% * 175M = 3_500_000
+    // nilaiAfterTax = 175M + 19_250_000 - 3_500_000 = 190_750_000
+    const b = groupFakturByDeal(fakturFixtures).find((g) => g.sphId === "SPH/002/5.2026")!;
+    expect(b.termins[1].nilaiAfterTax).toBe(190_750_000);
+  });
 });
