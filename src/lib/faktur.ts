@@ -42,6 +42,23 @@ export function computeFaktur(v: FakturFormValues): FakturTotals {
   };
 }
 
+/**
+ * Compute after-tax amount for a given nilaiTermin using explicit PPN/PPH
+ * settings. Uses DPP nilai lain method for PPN (base = 11/12 × nilai termin).
+ */
+export function afterTaxAmount(
+  nilaiTermin: number,
+  ppnAktif: boolean,
+  ppnPersen: number,
+  pph23Aktif: boolean,
+  pph23Persen: number,
+): number {
+  const dpp = (11 / 12) * nilaiTermin;
+  const ppn = ppnAktif ? Math.round((ppnPersen / 100) * dpp) : 0;
+  const pph23 = pph23Aktif ? (pph23Persen / 100) * nilaiTermin : 0;
+  return nilaiTermin + ppn - pph23;
+}
+
 /** A faktur is overdue when its due date passed and it isn't paid yet. */
 export function isFakturOverdue(f: Pick<Faktur, "status" | "jatuhTempo">): boolean {
   return f.status !== "lunas" && !!f.jatuhTempo && new Date(f.jatuhTempo + "T23:59:59") < new Date();
