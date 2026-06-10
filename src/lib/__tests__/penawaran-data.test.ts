@@ -6,7 +6,7 @@ describe("listPenawaran", () => {
   it("returns all seeded SPHs matching the schema", async () => {
     const rows = await listPenawaran();
     expect(rows.length).toBeGreaterThanOrEqual(5);
-    expect(rows[0]).toMatchObject({ id: expect.any(String), status: expect.stringMatching(/draft|terkirim|deal/) });
+    expect(rows[0]).toMatchObject({ id: expect.any(String), status: expect.stringMatching(/draft|terkirim|deal|ditolak|dibatalkan/) });
   });
   it("filters by id or perusahaan", async () => {
     expect((await listPenawaran({ q: "maju" })).length).toBe(1);

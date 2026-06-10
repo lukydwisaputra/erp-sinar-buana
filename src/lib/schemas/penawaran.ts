@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const sphStatus = z.enum(["draft", "terkirim", "deal"]);
+export const sphStatus = z.enum(["draft", "terkirim", "deal", "ditolak", "dibatalkan"]);
 export type SphStatus = z.infer<typeof sphStatus>;
 
 export const rabRowSchema = z.object({
@@ -53,6 +53,10 @@ export const sphFormSchema = z.object({
   ppnPersen: z.coerce.number().default(12),
   pph23Aktif: z.boolean().default(false),
   pph23Persen: z.coerce.number().default(2),
+  jabatanPenerima: z.string().default("Direktur"),
+  picAktif: z.boolean().default(false),
+  picNama: z.string().default(""),
+  picJabatan: z.string().default(""),
 });
 export type SphFormValues = z.infer<typeof sphFormSchema>;
 

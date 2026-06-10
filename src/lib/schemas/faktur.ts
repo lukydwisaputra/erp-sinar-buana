@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { sphTerminSchema } from "@/lib/schemas/penawaran";
 
-export const fakturStatus = z.enum(["draft", "terkirim", "lunas"]);
+export const fakturStatus = z.enum(["draft", "terkirim", "lunas", "dibatalkan"]);
 export type FakturStatus = z.infer<typeof fakturStatus>;
 
 export const fakturItemSchema = z.object({
@@ -31,6 +31,13 @@ export const fakturFormSchema = z.object({
   catatan: z.array(z.string()),
   status: fakturStatus,
   tanggalBayar: z.string(),
+  bankNama: z.string().default(""),
+  bankAtasNama: z.string().default(""),
+  bankNoRekening: z.string().default(""),
+  jabatanPenerima: z.string().default("Direktur"),
+  picAktif: z.boolean().default(false),
+  picNama: z.string().default(""),
+  picJabatan: z.string().default(""),
 });
 export type FakturFormValues = z.infer<typeof fakturFormSchema>;
 
