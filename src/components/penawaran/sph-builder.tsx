@@ -6,9 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { delay } from "@/lib/data/_delay";
 import { usePending } from "@/lib/use-pending";
-import { Save } from "lucide-react";
+import { Save, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { DocumentBuilder } from "@/components/shared/document/document-builder";
 import { ScaleToFit } from "@/components/shared/scale-to-fit";
 import {
@@ -70,6 +71,48 @@ const emptyValues: SphFormValues = {
 
 export function SphBuilder({ existing }: { existing?: Sph }) {
   const noSph = existing?.id ?? "SPH/006/6.2026";
+
+  if (existing?.status === "deal") {
+    const frozenValues: SphFormValues = {
+      perusahaanId: existing.perusahaanId,
+      perusahaanNama: existing.perusahaanNama,
+      alamat: existing.alamat,
+      tanggal: existing.tanggal,
+      masaBerlakuAktif: existing.masaBerlakuAktif,
+      masaBerlakuHari: existing.masaBerlakuHari,
+      kalimatPembuka: existing.kalimatPembuka,
+      lampiran: existing.lampiran,
+      rincianAktif: existing.rincianAktif,
+      items: existing.items,
+      termin: existing.termin,
+      catatan: existing.catatan,
+      ppnAktif: existing.ppnAktif,
+      ppnPersen: existing.ppnPersen,
+      pph23Aktif: existing.pph23Aktif,
+      pph23Persen: existing.pph23Persen,
+    };
+    return (
+      <div className="space-y-4">
+        <Alert>
+          <Lock className="size-4" />
+          <AlertTitle>Read Only</AlertTitle>
+          <AlertDescription>
+            Penawaran ini sudah menjadi Deal dan tidak dapat diubah.
+          </AlertDescription>
+        </Alert>
+        <div className="overflow-hidden rounded-lg border border-border">
+          <div className="border-b border-border bg-muted/30 px-4 py-3">
+            <p className="text-sm font-semibold">{noSph} — Pratinjau Dokumen</p>
+          </div>
+          <div className="p-4">
+            <ScaleToFit>
+              <SphCoverLetter values={frozenValues} noSph={noSph} />
+            </ScaleToFit>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const form = useForm<SphFormValues>({
     // sphFormSchema uses z.coerce.number(), so the resolver's inferred input
