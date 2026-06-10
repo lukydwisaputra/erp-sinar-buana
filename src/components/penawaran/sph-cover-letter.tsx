@@ -2,6 +2,7 @@ import { companyProfile } from "@/lib/company-profile";
 import { formatRupiah } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { totalPenawaran } from "@/lib/sph";
+import { afterTaxAmount } from "@/lib/faktur";
 import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
@@ -116,6 +117,60 @@ export function SphCoverLetter({
                 {formatRupiah(total)}
               </td>
             </tr>
+            {/* Per-termin after-tax rows (only when termin + any tax active) */}
+            {values.termin.length > 0 && (values.ppnAktif || values.pph23Aktif) && (
+              <>
+                {values.termin.map((t, i) => {
+                  const nilaiTermin = ((Number(t.persen) || 0) / 100) * total;
+                  const net = afterTaxAmount(
+                    nilaiTermin,
+                    values.ppnAktif,
+                    values.ppnPersen,
+                    values.pph23Aktif,
+                    values.pph23Persen,
+                  );
+                  return (
+                    <tr key={i}>
+                      <td
+                        colSpan={4}
+                        className="border border-[var(--doc-rule)] px-2 py-1 text-right"
+                      >
+                        {t.label}{t.pemicu ? ` — ${t.pemicu}` : ""}{" "}
+                        <span className="text-xs">(Termasuk Pajak)</span>
+                      </td>
+                      <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                        {formatRupiah(net)}
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="border border-[var(--doc-rule)] px-2 py-1 text-right font-bold"
+                  >
+                    TOTAL BIAYA SETELAH PAJAK
+                  </td>
+                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
+                    {formatRupiah(
+                      values.termin.reduce((s, t) => {
+                        const nilaiTermin = ((Number(t.persen) || 0) / 100) * total;
+                        return (
+                          s +
+                          afterTaxAmount(
+                            nilaiTermin,
+                            values.ppnAktif,
+                            values.ppnPersen,
+                            values.pph23Aktif,
+                            values.pph23Persen,
+                          )
+                        );
+                      }, 0),
+                    )}
+                  </td>
+                </tr>
+              </>
+            )}
             {/* Terbilang */}
             <tr>
               <td colSpan={5} className="border border-[var(--doc-rule)] px-2 py-1 text-center">
