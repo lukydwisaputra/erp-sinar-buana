@@ -1,7 +1,37 @@
 import type { Faktur } from "@/lib/schemas/faktur";
 
+// Full contract + termin schedule shared by every invoice of deal SPH/001.
+const sph001Items = [
+  { uraian: "Penyusunan Persetujuan Teknis Air Limbah", volume: 1, harga: 125_000_000, satuan: "Paket" },
+];
+const sph001Termin = [
+  { label: "Termin I", persen: 40, pemicu: "DP" },
+  { label: "Termin II", persen: 40, pemicu: "Progres" },
+  { label: "Termin III", persen: 20, pemicu: "Pelunasan Persetujuan Teknis Air Limbah" },
+];
+
 export const fakturFixtures: Faktur[] = [
-  // Verbatim PDF invoice – Termin III, terkirim
+  // Deal SPH/001 — Termin I (lunas)
+  {
+    id: "INV/010/04.2026", sphId: "SPH/001/5.2026",
+    perusahaanId: "PRSH-001", perusahaanNama: "PT Maju Bersama Industri",
+    alamat: "Garut", kota: "Garut", npwp: "0123456789010000",
+    tanggal: "2026-04-10", jatuhTempo: "2026-05-10",
+    items: sph001Items, terminList: sph001Termin,
+    terminIndex: 0, ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
+    catatan: [], status: "lunas", tanggalBayar: "2026-04-22",
+  },
+  // Deal SPH/001 — Termin II (lunas)
+  {
+    id: "INV/011/05.2026", sphId: "SPH/001/5.2026",
+    perusahaanId: "PRSH-001", perusahaanNama: "PT Maju Bersama Industri",
+    alamat: "Garut", kota: "Garut", npwp: "0123456789010000",
+    tanggal: "2026-05-02", jatuhTempo: "2026-06-02",
+    items: sph001Items, terminList: sph001Termin,
+    terminIndex: 1, ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
+    catatan: [], status: "lunas", tanggalBayar: "2026-05-15",
+  },
+  // Deal SPH/001 — Termin III (terkirim) — the verbatim PDF invoice
   {
     id: "INV/002/05.2026", sphId: "SPH/001/5.2026",
     perusahaanId: "PRSH-001", perusahaanNama: "PT Maju Bersama Industri",

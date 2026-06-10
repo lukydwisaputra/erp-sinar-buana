@@ -4,10 +4,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ReceiptText, Plus } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
+import { FakturRekap } from "@/components/faktur/faktur-rekap";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatRupiah } from "@/lib/format";
-import { computeFaktur } from "@/lib/faktur";
+import { computeFaktur, isFakturOverdue } from "@/lib/faktur";
 import { useFakturList } from "@/lib/query/faktur";
 import type { Faktur } from "@/lib/schemas/faktur";
 
@@ -20,11 +22,6 @@ const STATUS: Record<Faktur["status"], { label: string; variant: "info" | "warni
   terkirim: { label: "Terkirim", variant: "warning" },
   lunas: { label: "Lunas", variant: "success" },
 };
-
-/** Overdue when due date passed and not yet paid. */
-function isOverdue(f: Faktur): boolean {
-  return f.status !== "lunas" && !!f.jatuhTempo && new Date(f.jatuhTempo + "T23:59:59") < new Date();
-}
 
 export default function FakturPage() {
   const router = useRouter();
@@ -50,7 +47,7 @@ export default function FakturPage() {
     {
       accessorKey: "status", header: "Status",
       cell: ({ row }) => {
-        if (isOverdue(row.original)) return <Badge variant="destructive">Jatuh Tempo</Badge>;
+        if (isFakturOverdue(row.original)) return <Badge variant="destructive">Jatuh Tempo</Badge>;
         const s = STATUS[row.original.status];
         return <Badge variant={s.variant}>{s.label}</Badge>;
       },
@@ -70,9 +67,24 @@ export default function FakturPage() {
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : (
-        <DataTable columns={columns} data={data ?? []} loading={isLoading}
-          searchColumn="perusahaanNama" searchPlaceholder="Cari perusahaan…" emptyMessage="Belum ada faktur"
-          onEdit={(row) => router.push(`/faktur/${encodeURIComponent(row.id)}`)} />
+        <Tabs defaultValue="rekap">
+          <TabsList>
+            <TabsTrigger value="rekap">Rekap Termin per Deal</TabsTrigger>
+            <TabsTrigger value="semua">Semua Faktur</TabsTrigger>
+          </TabsList>
+          <TabsContent value="rekap" className="mt-4">
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Memuat…</p>
+            ) : (
+              <FakturRekap fakturs={data ?? []} />
+            )}
+          </TabsContent>
+          <TabsContent value="semua" className="mt-4">
+            <DataTable columns={columns} data={data ?? []} loading={isLoading}
+              searchColumn="perusahaanNama" searchPlaceholder="Cari perusahaan…" emptyMessage="Belum ada faktur"
+              onEdit={(row) => router.push(`/faktur/${encodeURIComponent(row.id)}`)} />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
