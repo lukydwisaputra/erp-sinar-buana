@@ -23,10 +23,12 @@ import { totalPenawaran } from "@/lib/sph";
 import { usePenawaranList, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
 import type { Sph, SphStatus } from "@/lib/schemas/penawaran";
 
-const STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" }> = {
+const STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
   draft: { label: "Draft", variant: "info" },
   terkirim: { label: "Leads - Terkirim", variant: "warning" },
   deal: { label: "Convert - Deal", variant: "success" },
+  ditolak: { label: "Ditolak", variant: "destructive" },
+  dibatalkan: { label: "Dibatalkan", variant: "secondary" },
 };
 
 const NEXT_STATUS: Partial<Record<SphStatus, { label: string; next: SphStatus }>> = {
