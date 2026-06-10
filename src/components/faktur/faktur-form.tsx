@@ -23,64 +23,44 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
-import { penawaranFixtures } from "@/lib/fixtures/penawaran";
+import { dealSphOptions, fakturValuesFromSph } from "@/lib/faktur-source";
 
 const err = (e: { message?: string } | undefined) => (e ? [e] : undefined);
-
-type PerusahaanOpt = { id: string; nama: string; alamat: string; kota: string; npwp: string };
-const perusahaanOptions: PerusahaanOpt[] = perusahaanFixtures.map((p) => ({
-  id: p.id, nama: p.nama, alamat: p.alamat, kota: p.kota, npwp: p.npwp,
-}));
-const dealSphOptions = penawaranFixtures.filter((s) => s.status === "deal");
 
 export function FakturForm({ form }: { form: UseFormReturn<FakturFormValues> }) {
   const values = form.watch();
   const errors = form.formState.errors;
 
+  // A faktur is always sourced from a deal Penawaran; everything below is filled
+  // from it (no manual perusahaan/contract entry).
   const applySph = (sphId: string) => {
-    const sph = penawaranFixtures.find((s) => s.id === sphId);
-    if (!sph) return;
-    const p = perusahaanOptions.find((o) => o.id === sph.perusahaanId);
-    form.setValue("sphId", sph.id);
-    form.setValue("perusahaanId", sph.perusahaanId, { shouldValidate: true });
-    form.setValue("perusahaanNama", sph.perusahaanNama);
-    form.setValue("alamat", sph.alamat);
-    form.setValue("kota", p?.kota ?? "");
-    form.setValue("npwp", p?.npwp ?? "");
-    form.setValue(
-      "items",
-      sph.items.map((it) => ({ uraian: it.nama, volume: it.volume, harga: it.harga, satuan: it.satuan })),
-      { shouldValidate: true },
-    );
-    form.setValue("terminList", sph.termin.length ? sph.termin : [{ label: "Termin I", persen: 100, pemicu: "Pelunasan" }], { shouldValidate: true });
+    const v = fakturValuesFromSph(sphId);
+    if (!v) return;
+    form.setValue("sphId", v.sphId ?? "", { shouldValidate: true });
+    form.setValue("perusahaanId", v.perusahaanId ?? "", { shouldValidate: true });
+    form.setValue("perusahaanNama", v.perusahaanNama ?? "");
+    form.setValue("alamat", v.alamat ?? "");
+    form.setValue("kota", v.kota ?? "");
+    form.setValue("npwp", v.npwp ?? "");
+    form.setValue("items", v.items ?? [], { shouldValidate: true });
+    form.setValue("terminList", v.terminList ?? [], { shouldValidate: true });
     form.setValue("terminIndex", 0, { shouldValidate: true });
-  };
-
-  const applyPerusahaan = (o: PerusahaanOpt) => {
-    form.setValue("perusahaanId", o.id, { shouldValidate: true });
-    form.setValue("perusahaanNama", o.nama);
-    form.setValue("alamat", o.alamat);
-    form.setValue("kota", o.kota);
-    form.setValue("npwp", o.npwp);
   };
 
   return (
     <div className="space-y-6">
       <BuilderSection title="Sumber & Tujuan">
         <div className="space-y-4">
-          <Field>
-            <FieldLabel>Sumber dari SPH (deal)</FieldLabel>
+          <Field data-invalid={!!errors.sphId}>
+            <FieldLabel>Penawaran (deal) sumber</FieldLabel>
             <SphPicker value={values.sphId} options={dealSphOptions} onPick={applySph} />
+            <FieldError errors={err(errors.sphId)} />
           </Field>
-          <Field data-invalid={!!errors.perusahaanId}>
+          <Field>
             <FieldLabel>Perusahaan</FieldLabel>
-            <PerusahaanPicker
-              value={perusahaanOptions.find((o) => o.id === values.perusahaanId)}
-              options={perusahaanOptions}
-              onPick={applyPerusahaan}
-            />
-            <FieldError errors={err(errors.perusahaanId)} />
+            <div className="flex h-9 items-center rounded-lg border border-input bg-muted/40 px-3 text-sm">
+              {values.perusahaanNama || <span className="text-muted-foreground">Otomatis dari Penawaran terpilih</span>}
+            </div>
           </Field>
           <div className="flex flex-wrap gap-4">
             <DateField label="Tanggal" value={values.tanggal} invalid={!!errors.tanggal}
@@ -168,47 +148,21 @@ function DateField({ label, value, onChange, invalid }: { label: string; value: 
   );
 }
 
-function PerusahaanPicker({ value, options, onPick }: { value?: PerusahaanOpt; options: PerusahaanOpt[]; onPick: (o: PerusahaanOpt) => void }) {
-  const [open, setOpen] = React.useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" className={cn("w-full justify-between font-normal", !value && "text-muted-foreground")}>
-          {value?.nama || "Pilih perusahaan…"}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Cari perusahaan…" />
-          <CommandList>
-            <CommandEmpty>Tidak ada perusahaan.</CommandEmpty>
-            <CommandGroup>
-              {options.map((o) => (
-                <CommandItem key={o.id} value={o.nama} onSelect={() => { onPick(o); setOpen(false); }}>{o.nama}</CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function SphPicker({ value, options, onPick }: { value: string; options: typeof penawaranFixtures; onPick: (id: string) => void }) {
+function SphPicker({ value, options, onPick }: { value: string; options: { id: string; perusahaanNama: string }[]; onPick: (id: string) => void }) {
   const [open, setOpen] = React.useState(false);
   const sel = options.find((s) => s.id === value);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" role="combobox" className={cn("w-full justify-between font-normal", !sel && "text-muted-foreground")}>
-          {sel ? `${sel.id} — ${sel.perusahaanNama}` : "Pilih SPH deal (opsional)…"}
+          {sel ? `${sel.id} — ${sel.perusahaanNama}` : value ? value : "Pilih Penawaran deal…"}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
         <Command>
-          <CommandInput placeholder="Cari SPH…" />
+          <CommandInput placeholder="Cari Penawaran…" />
           <CommandList>
-            <CommandEmpty>Tidak ada SPH deal.</CommandEmpty>
+            <CommandEmpty>Tidak ada Penawaran deal.</CommandEmpty>
             <CommandGroup>
               {options.map((s) => (
                 <CommandItem key={s.id} value={`${s.id} ${s.perusahaanNama}`} onSelect={() => { onPick(s.id); setOpen(false); }}>

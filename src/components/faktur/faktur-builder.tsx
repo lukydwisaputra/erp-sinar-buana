@@ -10,6 +10,7 @@ import { DocumentBuilder } from "@/components/shared/document/document-builder";
 import { FakturForm } from "@/components/faktur/faktur-form";
 import { FakturDocument } from "@/components/faktur/faktur-document";
 import { fakturFormSchema, type FakturFormValues, type Faktur } from "@/lib/schemas/faktur";
+import { fakturValuesFromSph } from "@/lib/faktur-source";
 import { usePending } from "@/lib/use-pending";
 import { delay } from "@/lib/data/_delay";
 
@@ -25,11 +26,25 @@ const emptyValues: FakturFormValues = {
   catatan: [], status: "draft", tanggalBayar: "",
 };
 
-export function FakturBuilder({ existing }: { existing?: Faktur }) {
+export function FakturBuilder({
+  existing,
+  initialSphId,
+  initialTerminIndex,
+}: {
+  existing?: Faktur;
+  initialSphId?: string;
+  initialTerminIndex?: number;
+}) {
   const noFaktur = existing?.id ?? "INV/006/06.2026";
+  // When opened from a deal's termin ("Buat Faktur"), pre-fill from that deal.
+  const defaultValues = React.useMemo<FakturFormValues>(() => {
+    if (existing) return { ...existing };
+    const fromSph = initialSphId ? fakturValuesFromSph(initialSphId) : null;
+    return { ...emptyValues, ...(fromSph ?? {}), terminIndex: initialTerminIndex ?? 0 };
+  }, [existing, initialSphId, initialTerminIndex]);
   const form = useForm<FakturFormValues>({
     resolver: zodResolver(fakturFormSchema) as Resolver<FakturFormValues>,
-    defaultValues: existing ? { ...existing } : emptyValues,
+    defaultValues,
   });
   const values = form.watch();
   const [saving, runSave] = usePending();

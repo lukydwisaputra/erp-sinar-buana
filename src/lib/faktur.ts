@@ -66,6 +66,8 @@ export type DealTerminRow = {
   faktur: Faktur | null;
   status: TerminPaymentStatus;
   overdue: boolean;
+  /** A termin may be invoiced only once every earlier termin is fully paid. */
+  canCreate: boolean;
 };
 
 export type DealRekap = {
@@ -105,8 +107,16 @@ export function groupFakturByDeal(fakturs: Faktur[]): DealRekap[] {
         faktur,
         status: terminStatusOf(faktur),
         overdue: faktur ? isFakturOverdue(faktur) : false,
+        canCreate: false,
       };
     });
+    // Sequential billing: a termin can be invoiced only after every earlier
+    // termin is paid (lunas). Enables the next eligible termin one at a time.
+    let prevAllLunas = true;
+    for (const t of termins) {
+      t.canCreate = t.status === "belum" && prevAllLunas;
+      prevAllLunas = prevAllLunas && t.status === "lunas";
+    }
     const terbayar = termins.filter((t) => t.status === "lunas").reduce((s, t) => s + t.nilai, 0);
     return {
       key,

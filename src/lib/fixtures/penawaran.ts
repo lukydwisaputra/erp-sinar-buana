@@ -43,7 +43,7 @@ export const penawaranFixtures: Sph[] = [
     ],
   },
   {
-    id: "SPH/002/5.2026", status: "terkirim", rincianAktif: true,
+    id: "SPH/002/5.2026", status: "deal", rincianAktif: true,
     perusahaanId: "PRSH-003", perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
     tanggal: "2026-05-12",
@@ -93,7 +93,7 @@ export const penawaranFixtures: Sph[] = [
     ],
   },
   {
-    id: "SPH/004/6.2026", status: "draft", rincianAktif: true,
+    id: "SPH/004/6.2026", status: "deal", rincianAktif: true,
     perusahaanId: "PRSH-006", perusahaanNama: "PT Cahaya Teknik Mandiri",
     alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
     tanggal: "2026-06-02",

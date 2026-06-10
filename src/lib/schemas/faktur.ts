@@ -12,7 +12,8 @@ export const fakturItemSchema = z.object({
 });
 
 export const fakturFormSchema = z.object({
-  sphId: z.string(),
+  // A faktur may only be issued from a converted (deal) Penawaran.
+  sphId: z.string().min(1, "Pilih Penawaran (deal) sebagai sumber faktur."),
   perusahaanId: z.string().min(1, "Perusahaan wajib dipilih."),
   perusahaanNama: z.string(),
   alamat: z.string(),
