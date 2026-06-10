@@ -207,17 +207,7 @@ function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string })
   );
 }
 
-export function SphBuilder({ existing }: { existing?: Sph }) {
-  const noSph = existing?.id ?? "SPH/006/6.2026";
-
-  if (existing?.status === "deal") {
-    return <SphDealView existing={existing} noSph={noSph} />;
-  }
-
-  if (existing?.status === "dibatalkan" || existing?.status === "ditolak") {
-    return <SphCancelledView existing={existing} noSph={noSph} />;
-  }
-
+function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
   const form = useForm<SphFormValues>({
     // sphFormSchema uses z.coerce.number(), so the resolver's inferred input
     // type differs from SphFormValues (the output). Cast keeps SphForm's
@@ -280,4 +270,18 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
       onKirim={onKirim}
     />
   );
+}
+
+export function SphBuilder({ existing }: { existing?: Sph }) {
+  const noSph = existing?.id ?? "SPH/006/6.2026";
+
+  if (existing?.status === "deal") {
+    return <SphDealView existing={existing} noSph={noSph} />;
+  }
+
+  if (existing?.status === "dibatalkan" || existing?.status === "ditolak") {
+    return <SphCancelledView existing={existing} noSph={noSph} />;
+  }
+
+  return <SphEditView existing={existing} noSph={noSph} />;
 }
