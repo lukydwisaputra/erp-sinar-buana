@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listPenawaran,
   updatePenawaranStatus,
+  deletePenawaran,
   type ListPenawaranParams,
 } from "@/lib/data/penawaran";
 import type { SphStatus } from "@/lib/schemas/penawaran";
@@ -22,6 +23,16 @@ export function useUpdatePenawaranStatus() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["penawaran"] });
       qc.invalidateQueries({ queryKey: ["faktur"] });
+    },
+  });
+}
+
+export function useDeletePenawaran() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deletePenawaran(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["penawaran"] });
     },
   });
 }
