@@ -34,5 +34,10 @@ export const fakturFormSchema = z.object({
 });
 export type FakturFormValues = z.infer<typeof fakturFormSchema>;
 
-export const fakturSchema = fakturFormSchema.extend({ id: z.string() });
+/** Stored/persisted shape — tanggal/jatuhTempo may be empty for drafts. */
+export const fakturSchema = fakturFormSchema.extend({
+  id: z.string(),
+  tanggal: z.string(),
+  jatuhTempo: z.string(),
+});
 export type Faktur = z.infer<typeof fakturSchema>;

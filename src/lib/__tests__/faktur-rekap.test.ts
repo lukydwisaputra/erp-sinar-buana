@@ -14,9 +14,9 @@ describe("groupFakturByDeal", () => {
   it("unlocks the next termin only after the previous is paid (sequential)", () => {
     const deals = groupFakturByDeal(fakturFixtures);
 
-    // Deal B: Termin I lunas → Termin II (belum) is unlocked.
+    // Deal B: Termin I lunas → Termin II (draft, auto-created) is unlocked.
     const b = deals.find((g) => g.sphId === "SPH/002/5.2026")!;
-    expect(b.termins[1].status).toBe("belum");
+    expect(["belum", "draft"]).toContain(b.termins[1].status);
     expect(b.termins[1].canCreate).toBe(true);
 
     // Deal C: Termin I terkirim (overdue, not paid) → Termin II stays locked.

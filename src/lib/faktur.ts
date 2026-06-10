@@ -112,9 +112,11 @@ export function groupFakturByDeal(fakturs: Faktur[]): DealRekap[] {
     });
     // Sequential billing: a termin can be invoiced only after every earlier
     // termin is paid (lunas). Enables the next eligible termin one at a time.
+    // A draft termin is treated as "unlocked but not yet issued" — canCreate
+    // remains true so the user can complete/send it.
     let prevAllLunas = true;
     for (const t of termins) {
-      t.canCreate = t.status === "belum" && prevAllLunas;
+      t.canCreate = (t.status === "belum" || t.status === "draft") && prevAllLunas;
       prevAllLunas = prevAllLunas && t.status === "lunas";
     }
     const terbayar = termins.filter((t) => t.status === "lunas").reduce((s, t) => s + t.nilai, 0);
