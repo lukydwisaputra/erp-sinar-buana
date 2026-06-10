@@ -18,48 +18,20 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
-} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-import { dealSphOptions, fakturValuesFromSph } from "@/lib/faktur-source";
-
-const err = (e: { message?: string } | undefined) => (e ? [e] : undefined);
 
 export function FakturForm({ form }: { form: UseFormReturn<FakturFormValues> }) {
   const values = form.watch();
   const errors = form.formState.errors;
 
-  // A faktur is always sourced from a deal Penawaran; everything below is filled
-  // from it (no manual perusahaan/contract entry).
-  const applySph = (sphId: string) => {
-    const v = fakturValuesFromSph(sphId);
-    if (!v) return;
-    form.setValue("sphId", v.sphId ?? "", { shouldValidate: true });
-    form.setValue("perusahaanId", v.perusahaanId ?? "", { shouldValidate: true });
-    form.setValue("perusahaanNama", v.perusahaanNama ?? "");
-    form.setValue("alamat", v.alamat ?? "");
-    form.setValue("kota", v.kota ?? "");
-    form.setValue("npwp", v.npwp ?? "");
-    form.setValue("items", v.items ?? [], { shouldValidate: true });
-    form.setValue("terminList", v.terminList ?? [], { shouldValidate: true });
-    form.setValue("terminIndex", 0, { shouldValidate: true });
-  };
-
   return (
     <div className="space-y-6">
-      <BuilderSection title="Sumber & Tujuan">
+      <BuilderSection title="Sumber">
         <div className="space-y-4">
-          <Field data-invalid={!!errors.sphId}>
-            <FieldLabel>Penawaran (deal) sumber</FieldLabel>
-            <SphPicker value={values.sphId} options={dealSphOptions} onPick={applySph} />
-            <FieldError errors={err(errors.sphId)} />
-          </Field>
           <Field>
-            <FieldLabel>Perusahaan</FieldLabel>
-            <div className="flex h-9 items-center rounded-lg border border-input bg-muted/40 px-3 text-sm">
-              {values.perusahaanNama || <span className="text-muted-foreground">Otomatis dari Penawaran terpilih</span>}
+            <FieldLabel>No. Penawaran (Deal)</FieldLabel>
+            <div className="flex h-9 items-center rounded-lg border border-input bg-muted/40 px-3 font-mono text-sm text-muted-foreground">
+              {values.sphId || "—"}
             </div>
           </Field>
           <div className="flex flex-wrap gap-4">
@@ -145,35 +117,6 @@ function DateField({ label, value, onChange, invalid }: { label: string; value: 
         </PopoverContent>
       </Popover>
     </Field>
-  );
-}
-
-function SphPicker({ value, options, onPick }: { value: string; options: { id: string; perusahaanNama: string }[]; onPick: (id: string) => void }) {
-  const [open, setOpen] = React.useState(false);
-  const sel = options.find((s) => s.id === value);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" className={cn("w-full justify-between font-normal", !sel && "text-muted-foreground")}>
-          {sel ? `${sel.id} — ${sel.perusahaanNama}` : value ? value : "Pilih Penawaran deal…"}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Cari Penawaran…" />
-          <CommandList>
-            <CommandEmpty>Tidak ada Penawaran deal.</CommandEmpty>
-            <CommandGroup>
-              {options.map((s) => (
-                <CommandItem key={s.id} value={`${s.id} ${s.perusahaanNama}`} onSelect={() => { onPick(s.id); setOpen(false); }}>
-                  {s.id} — {s.perusahaanNama}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
   );
 }
 

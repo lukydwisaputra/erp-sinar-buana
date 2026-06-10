@@ -10,12 +10,15 @@ import { DocumentBuilder } from "@/components/shared/document/document-builder";
 import { FakturForm } from "@/components/faktur/faktur-form";
 import { FakturDocument } from "@/components/faktur/faktur-document";
 import { fakturFormSchema, type FakturFormValues, type Faktur } from "@/lib/schemas/faktur";
-import { fakturValuesFromSph } from "@/lib/faktur-source";
 import { usePending } from "@/lib/use-pending";
 import { delay } from "@/lib/data/_delay";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
-function plusDaysISO(n: number) { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+function plusDaysISO(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 
 const emptyValues: FakturFormValues = {
   sphId: "", perusahaanId: "", perusahaanNama: "", alamat: "", kota: "", npwp: "",
@@ -26,37 +29,36 @@ const emptyValues: FakturFormValues = {
   catatan: [], status: "draft", tanggalBayar: "",
 };
 
-export function FakturBuilder({
-  existing,
-  initialSphId,
-  initialTerminIndex,
-}: {
-  existing?: Faktur;
-  initialSphId?: string;
-  initialTerminIndex?: number;
-}) {
-  const noFaktur = existing?.id ?? "INV/006/06.2026";
-  // When opened from a deal's termin ("Buat Faktur"), pre-fill from that deal.
-  const defaultValues = React.useMemo<FakturFormValues>(() => {
-    if (existing) return { ...existing };
-    const fromSph = initialSphId ? fakturValuesFromSph(initialSphId) : null;
-    return { ...emptyValues, ...(fromSph ?? {}), terminIndex: initialTerminIndex ?? 0 };
-  }, [existing, initialSphId, initialTerminIndex]);
+export function FakturBuilder({ existing }: { existing?: Faktur }) {
+  const noFaktur = existing?.id ?? "INV/???/????";
   const form = useForm<FakturFormValues>({
     resolver: zodResolver(fakturFormSchema) as Resolver<FakturFormValues>,
-    defaultValues,
+    defaultValues: existing ? { ...existing } : emptyValues,
   });
   const values = form.watch();
   const [saving, runSave] = usePending();
-  const onSimpan = () => runSave(form.handleSubmit(async () => { await delay(); toast.success("Demo: draf tidak benar-benar disimpan"); }));
-  const onKirim = form.handleSubmit(async () => { await delay(); toast.success("Demo: faktur tidak benar-benar dikirim"); });
+  const onSimpan = () =>
+    runSave(
+      form.handleSubmit(async () => {
+        await delay();
+        toast.success("Demo: draf tidak benar-benar disimpan");
+      }),
+    );
+  const onKirim = form.handleSubmit(async () => {
+    await delay();
+    toast.success("Demo: faktur tidak benar-benar dikirim");
+  });
 
   return (
     <DocumentBuilder
-      title={existing ? existing.id : "Buat Faktur"}
+      title={existing ? existing.id : "Faktur"}
       subtitle="Susun Faktur per termin. Pratinjau diperbarui otomatis."
       previewTitle="Pratinjau Faktur"
-      actions={<Button variant="secondary" loading={saving} onClick={onSimpan}><Save className="size-4" /> Simpan Draf</Button>}
+      actions={
+        <Button variant="secondary" loading={saving} onClick={onSimpan}>
+          <Save className="size-4" /> Simpan Draf
+        </Button>
+      }
       form={<FakturForm form={form} />}
       sidePreview={<ScaleToFit><FakturDocument values={values} noFaktur={noFaktur} /></ScaleToFit>}
       doc={<FakturDocument values={values} noFaktur={noFaktur} />}
