@@ -43,12 +43,13 @@ export default function FakturPage() {
       id: "sphId", header: "No. Faktur", meta: { mono: true },
       cell: ({ row }) => {
         const deal = row.original;
-        const latestId = deal.latestFaktur?.id;
-        if (!latestId) return <span className="font-mono">{deal.sphId}</span>;
+        const lastTermin = deal.termins[deal.termins.length - 1];
+        const targetId = lastTermin?.faktur?.id ?? deal.latestFaktur?.id;
+        if (!targetId) return <span className="font-mono">{deal.sphId}</span>;
         return (
           <button
             type="button"
-            onClick={() => router.push(`/faktur/${encodeURIComponent(latestId)}`)}
+            onClick={() => router.push(`/faktur/${encodeURIComponent(targetId)}`)}
             className="rounded-sm font-mono text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {deal.sphId}
