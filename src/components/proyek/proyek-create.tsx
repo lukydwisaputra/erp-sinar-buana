@@ -98,7 +98,7 @@ export function ProyekCreate({ sph }: { sph: Sph }) {
 
         <Field data-invalid={!!errors.tahun}>
           <FieldLabel htmlFor="p-tahun">Tahun Pengerjaan</FieldLabel>
-          <Input id="p-tahun" type="number" inputMode="numeric" aria-invalid={!!errors.tahun} {...register("tahun")} />
+          <Input id="p-tahun" type="number" inputMode="numeric" aria-invalid={!!errors.tahun} {...register("tahun", { valueAsNumber: true })} />
           <FieldError errors={errors.tahun ? [errors.tahun] : undefined} />
         </Field>
 

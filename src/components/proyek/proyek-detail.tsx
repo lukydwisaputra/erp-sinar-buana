@@ -76,6 +76,7 @@ function MilestoneRow({
   isLast: boolean;
   autoFocus?: boolean;
 }) {
+  const router = useRouter();
   const updateMilestone = useUpdateMilestone();
   const moveMilestone   = useMoveMilestone();
   const deleteMilestone = useDeleteMilestone();
@@ -91,7 +92,9 @@ function MilestoneRow({
   React.useEffect(() => { if (autoFocus) namaRef.current?.focus(); }, [autoFocus]);
 
   const save = (patch: Partial<Omit<Milestone, "id" | "urutan">>) =>
-    updateMilestone.mutate({ proyekId, milestoneId: m.id, patch });
+    updateMilestone.mutate({ proyekId, milestoneId: m.id, patch }, {
+      onSuccess: () => router.refresh(),
+    });
 
   const inputCls = "w-full rounded px-1.5 py-0.5 text-sm bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
 
@@ -105,7 +108,10 @@ function MilestoneRow({
         <button
           type="button"
           disabled={isFirst || moveMilestone.isPending}
-          onClick={() => moveMilestone.mutate({ proyekId, milestoneId: m.id, direction: "up" })}
+          onClick={() => moveMilestone.mutate(
+            { proyekId, milestoneId: m.id, direction: "up" },
+            { onSuccess: () => router.refresh() },
+          )}
           className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
         >
           <ChevronUp className="size-3" />
@@ -113,7 +119,10 @@ function MilestoneRow({
         <button
           type="button"
           disabled={isLast || moveMilestone.isPending}
-          onClick={() => moveMilestone.mutate({ proyekId, milestoneId: m.id, direction: "down" })}
+          onClick={() => moveMilestone.mutate(
+            { proyekId, milestoneId: m.id, direction: "down" },
+            { onSuccess: () => router.refresh() },
+          )}
           className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
         >
           <ChevronDown className="size-3" />
@@ -193,7 +202,10 @@ function MilestoneRow({
         type="button"
         onClick={() => {
           deleteMilestone.mutate({ proyekId, milestoneId: m.id }, {
-            onSuccess: () => toast.success("Milestone dihapus."),
+            onSuccess: () => {
+              toast.success("Milestone dihapus.");
+              router.refresh();
+            },
           });
         }}
         className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors"
@@ -206,6 +218,7 @@ function MilestoneRow({
 }
 
 function MilestoneTab({ proyek }: { proyek: Proyek }) {
+  const router = useRouter();
   const addMilestone    = useAddMilestone();
   const replaceTemplate = useReplaceMilestonesWithTemplate();
   const [newId, setNewId]                   = React.useState<string | null>(null);
@@ -226,7 +239,7 @@ function MilestoneTab({ proyek }: { proyek: Proyek }) {
           status: "belum_mulai", pemicuTermin: null,
         },
       },
-      { onSuccess: () => setNewId(id) },
+      { onSuccess: () => { setNewId(id); router.refresh(); } },
     );
   };
 
@@ -238,6 +251,7 @@ function MilestoneTab({ proyek }: { proyek: Proyek }) {
         onSuccess: () => {
           toast.success("Template milestone dimuat.");
           setTemplateConfirm(false);
+          router.refresh();
         },
       },
     );
@@ -248,7 +262,7 @@ function MilestoneTab({ proyek }: { proyek: Proyek }) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {template && (
-            <Button variant="outline" size="sm" onClick={() => setTemplateConfirm(true)}>
+            <Button variant="outline" size="sm" onClick={() => setTemplateConfirm(true)} disabled={replaceTemplate.isPending}>
               <LayoutList className="size-3.5 mr-1.5" /> Muat Template
             </Button>
           )}

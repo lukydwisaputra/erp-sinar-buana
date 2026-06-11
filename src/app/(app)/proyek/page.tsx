@@ -89,7 +89,7 @@ export default function ProyekPage() {
           data={data ?? []}
           loading={isLoading}
           searchColumn="nama"
-          searchPlaceholder="Cari nama proyek atau perusahaan…"
+          searchPlaceholder="Cari nama proyek…"
           emptyMessage="Belum ada proyek"
           rowActions={false}
         />
