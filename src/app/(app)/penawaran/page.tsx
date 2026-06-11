@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   FileText, Plus, EllipsisVerticalIcon, SquarePenIcon, Trash2Icon,
-  SendIcon, CircleCheckIcon, FileIcon, BanIcon,
+  SendIcon, CircleCheckIcon, FileIcon, BanIcon, FolderKanban,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DataTable } from "@/components/shared/data-table";
@@ -25,6 +25,7 @@ import {
   usePenawaranList, useUpdatePenawaranStatus, useDeletePenawaran,
 } from "@/lib/query/penawaran";
 import { useDeleteFakturBySph } from "@/lib/query/faktur";
+import { useProyekList } from "@/lib/query/proyek";
 import type { Sph, SphStatus } from "@/lib/schemas/penawaran";
 
 const STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
@@ -55,6 +56,12 @@ export default function PenawaranPage() {
   const updateStatus    = useUpdatePenawaranStatus();
   const deletePenawaran = useDeletePenawaran();
   const deleteFakturBySph = useDeleteFakturBySph();
+  const { data: proyekList } = useProyekList();
+  const sphToProyekId = React.useMemo(() => {
+    const map = new Map<string, string>();
+    proyekList?.forEach((p) => { if (p.sphId) map.set(p.sphId, p.id); });
+    return map;
+  }, [proyekList]);
 
   const [statusTarget, setStatusTarget] = React.useState<{ sph: Sph; nextStatus: SphStatus } | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Sph | null>(null);
@@ -156,6 +163,24 @@ export default function PenawaranPage() {
                 >
                   <Trash2Icon className="mr-2 size-4" /> Hapus
                 </DropdownMenuItem>
+                {isDeal && (
+                  <>
+                    <DropdownMenuSeparator />
+                    {sphToProyekId.has(sph.id) ? (
+                      <DropdownMenuItem
+                        onSelect={() => router.push(`/proyek/${sphToProyekId.get(sph.id)}`)}
+                      >
+                        <FolderKanban className="mr-2 size-4" /> Lihat Proyek
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onSelect={() => router.push(`/proyek/baru?sphId=${encodeURIComponent(sph.id)}`)}
+                      >
+                        <FolderKanban className="mr-2 size-4" /> Buat Proyek
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -203,6 +228,7 @@ export default function PenawaranPage() {
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
               variant={dialogInfo?.destructive ? "destructive" : "default"}
+              disabled={updateStatus.isPending}
               onClick={() => {
                 if (!statusTarget) return;
                 updateStatus.mutate(
@@ -237,6 +263,7 @@ export default function PenawaranPage() {
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              disabled={deletePenawaran.isPending || deleteFakturBySph.isPending}
               onClick={() => {
                 if (!deleteTarget) return;
                 const doDelete = () => {
