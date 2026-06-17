@@ -237,15 +237,15 @@ export function PenggajianCreate() {
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full table-fixed text-sm">
               <colgroup>
-                <col className="w-[18%]" />
+                <col className="w-[14%]" />
+                <col className="w-[12%]" />
                 <col className="w-[10%]" />
-                <col className="w-[10%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9%]" />
-                <col className="w-[13%]" />
-                <col className="w-[13%]" />
+                <col className="w-[7%]" />
+                <col className="w-[7%]" />
+                <col className="w-[7%]" />
+                <col className="w-[7%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase">
