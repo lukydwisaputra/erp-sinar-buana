@@ -74,6 +74,7 @@ export function PenggajianCreate() {
         <Checkbox
           checked={selectedIds.length === activeKaryawan.length ? true : selectedIds.length > 0 ? "indeterminate" : false}
           onCheckedChange={toggleAll}
+          disabled={phase === "table"}
           aria-label="Pilih semua"
         />
       ),
@@ -81,6 +82,7 @@ export function PenggajianCreate() {
         <Checkbox
           checked={selectedIds.includes(row.original.id)}
           onCheckedChange={() => toggleKaryawan(row.original.id)}
+          disabled={phase === "table"}
           aria-label={`Pilih ${row.original.nama}`}
         />
       ),
@@ -105,7 +107,7 @@ export function PenggajianCreate() {
       meta: { align: "right" as const, mono: true },
       cell: ({ row }) => formatRupiahCompact(row.original.gajiPokok),
     },
-  ], [selectedIds]);
+  ], [selectedIds, phase]);
 
   const handleLanjut = () => {
     setRows(selectedIds.map(makeDefaultRow));
