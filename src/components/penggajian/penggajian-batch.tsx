@@ -104,15 +104,15 @@ function SlipRow({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
                 <EllipsisIcon className="size-3.5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem asChild>
+            <DropdownMenuContent align="end" className="w-36 text-xs">
+              <DropdownMenuItem asChild className="text-xs py-1">
                 <Link href={`/penggajian/${batchId}/${slip.id}`}>
-                  <ExternalLink className="mr-2 size-3.5" /> Lihat Slip
+                  <ExternalLink className="mr-1.5 size-3" /> Lihat Slip
                 </Link>
               </DropdownMenuItem>
               {!locked && (
-                <DropdownMenuItem onSelect={() => setConfirmOpen(true)}>
-                  <CircleDollarSign className="mr-2 size-3.5" /> Tandai Dibayar
+                <DropdownMenuItem onSelect={() => setConfirmOpen(true)} className="text-xs py-1">
+                  <CircleDollarSign className="mr-1.5 size-3" /> Tandai Dibayar
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
