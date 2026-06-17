@@ -95,7 +95,7 @@ function SlipRow({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
             : <Badge variant="warning" className="text-[10px]">Menunggu</Badge>}
         </td>
         <td className="px-1 py-1.5">
-          <div className="flex items-center gap-0.5 justify-end">
+          <div className="flex items-center gap-0.5 justify-center">
             <Link href={`/penggajian/${batchId}/${slip.id}`}>
               <Button variant="ghost" size="sm" className="h-5 px-1 text-[10px] gap-0.5">
                 <ExternalLink className="size-2.5" /> Slip
