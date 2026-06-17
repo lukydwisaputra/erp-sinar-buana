@@ -2,18 +2,16 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CalendarIcon, Wallet, Plus, X } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Wallet, Plus, X } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { id as idLocale } from "date-fns/locale";
 import { useBatchList } from "@/lib/query/penggajian";
 import type { PenggajianBatch } from "@/lib/schemas/penggajian";
 
@@ -34,6 +32,11 @@ function bulanLabel(key: string) {
   return d.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 }
 
+const BULAN_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+];
+
 function MonthPicker({
   value,
   onChange,
@@ -42,6 +45,7 @@ function MonthPicker({
   onChange: (date: Date | undefined) => void;
 }) {
   const [open, setOpen] = React.useState(false);
+  const [year, setYear] = React.useState(() => value?.getFullYear() ?? new Date().getFullYear());
   const label = value
     ? value.toLocaleDateString("id-ID", { month: "long", year: "numeric" })
     : "Semua bulan";
@@ -63,19 +67,35 @@ function MonthPicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={value}
-          onSelect={(date) => {
-            if (date) {
-              onChange(new Date(date.getFullYear(), date.getMonth(), 1));
-            }
-            setOpen(false);
-          }}
-          locale={idLocale}
-          captionLayout="dropdown"
-        />
+      <PopoverContent className="w-64 p-3" align="start">
+        <div className="flex items-center justify-between mb-2">
+          <Button variant="ghost" size="icon" className="size-7" onClick={() => setYear((y) => y - 1)}>
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="text-sm font-medium">{year}</span>
+          <Button variant="ghost" size="icon" className="size-7" onClick={() => setYear((y) => y + 1)}>
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-4 gap-1">
+          {BULAN_NAMES.map((name, i) => {
+            const selected = value && value.getFullYear() === year && value.getMonth() === i;
+            return (
+              <Button
+                key={i}
+                variant={selected ? "default" : "ghost"}
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => {
+                  onChange(new Date(year, i, 1));
+                  setOpen(false);
+                }}
+              >
+                {name}
+              </Button>
+            );
+          })}
+        </div>
       </PopoverContent>
     </Popover>
   );
