@@ -229,7 +229,18 @@ export function PenggajianCreate() {
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-sm">
+            <table className="w-full table-fixed text-sm">
+              <colgroup>
+                <col className="w-[18%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
+              </colgroup>
               <thead>
                 <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase">
                   <th className="px-3 py-2 text-left">Nama</th>
@@ -250,8 +261,8 @@ export function PenggajianCreate() {
                   return (
                     <tr key={row.karyawanId} className="border-b border-border last:border-0">
                       <td className="px-3 py-2">
-                        <p className="font-medium">{k.nama}</p>
-                        <p className="text-xs text-muted-foreground">{k.jabatan}</p>
+                        <p className="font-medium truncate">{k.nama}</p>
+                        <p className="text-xs text-muted-foreground truncate">{k.jabatan}</p>
                       </td>
                       <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiahCompact(gajiPokokEfektif)}</td>
                       <td className="px-1 py-1">{numInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}</td>
