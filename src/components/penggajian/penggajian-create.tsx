@@ -260,16 +260,16 @@ export function PenggajianCreate() {
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full table-fixed text-xs">
               <colgroup>
-                {/* Nama  GajiEf  Tunj   Lembur Bonus  PPh21  BPJS   Kotor  Bersih */}
-                <col className="w-[15%]" />
-                <col className="w-[11%]" />
-                <col className="w-[9%]" />
-                <col className="w-[8%]" />
-                <col className="w-[8%]" />
-                <col className="w-[6%]" />
-                <col className="w-[8%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
+                {/* Nama  GajiEf  Tunj   Lembur Bonus  PPh21  BPJS   Kotor  Bersih = 100% */}
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "15%" }} />
               </colgroup>
               <thead>
                 <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase divide-x divide-border">
