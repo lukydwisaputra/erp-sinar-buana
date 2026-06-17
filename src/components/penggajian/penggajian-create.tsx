@@ -89,6 +89,7 @@ export function PenggajianCreate() {
     { accessorKey: "jabatan", header: "Jabatan" },
     {
       accessorKey: "statusKepegawaian", header: "Status",
+      meta: { collapse: true },
       cell: ({ row }) => {
         const s = row.original.statusKepegawaian;
         return (
@@ -100,7 +101,7 @@ export function PenggajianCreate() {
     },
     {
       accessorKey: "gajiPokok", header: "Gaji Pokok",
-      meta: { align: "right" as const, mono: true },
+      meta: { mono: true, collapse: true },
       cell: ({ row }) => formatRupiahCompact(row.original.gajiPokok),
     },
   ], [selectedIds]);
