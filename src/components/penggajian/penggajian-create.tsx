@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DataTable } from "@/components/shared/data-table";
 import { SectionLabel } from "@/components/shared/detail-drawer";
-import { formatRupiahCompact } from "@/lib/format";
+import { formatRupiah } from "@/lib/format";
 import { calcSlip } from "@/lib/schemas/penggajian";
 import { useCreateBatch } from "@/lib/query/penggajian";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
@@ -102,7 +102,7 @@ export function PenggajianCreate() {
     {
       accessorKey: "gajiPokok", header: "Gaji Pokok",
       meta: { mono: true, className: "w-[20%]" },
-      cell: ({ row }) => formatRupiahCompact(row.original.gajiPokok),
+      cell: ({ row }) => formatRupiah(row.original.gajiPokok),
     },
   ], [selectedIds]);
 
@@ -271,7 +271,7 @@ export function PenggajianCreate() {
                         <p className="font-medium truncate">{k.nama}</p>
                         <p className="text-xs text-muted-foreground truncate">{k.jabatan}</p>
                       </td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiahCompact(gajiPokokEfektif)}</td>
+                      <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiah(gajiPokokEfektif)}</td>
                       <td className="px-1 py-1">{numInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}</td>
                       <td className="px-1 py-1">{numInput(row.lembur, (v) => updateRow(idx, { lembur: v }))}</td>
                       <td className="px-1 py-1">{numInput(row.bonus, (v) => updateRow(idx, { bonus: v }))}</td>
@@ -291,9 +291,9 @@ export function PenggajianCreate() {
                         </div>
                       </td>
                       <td className="px-1 py-1">{numInput(row.bpjsPotongan, (v) => updateRow(idx, { bpjsPotongan: v }))}</td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiahCompact(penggajianKotor)}</td>
+                      <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiah(penggajianKotor)}</td>
                       <td className={`px-3 py-2 text-right font-mono tabular-nums font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>
-                        {formatRupiahCompact(penggajianBersih)}
+                        {formatRupiah(penggajianBersih)}
                       </td>
                     </tr>
                   );
