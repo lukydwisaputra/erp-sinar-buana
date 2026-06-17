@@ -1,16 +1,19 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, ChevronRight, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/shared/data-table";
 import { SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiahCompact } from "@/lib/format";
 import { calcSlip } from "@/lib/schemas/penggajian";
 import { useCreateBatch } from "@/lib/query/penggajian";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
+import type { Karyawan } from "@/lib/schemas/karyawan";
 
 const activeKaryawan = karyawanFixtures.filter((k) => k.status === "aktif");
 
@@ -28,6 +31,12 @@ function makeDefaultRow(karyawanId: string): SlipRow {
   return { karyawanId, tunjangan: k.tunjangan, lembur: 0, bonus: 0, pph21: 0, bpjsPotongan: 0 };
 }
 
+const statusFilterOptions = [
+  { label: "Tetap", value: "tetap" },
+  { label: "Kontrak", value: "kontrak" },
+  { label: "Probation", value: "probation" },
+];
+
 const colGrid = "160px 100px 90px 80px 80px 90px 90px 110px 110px";
 const inputCls =
   "w-full rounded px-1.5 py-0.5 text-right text-sm font-mono bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
@@ -44,6 +53,54 @@ export function PenggajianCreate() {
 
   const toggleKaryawan = (id: string) =>
     setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+
+  const toggleAll = () => {
+    if (selectedIds.length === activeKaryawan.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(activeKaryawan.map((k) => k.id));
+    }
+  };
+
+  const karyawanColumns: ColumnDef<Karyawan>[] = React.useMemo(() => [
+    {
+      id: "select",
+      header: () => (
+        <Checkbox
+          checked={selectedIds.length === activeKaryawan.length ? true : selectedIds.length > 0 ? "indeterminate" : false}
+          onCheckedChange={toggleAll}
+          aria-label="Pilih semua"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={selectedIds.includes(row.original.id)}
+          onCheckedChange={() => toggleKaryawan(row.original.id)}
+          aria-label={`Pilih ${row.original.nama}`}
+        />
+      ),
+      enableSorting: false,
+      meta: { collapse: true },
+    },
+    { accessorKey: "nama", header: "Nama", cell: ({ row }) => <span className="font-medium">{row.original.nama}</span> },
+    { accessorKey: "jabatan", header: "Jabatan" },
+    {
+      accessorKey: "statusKepegawaian", header: "Status",
+      cell: ({ row }) => {
+        const s = row.original.statusKepegawaian;
+        return (
+          <Badge variant={s === "tetap" ? "success" : s === "kontrak" ? "info" : "warning"} className="text-xs">
+            {s} ×{row.original.pengali}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "gajiPokok", header: "Gaji Pokok",
+      meta: { align: "right" as const, mono: true },
+      cell: ({ row }) => formatRupiahCompact(row.original.gajiPokok),
+    },
+  ], [selectedIds]);
 
   const handleLanjut = () => {
     setRows(selectedIds.map(makeDefaultRow));
@@ -111,22 +168,25 @@ export function PenggajianCreate() {
         </section>
 
         <section>
-          <SectionLabel>Pilih Karyawan</SectionLabel>
-          <div className="space-y-2">
-            {activeKaryawan.map((k) => (
-              <label key={k.id} className="flex cursor-pointer items-center gap-2.5">
-                <Checkbox checked={selectedIds.includes(k.id)} onCheckedChange={() => toggleKaryawan(k.id)} />
-                <span className="text-sm font-medium">{k.nama}</span>
-                <span className="text-xs text-muted-foreground">{k.jabatan}</span>
-                <Badge
-                  variant={k.statusKepegawaian === "tetap" ? "success" : k.statusKepegawaian === "kontrak" ? "info" : "warning"}
-                  className="ml-auto text-xs"
-                >
-                  {k.statusKepegawaian} ×{k.pengali}
-                </Badge>
-              </label>
-            ))}
+          <div className="flex items-center justify-between mb-2">
+            <SectionLabel>Pilih Karyawan</SectionLabel>
+            {selectedIds.length > 0 && (
+              <span className="text-sm text-muted-foreground">{selectedIds.length} dipilih</span>
+            )}
           </div>
+          <DataTable
+            columns={karyawanColumns}
+            data={activeKaryawan}
+            searchColumns={["nama", "jabatan"]}
+            searchPlaceholder="Cari nama atau jabatan…"
+            filterColumn="statusKepegawaian"
+            filterPlaceholder="Semua status"
+            filterOptions={statusFilterOptions}
+            rowActions={false}
+            compact
+            initialPageSize={10}
+            emptyMessage="Tidak ada karyawan aktif"
+          />
         </section>
 
         {phase === "select" && (
