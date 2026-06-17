@@ -56,15 +56,16 @@ describe("updateSlip", () => {
 describe("markSlipDibayar", () => {
   it("sets status to sudah_dibayar and sets paidAt", async () => {
     const b = await getBatch("GAJ-002");
-    const slipId = b!.slips[0].id;
-    await markSlipDibayar("GAJ-002", slipId);
-    const slip = await getSlip("GAJ-002", slipId);
+    const pending = b!.slips.find((s) => s.status === "menunggu_pembayaran")!;
+    await markSlipDibayar("GAJ-002", pending.id);
+    const slip = await getSlip("GAJ-002", pending.id);
     expect(slip?.status).toBe("sudah_dibayar");
     expect(slip?.paidAt).not.toBeNull();
   });
   it("appends an arus kas log entry", async () => {
     const b = await getBatch("GAJ-002");
-    const slipId = b!.slips[1].id;
+    const pending = b!.slips.filter((s) => s.status === "menunggu_pembayaran");
+    const slipId = pending[pending.length - 1].id;
     await markSlipDibayar("GAJ-002", slipId);
     const log = await listArusKasLog();
     expect(log.some((e) => e.slipId === slipId)).toBe(true);
