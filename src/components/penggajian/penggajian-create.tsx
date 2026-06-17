@@ -23,13 +23,13 @@ type SlipRow = {
   tunjangan: number;
   lembur: number;
   bonus: number;
-  pph21: number;
+  pph21Pct: number;
   bpjsPotongan: number;
 };
 
 function makeDefaultRow(karyawanId: string): SlipRow {
   const k = activeKaryawan.find((k) => k.id === karyawanId)!;
-  return { karyawanId, tunjangan: k.tunjangan, lembur: 0, bonus: 0, pph21: 0, bpjsPotongan: 0 };
+  return { karyawanId, tunjangan: k.tunjangan, lembur: 0, bonus: 0, pph21Pct: 0, bpjsPotongan: 0 };
 }
 
 const statusFilterOptions = [
@@ -125,9 +125,15 @@ export function PenggajianCreate() {
     />
   );
 
+  function pph21Idr(row: SlipRow) {
+    const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
+    const kotor = k.gajiPokok * k.pengali + row.tunjangan + row.lembur + row.bonus;
+    return Math.round(kotor * row.pph21Pct / 100);
+  }
+
   const rowsValid = rows.every((row) => {
     const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
-    const { penggajianBersih } = calcSlip({ ...k, ...row });
+    const { penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Idr(row) });
     return penggajianBersih >= 0;
   });
 
@@ -138,7 +144,7 @@ export function PenggajianCreate() {
         karyawanId: k.id, karyawanNama: k.nama, jabatan: k.jabatan,
         statusKepegawaian: k.statusKepegawaian, pengali: k.pengali, gajiPokok: k.gajiPokok,
         tunjangan: row.tunjangan, lembur: row.lembur, bonus: row.bonus,
-        pph21: row.pph21, bpjsPotongan: row.bpjsPotongan,
+        pph21: pph21Idr(row), bpjsPotongan: row.bpjsPotongan,
         bankNama: k.bank.nama, bankNomor: k.bank.nomor, bankAtasNama: k.bank.atasNama,
       };
     });
@@ -257,7 +263,8 @@ export function PenggajianCreate() {
               <tbody>
                 {rows.map((row, idx) => {
                   const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
-                  const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row });
+                  const pph21Amount = pph21Idr(row);
+                  const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Amount });
                   return (
                     <tr key={row.karyawanId} className="border-b border-border last:border-0">
                       <td className="px-3 py-2">
@@ -268,7 +275,21 @@ export function PenggajianCreate() {
                       <td className="px-1 py-1">{numInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}</td>
                       <td className="px-1 py-1">{numInput(row.lembur, (v) => updateRow(idx, { lembur: v }))}</td>
                       <td className="px-1 py-1">{numInput(row.bonus, (v) => updateRow(idx, { bonus: v }))}</td>
-                      <td className="px-1 py-1">{numInput(row.pph21, (v) => updateRow(idx, { pph21: v }))}</td>
+                      <td className="px-1 py-1">
+                        <div className="flex items-center gap-0.5">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={0.1}
+                            value={row.pph21Pct === 0 ? "" : row.pph21Pct}
+                            placeholder="0"
+                            onChange={(e) => updateRow(idx, { pph21Pct: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
+                            className={inputCls}
+                          />
+                          <span className="text-xs text-muted-foreground shrink-0">%</span>
+                        </div>
+                      </td>
                       <td className="px-1 py-1">{numInput(row.bpjsPotongan, (v) => updateRow(idx, { bpjsPotongan: v }))}</td>
                       <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiahCompact(penggajianKotor)}</td>
                       <td className={`px-3 py-2 text-right font-mono tabular-nums font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>
