@@ -263,25 +263,25 @@ export function PenggajianCreate() {
                 {/* Nama  GajiEf  Tunj   Lembur Bonus  PPh21  BPJS   Kotor  Bersih = 100% */}
                 <col style={{ width: "14%" }} />
                 <col style={{ width: "12%" }} />
-                <col style={{ width: "11%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "15%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "12%" }} />
               </colgroup>
               <thead>
                 <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase divide-x divide-border">
-                  <th className="px-2 py-2 text-left">Nama</th>
-                  <th className="px-2 py-2 text-right">Gaji Efektif</th>
-                  <th className="px-2 py-2 text-right">Tunjangan</th>
-                  <th className="px-2 py-2 text-right">Lembur</th>
-                  <th className="px-2 py-2 text-right">Bonus</th>
-                  <th className="px-2 py-2 text-right">PPh 21</th>
-                  <th className="px-2 py-2 text-right">BPJS</th>
-                  <th className="px-2 py-2 text-right">Kotor</th>
-                  <th className="px-2 py-2 text-right">Bersih</th>
+                  <th className="px-2 py-2 text-center">Nama</th>
+                  <th className="px-2 py-2 text-center">Gaji Efektif</th>
+                  <th className="px-2 py-2 text-center">Tunjangan</th>
+                  <th className="px-2 py-2 text-center">Lembur</th>
+                  <th className="px-2 py-2 text-center">Bonus</th>
+                  <th className="px-2 py-2 text-center">PPh 21</th>
+                  <th className="px-2 py-2 text-center">BPJS</th>
+                  <th className="px-2 py-2 text-center">Kotor</th>
+                  <th className="px-2 py-2 text-center">Bersih</th>
                 </tr>
               </thead>
               <tbody>
