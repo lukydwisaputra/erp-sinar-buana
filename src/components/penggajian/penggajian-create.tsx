@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DataTable } from "@/components/shared/data-table";
 import { SectionLabel } from "@/components/shared/detail-drawer";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, formatIntIDR, parseRupiah } from "@/lib/format";
 import { calcSlip } from "@/lib/schemas/penggajian";
 import { useCreateBatch } from "@/lib/query/penggajian";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
@@ -40,6 +40,36 @@ const statusFilterOptions = [
 
 const inputCls =
   "w-full rounded px-1.5 py-1 text-right text-sm font-mono bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
+
+function InlineMoneyInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [focused, setFocused] = React.useState(false);
+  const [text, setText] = React.useState(value ? formatIntIDR(value) : "");
+
+  React.useEffect(() => {
+    if (!focused) setText(value ? formatIntIDR(value) : "");
+  }, [value, focused]);
+
+  return (
+    <div className="flex items-center gap-0.5">
+      <span className="text-xs text-muted-foreground shrink-0">Rp</span>
+      <input
+        inputMode="numeric"
+        value={focused ? text : (value ? formatIntIDR(value) : "")}
+        placeholder="0"
+        onFocus={() => setFocused(true)}
+        onChange={(e) => {
+          setText(e.target.value);
+          onChange(parseRupiah(e.target.value));
+        }}
+        onBlur={() => {
+          setFocused(false);
+          setText(value ? formatIntIDR(value) : "");
+        }}
+        className={inputCls}
+      />
+    </div>
+  );
+}
 
 export function PenggajianCreate() {
   const router = useRouter();
@@ -114,15 +144,8 @@ export function PenggajianCreate() {
   const updateRow = (idx: number, patch: Partial<SlipRow>) =>
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
 
-  const numInput = (val: number, onChange: (v: number) => void) => (
-    <input
-      type="number"
-      min={0}
-      value={val === 0 ? "" : val}
-      placeholder="0"
-      onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
-      className={inputCls}
-    />
+  const moneyInput = (val: number, onChange: (v: number) => void) => (
+    <InlineMoneyInput value={val} onChange={onChange} />
   );
 
   function pph21Idr(row: SlipRow) {
@@ -272,9 +295,9 @@ export function PenggajianCreate() {
                         <p className="text-xs text-muted-foreground truncate">{k.jabatan}</p>
                       </td>
                       <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiah(gajiPokokEfektif)}</td>
-                      <td className="px-1 py-1">{numInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}</td>
-                      <td className="px-1 py-1">{numInput(row.lembur, (v) => updateRow(idx, { lembur: v }))}</td>
-                      <td className="px-1 py-1">{numInput(row.bonus, (v) => updateRow(idx, { bonus: v }))}</td>
+                      <td className="px-1 py-1">{moneyInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}</td>
+                      <td className="px-1 py-1">{moneyInput(row.lembur, (v) => updateRow(idx, { lembur: v }))}</td>
+                      <td className="px-1 py-1">{moneyInput(row.bonus, (v) => updateRow(idx, { bonus: v }))}</td>
                       <td className="px-1 py-1">
                         <div className="flex items-center gap-0.5">
                           <input
@@ -290,7 +313,7 @@ export function PenggajianCreate() {
                           <span className="text-xs text-muted-foreground shrink-0">%</span>
                         </div>
                       </td>
-                      <td className="px-1 py-1">{numInput(row.bpjsPotongan, (v) => updateRow(idx, { bpjsPotongan: v }))}</td>
+                      <td className="px-1 py-1">{moneyInput(row.bpjsPotongan, (v) => updateRow(idx, { bpjsPotongan: v }))}</td>
                       <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiah(penggajianKotor)}</td>
                       <td className={`px-3 py-2 text-right font-mono tabular-nums font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>
                         {formatRupiah(penggajianBersih)}
