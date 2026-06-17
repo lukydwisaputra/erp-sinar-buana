@@ -2,11 +2,18 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Wallet, Plus } from "lucide-react";
+import { CalendarIcon, Wallet, Plus, X } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { id as idLocale } from "date-fns/locale";
 import { useBatchList } from "@/lib/query/penggajian";
 import type { PenggajianBatch } from "@/lib/schemas/penggajian";
 
@@ -27,23 +34,69 @@ function bulanLabel(key: string) {
   return d.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 }
 
-type BatchRow = PenggajianBatch & { bulan: string };
+function MonthPicker({
+  value,
+  onChange,
+}: {
+  value: Date | undefined;
+  onChange: (date: Date | undefined) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const label = value
+    ? value.toLocaleDateString("id-ID", { month: "long", year: "numeric" })
+    : "Semua bulan";
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="h-9 justify-start gap-2 text-sm font-normal">
+          <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
+          {label}
+          {value && (
+            <span
+              role="button"
+              className="ml-auto rounded-full p-0.5 hover:bg-muted"
+              onClick={(e) => { e.stopPropagation(); onChange(undefined); }}
+            >
+              <X className="size-3" />
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={value}
+          onSelect={(date) => {
+            if (date) {
+              onChange(new Date(date.getFullYear(), date.getMonth(), 1));
+            }
+            setOpen(false);
+          }}
+          locale={idLocale}
+          captionLayout="dropdown"
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function PenggajianPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useBatchList();
+  const [filterMonth, setFilterMonth] = React.useState<Date | undefined>();
 
-  const rows: BatchRow[] = React.useMemo(
-    () => (data ?? []).map((b) => ({ ...b, bulan: bulanKey(b.periode) })),
-    [data],
-  );
+  const filterKey = filterMonth
+    ? `${filterMonth.getFullYear()}-${String(filterMonth.getMonth() + 1).padStart(2, "0")}`
+    : null;
 
-  const bulanOptions = React.useMemo(() => {
-    const keys = [...new Set(rows.map((r) => r.bulan))].sort().reverse();
-    return keys.map((k) => ({ label: bulanLabel(k), value: k }));
-  }, [rows]);
+  const rows = React.useMemo(() => {
+    const all = (data ?? []).map((b) => ({ ...b, bulan: bulanKey(b.periode) }));
+    if (!filterKey) return all;
+    return all.filter((r) => r.bulan === filterKey);
+  }, [data, filterKey]);
 
-  const columns: ColumnDef<BatchRow>[] = [
+  const columns: ColumnDef<PenggajianBatch & { bulan: string }>[] = [
     {
       accessorKey: "id", header: "ID", meta: { mono: true },
       cell: ({ row }) => (
@@ -109,9 +162,7 @@ export default function PenggajianPage() {
           loading={isLoading}
           searchColumn="id"
           searchPlaceholder="Cari ID penggajian…"
-          filterColumn="bulan"
-          filterPlaceholder="Semua bulan"
-          filterOptions={bulanOptions}
+          toolbarActions={<MonthPicker value={filterMonth} onChange={setFilterMonth} />}
           emptyMessage="Belum ada penggajian"
         />
       )}
