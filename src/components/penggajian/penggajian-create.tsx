@@ -85,11 +85,11 @@ export function PenggajianCreate() {
       enableSorting: false,
       meta: { collapse: true },
     },
-    { accessorKey: "nama", header: "Nama", cell: ({ row }) => <span className="font-medium">{row.original.nama}</span> },
-    { accessorKey: "jabatan", header: "Jabatan" },
+    { accessorKey: "nama", header: "Nama", meta: { className: "w-[30%]" }, cell: ({ row }) => <span className="font-medium">{row.original.nama}</span> },
+    { accessorKey: "jabatan", header: "Jabatan", meta: { className: "w-[30%]" } },
     {
       accessorKey: "statusKepegawaian", header: "Status",
-      meta: { collapse: true },
+      meta: { className: "w-[20%]" },
       cell: ({ row }) => {
         const s = row.original.statusKepegawaian;
         return (
@@ -101,7 +101,7 @@ export function PenggajianCreate() {
     },
     {
       accessorKey: "gajiPokok", header: "Gaji Pokok",
-      meta: { mono: true, collapse: true },
+      meta: { mono: true, className: "w-[20%]" },
       cell: ({ row }) => formatRupiahCompact(row.original.gajiPokok),
     },
   ], [selectedIds]);
