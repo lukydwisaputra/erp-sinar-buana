@@ -20,6 +20,7 @@ export type CreateBatchInput = {
 
 export type ArusKasLogEntry = {
   id: string;
+  type: "pengeluaran";
   slipId: string;
   batchId: string;
   karyawanNama: string;
@@ -37,6 +38,7 @@ function appendArusKas(slip: SlipGaji, batchId: string) {
   const { penggajianBersih } = calcSlip(slip);
   arusKasLog.push({
     id: `AKS-${String(_arusKasId++).padStart(4, "0")}`,
+    type: "pengeluaran",
     slipId: slip.id,
     batchId,
     karyawanNama: slip.karyawanNama,
