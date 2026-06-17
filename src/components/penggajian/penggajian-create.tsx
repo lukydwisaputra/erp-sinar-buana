@@ -1,13 +1,15 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, ChevronRight, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { DataTable } from "@/components/shared/data-table";
+
 import { SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiahCompact } from "@/lib/format";
 import { calcSlip } from "@/lib/schemas/penggajian";
@@ -45,8 +47,11 @@ export function PenggajianCreate() {
   const router = useRouter();
   const createBatch = useCreateBatch();
 
-  const [mulai, setMulai] = React.useState("");
-  const [selesai, setSelesai] = React.useState("");
+  const [mulai, setMulai] = React.useState<Date | undefined>();
+  const [selesai, setSelesai] = React.useState<Date | undefined>();
+
+  const mulaiStr = mulai ? format(mulai, "yyyy-MM-dd") : "";
+  const selesaiStr = selesai ? format(selesai, "yyyy-MM-dd") : "";
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [phase, setPhase] = React.useState<"select" | "table">("select");
   const [rows, setRows] = React.useState<SlipRow[]>([]);
@@ -138,11 +143,11 @@ export function PenggajianCreate() {
         bankNama: k.bank.nama, bankNomor: k.bank.nomor, bankAtasNama: k.bank.atasNama,
       };
     });
-    const batch = await createBatch.mutateAsync({ periode: { mulai, selesai }, slips });
+    const batch = await createBatch.mutateAsync({ periode: { mulai: mulaiStr, selesai: selesaiStr }, slips });
     router.push(`/penggajian/${batch.id}`);
   };
 
-  const periodeValid = mulai && selesai && mulai <= selesai;
+  const periodeValid = mulaiStr && selesaiStr && mulaiStr <= selesaiStr;
   const canLanjut = !!periodeValid && selectedIds.length > 0;
 
   return (
@@ -157,16 +162,23 @@ export function PenggajianCreate() {
         </div>
       </div>
 
-      <div className="space-y-4">
-        <section>
-          <SectionLabel>Periode</SectionLabel>
-          <div className="flex items-center gap-3">
-            <Input type="date" value={mulai} onChange={(e) => setMulai(e.target.value)} className="w-44" />
-            <span className="text-muted-foreground text-sm">–</span>
-            <Input type="date" value={selesai} onChange={(e) => setSelesai(e.target.value)} className="w-44" />
-          </div>
-        </section>
+      {/* Toolbar: periode + CTA */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Periode</span>
+          <DatePicker value={mulai} onChange={setMulai} placeholder="Mulai" className="w-40" />
+          <span className="text-muted-foreground text-sm">–</span>
+          <DatePicker value={selesai} onChange={setSelesai} placeholder="Selesai" className="w-40" />
+        </div>
+        {phase === "select" && (
+          <Button disabled={!canLanjut} onClick={handleLanjut}>
+            Atur Komponen Gaji {selectedIds.length > 0 && `(${selectedIds.length} karyawan)`} <ChevronRight className="size-4 ml-1" />
+          </Button>
+        )}
+      </div>
 
+      {/* Karyawan table */}
+      <div className="space-y-4">
         <section>
           <div className="flex items-center justify-between mb-2">
             <SectionLabel>Pilih Karyawan</SectionLabel>
@@ -188,23 +200,6 @@ export function PenggajianCreate() {
             emptyMessage="Tidak ada karyawan aktif"
           />
         </section>
-
-        {phase === "select" && (
-          <div className="space-y-1.5">
-            <Button disabled={!canLanjut} onClick={handleLanjut}>
-              Atur Komponen Gaji {selectedIds.length > 0 && `(${selectedIds.length} karyawan)`} <ChevronRight className="size-4 ml-1" />
-            </Button>
-            {!canLanjut && (
-              <p className="text-xs text-muted-foreground">
-                {!periodeValid && !selectedIds.length
-                  ? "Isi periode dan pilih minimal 1 karyawan untuk melanjutkan."
-                  : !periodeValid
-                    ? "Isi periode penggajian terlebih dahulu."
-                    : "Pilih minimal 1 karyawan untuk melanjutkan."}
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
       {phase === "table" && (
