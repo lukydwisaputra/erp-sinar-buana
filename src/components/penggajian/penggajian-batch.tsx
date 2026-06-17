@@ -223,7 +223,7 @@ export function PenggajianBatchDetail({ batchId }: { batchId: string }) {
               {paid}/{total} Dibayar
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground pl-7">{periodStr(batch.periode)}</p>
+          <p className="text-sm text-muted-foreground">{periodStr(batch.periode)}</p>
         </div>
       </div>
 
