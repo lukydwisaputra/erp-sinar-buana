@@ -1,8 +1,12 @@
 import type { PenggajianBatch } from "@/lib/schemas/penggajian";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
 
+function kryHash(karyawanId: string) {
+  return karyawanId.replace("KRY-", "");
+}
+
 function makeSlip(
-  slipNum: number,
+  karyawanSeq: number,
   batchId: string,
   kIdx: number,
   overrides: {
@@ -12,7 +16,7 @@ function makeSlip(
 ) {
   const k = karyawanFixtures[kIdx];
   return {
-    id: `SLP-${String(slipNum).padStart(3, "0")}`,
+    id: `SLP-${kryHash(k.id)}-${String(karyawanSeq).padStart(3, "0")}`,
     batchId,
     karyawanId: k.id,
     karyawanNama: k.nama,

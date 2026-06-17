@@ -32,7 +32,20 @@ export type ArusKasLogEntry = {
 const arusKasLog: ArusKasLogEntry[] = [];
 let _arusKasId = 1;
 let _batchSeq = 3;
-let _slipSeq = 9;
+
+const _karyawanSlipSeq = new Map<string, number>();
+for (const batch of penggajianFixtures) {
+  for (const slip of batch.slips) {
+    _karyawanSlipSeq.set(slip.karyawanId, (_karyawanSlipSeq.get(slip.karyawanId) ?? 0) + 1);
+  }
+}
+
+function nextSlipId(karyawanId: string): string {
+  const seq = (_karyawanSlipSeq.get(karyawanId) ?? 0) + 1;
+  _karyawanSlipSeq.set(karyawanId, seq);
+  const hash = karyawanId.replace("KRY-", "");
+  return `SLP-${hash}-${String(seq).padStart(3, "0")}`;
+}
 
 function appendArusKas(slip: SlipGaji, batchId: string) {
   const { penggajianBersih } = calcSlip(slip);
@@ -72,7 +85,7 @@ export async function createBatch(input: CreateBatchInput): Promise<PenggajianBa
   const batchId = `GAJ-${String(_batchSeq++).padStart(3, "0")}`;
   const slips: SlipGaji[] = input.slips.map((s) => ({
     ...s,
-    id: `SLP-${String(_slipSeq++).padStart(3, "0")}`,
+    id: nextSlipId(s.karyawanId),
     batchId,
     status: "menunggu_pembayaran" as const,
     paidAt: null,

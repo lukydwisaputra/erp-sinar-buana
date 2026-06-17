@@ -16,6 +16,10 @@ function rupiah(v: number) {
   return v === 0 ? "–" : formatRupiah(v);
 }
 
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 const cell = "px-4 py-1 text-[11px]";
 const cellR = `${cell} text-right font-mono tabular-nums`;
 const divider = "border-t border-[var(--doc-rule)]";
@@ -45,7 +49,7 @@ export function SlipDocument({
           <div className="space-y-0.5">
             <div className="flex gap-2"><span className="w-20 text-muted-foreground">Nama</span><span>: {slip.karyawanNama}</span></div>
             <div className="flex gap-2"><span className="w-20 text-muted-foreground">Jabatan</span><span>: {slip.jabatan}</span></div>
-            <div className="flex gap-2"><span className="w-20 text-muted-foreground">Status</span><span>: {slip.statusKepegawaian} (×{slip.pengali})</span></div>
+            <div className="flex gap-2"><span className="w-20 text-muted-foreground">Status</span><span>: {capitalize(slip.statusKepegawaian)}</span></div>
           </div>
           <div className="space-y-0.5 text-right">
             <div><span className="text-muted-foreground">No. Slip </span><span className="font-mono">{slip.id}</span></div>
@@ -62,14 +66,18 @@ export function SlipDocument({
           </thead>
           <tbody>
             <tr><td className={cell}>Gaji Pokok</td><td className={cellR}>{formatRupiah(slip.gajiPokok)}</td></tr>
-            <tr className="text-muted-foreground">
-              <td className={cell}>Pengali ({slip.statusKepegawaian} ×{slip.pengali})</td>
-              <td className={cellR} />
-            </tr>
-            <tr className="font-bold">
-              <td className={cell}>Gaji Pokok Efektif</td>
-              <td className={cellR}>{formatRupiah(gajiPokokEfektif)}</td>
-            </tr>
+            {slip.pengali !== 1 && (
+              <>
+                <tr className="text-muted-foreground">
+                  <td className={cell}>Pengali ({capitalize(slip.statusKepegawaian)})</td>
+                  <td className={cellR}>{slip.pengali}</td>
+                </tr>
+                <tr className="font-bold">
+                  <td className={cell}>Gaji Pokok Efektif</td>
+                  <td className={cellR}>{formatRupiah(gajiPokokEfektif)}</td>
+                </tr>
+              </>
+            )}
             <tr><td className={cell}>Tunjangan</td><td className={cellR}>{formatRupiah(slip.tunjangan)}</td></tr>
             <tr><td className={cell}>Lembur</td><td className={cellR}>{rupiah(slip.lembur)}</td></tr>
             <tr><td className={cell}>Bonus</td><td className={cellR}>{rupiah(slip.bonus)}</td></tr>
@@ -89,7 +97,7 @@ export function SlipDocument({
           </thead>
           <tbody>
             <tr><td className={cell}>PPh 21</td><td className={cellR}>{formatRupiah(slip.pph21)}</td></tr>
-            <tr><td className={cell}>BPJS (porsi karyawan)</td><td className={cellR}>{formatRupiah(slip.bpjsPotongan)}</td></tr>
+            <tr><td className={cell}>BPJS</td><td className={cellR}>{formatRupiah(slip.bpjsPotongan)}</td></tr>
             <tr className={`${divider} font-bold bg-[var(--doc-blue-soft)]`}>
               <td className={cell}>TOTAL POTONGAN</td>
               <td className={cellR}>{formatRupiah(totalPotongan)}</td>
@@ -114,12 +122,11 @@ export function SlipDocument({
         </div>
 
         {/* Signature */}
-        <div className="flex justify-between items-end pt-4">
-          <div />
-          <div className="text-center space-y-8">
+        <div className="flex justify-end pt-10 pb-4 pr-4">
+          <div className="text-center">
             <p>{companyProfile.kota}, {tglPaid}</p>
-            <div>
-              <div className="border-b border-[var(--doc-rule)] w-40 mx-auto" />
+            <div className="mt-24">
+              <div className="border-b border-[var(--doc-rule)] w-44 mx-auto" />
               <p className="font-medium mt-1">{companyProfile.direktur.nama}</p>
               <p className="text-muted-foreground">{companyProfile.direktur.jabatan}</p>
             </div>

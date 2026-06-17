@@ -90,7 +90,7 @@ export function PenggajianCreate() {
         const s = row.original.statusKepegawaian;
         return (
           <Badge variant={s === "tetap" ? "success" : s === "kontrak" ? "info" : "warning"} className="text-xs">
-            {s} ×{row.original.pengali}
+            {s.charAt(0).toUpperCase() + s.slice(1)}
           </Badge>
         );
       },
