@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   listBatch, getBatch, getSlip, createBatch, updateSlip, markSlipDibayar,
-  listArusKasLog,
 } from "@/lib/data/penggajian";
 import { calcSlip } from "@/lib/schemas/penggajian";
 
@@ -61,15 +60,6 @@ describe("markSlipDibayar", () => {
     const slip = await getSlip("GAJ-002", pending.id);
     expect(slip?.status).toBe("sudah_dibayar");
     expect(slip?.paidAt).not.toBeNull();
-  });
-  it("appends an arus kas log entry", async () => {
-    const b = await getBatch("GAJ-002");
-    const pending = b!.slips.filter((s) => s.status === "menunggu_pembayaran");
-    const slipId = pending[pending.length - 1].id;
-    await markSlipDibayar("GAJ-002", slipId);
-    const log = await listArusKasLog();
-    expect(log.some((e) => e.slipId === slipId)).toBe(true);
-    expect(log.find((e) => e.slipId === slipId)?.kategori).toBe("penggajian");
   });
   it("throws if slip is already sudah_dibayar", async () => {
     const b = await getBatch("GAJ-001");

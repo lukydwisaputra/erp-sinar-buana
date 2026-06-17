@@ -18,19 +18,6 @@ export type CreateBatchInput = {
   slips: Omit<SlipGaji, "id" | "batchId" | "status" | "paidAt">[];
 };
 
-export type ArusKasLogEntry = {
-  id: string;
-  type: "pengeluaran";
-  slipId: string;
-  batchId: string;
-  karyawanNama: string;
-  jumlah: number;
-  timestamp: string;
-  kategori: "penggajian";
-};
-
-const arusKasLog: ArusKasLogEntry[] = [];
-let _arusKasId = 1;
 let _batchSeq = 3;
 
 const _karyawanSlipSeq = new Map<string, number>();
@@ -45,20 +32,6 @@ function nextSlipId(karyawanId: string): string {
   _karyawanSlipSeq.set(karyawanId, seq);
   const hash = karyawanId.replace("KRY-", "");
   return `SLP-${hash}-${String(seq).padStart(3, "0")}`;
-}
-
-function appendArusKas(slip: SlipGaji, batchId: string) {
-  const { penggajianBersih } = calcSlip(slip);
-  arusKasLog.push({
-    id: `AKS-${String(_arusKasId++).padStart(4, "0")}`,
-    type: "pengeluaran",
-    slipId: slip.id,
-    batchId,
-    karyawanNama: slip.karyawanNama,
-    jumlah: penggajianBersih,
-    timestamp: new Date().toISOString(),
-    kategori: "penggajian",
-  });
 }
 
 export async function listBatch(): Promise<PenggajianBatch[]> {
@@ -131,11 +104,5 @@ export async function markSlipDibayar(batchId: string, slipId: string): Promise<
   const slips = [...penggajianFixtures[bIdx].slips];
   slips[sIdx] = updated;
   penggajianFixtures[bIdx] = { ...penggajianFixtures[bIdx], slips };
-  appendArusKas(updated, batchId);
   return slipGajiSchema.parse(updated);
-}
-
-export async function listArusKasLog(): Promise<ArusKasLogEntry[]> {
-  await delay(100);
-  return [...arusKasLog];
 }
