@@ -322,6 +322,39 @@ export function PenggajianCreate() {
                   );
                 })}
               </tbody>
+              {rows.length > 0 && (() => {
+                const totals = rows.reduce((acc, row) => {
+                  const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
+                  const pph21Amount = pph21Idr(row);
+                  const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Amount });
+                  return {
+                    gajiEfektif: acc.gajiEfektif + gajiPokokEfektif,
+                    tunjangan: acc.tunjangan + row.tunjangan,
+                    lembur: acc.lembur + row.lembur,
+                    bonus: acc.bonus + row.bonus,
+                    pph21: acc.pph21 + pph21Amount,
+                    bpjs: acc.bpjs + row.bpjsPotongan,
+                    kotor: acc.kotor + penggajianKotor,
+                    bersih: acc.bersih + penggajianBersih,
+                  };
+                }, { gajiEfektif: 0, tunjangan: 0, lembur: 0, bonus: 0, pph21: 0, bpjs: 0, kotor: 0, bersih: 0 });
+                const tfootCls = "px-3 py-2 text-right font-mono tabular-nums";
+                return (
+                  <tfoot>
+                    <tr className="border-t-2 border-border bg-muted/50 font-semibold">
+                      <td className="px-2 py-2">Total</td>
+                      <td className={tfootCls}>{formatRupiah(totals.gajiEfektif)}</td>
+                      <td className={tfootCls}>{formatRupiah(totals.tunjangan)}</td>
+                      <td className={tfootCls}>{formatRupiah(totals.lembur)}</td>
+                      <td className={tfootCls}>{formatRupiah(totals.bonus)}</td>
+                      <td className={tfootCls}>{formatRupiah(totals.pph21)}</td>
+                      <td className={tfootCls}>{formatRupiah(totals.bpjs)}</td>
+                      <td className={tfootCls}>{formatRupiah(totals.kotor)}</td>
+                      <td className={`${tfootCls} ${totals.bersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(totals.bersih)}</td>
+                    </tr>
+                  </tfoot>
+                );
+              })()}
             </table>
           </div>
         </div>
