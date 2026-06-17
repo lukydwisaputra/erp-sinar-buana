@@ -46,40 +46,42 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
   return (
     <>
       <div className="space-y-4">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between gap-4 print:hidden">
-          <div className="flex items-center gap-3">
-            <Link href={`/penggajian/${batchId}`}>
-              <Button variant="ghost" size="sm" className="gap-1.5">
-                <ArrowLeft className="size-4" /> Kembali ke Batch
+        <Link href={`/penggajian/${batchId}`} className="print:hidden">
+          <Button variant="ghost" size="sm" className="gap-1.5">
+            <ArrowLeft className="size-4" /> Kembali ke Batch
+          </Button>
+        </Link>
+
+        <div className="overflow-hidden rounded-lg border border-border print:border-0">
+          {/* Header bar */}
+          <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3 print:hidden">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">{slip.id}</span>
+              <Badge variant={locked ? "success" : "warning"}>
+                {locked ? "Sudah Dibayar" : "Menunggu Pembayaran"}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              {!locked && (
+                <Button variant="outline" size="sm" onClick={() => setConfirmOpen(true)}>
+                  Tandai Dibayar
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Download className="size-4" /> Unduh
               </Button>
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-medium">{slip.id}</span>
-                <Badge variant={locked ? "success" : "warning"}>
-                  {locked ? "Sudah Dibayar" : "Menunggu Pembayaran"}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">{slip.karyawanNama}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {!locked && (
-              <Button variant="outline" size="sm" onClick={() => setConfirmOpen(true)}>
-                Tandai Dibayar
-              </Button>
-            )}
-            <Button size="sm" onClick={() => window.print()}>
-              <Download className="size-4 mr-1.5" /> Unduh
-            </Button>
+
+          {/* Document preview */}
+          <div className="p-4">
+            <div className="mx-auto max-w-[794px]">
+              <ScaleToFit>
+                <SlipDocument slip={slip} periode={batch.periode} />
+              </ScaleToFit>
+            </div>
           </div>
         </div>
-
-        {/* Document preview */}
-        <ScaleToFit>
-          <SlipDocument slip={slip} periode={batch.periode} />
-        </ScaleToFit>
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
