@@ -66,7 +66,7 @@ export function SlipDocument({
               <td className={cell}>Pengali ({slip.statusKepegawaian} ×{slip.pengali})</td>
               <td className={cellR} />
             </tr>
-            <tr className="font-medium">
+            <tr className="font-bold">
               <td className={cell}>Gaji Pokok Efektif</td>
               <td className={cellR}>{formatRupiah(gajiPokokEfektif)}</td>
             </tr>
