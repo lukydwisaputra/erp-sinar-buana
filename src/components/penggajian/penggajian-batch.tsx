@@ -2,10 +2,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Wallet, ExternalLink } from "lucide-react";
+import { Wallet, EllipsisIcon, ExternalLink, CircleDollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -94,20 +97,26 @@ function SlipRow({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
             ? <Badge variant="success" className="text-[10px]">Dibayar</Badge>
             : <Badge variant="warning" className="text-[10px]">Menunggu</Badge>}
         </td>
-        <td className="px-1 py-1.5">
-          <div className="flex items-center gap-0.5 justify-center">
-            <Link href={`/penggajian/${batchId}/${slip.id}`}>
-              <Button variant="ghost" size="sm" className="h-5 px-1 text-[10px] gap-0.5">
-                <ExternalLink className="size-2.5" /> Slip
+        <td className="px-1 py-1.5 text-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-6">
+                <EllipsisIcon className="size-3.5" />
               </Button>
-            </Link>
-            {!locked && (
-              <Button variant="outline" size="sm" className="h-5 px-1 text-[10px]"
-                onClick={() => setConfirmOpen(true)}>
-                Bayar
-              </Button>
-            )}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem asChild>
+                <Link href={`/penggajian/${batchId}/${slip.id}`}>
+                  <ExternalLink className="mr-2 size-3.5" /> Lihat Slip
+                </Link>
+              </DropdownMenuItem>
+              {!locked && (
+                <DropdownMenuItem onSelect={() => setConfirmOpen(true)}>
+                  <CircleDollarSign className="mr-2 size-3.5" /> Tandai Dibayar
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </td>
       </tr>
 
