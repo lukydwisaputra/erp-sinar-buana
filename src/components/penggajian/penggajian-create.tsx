@@ -338,17 +338,17 @@ export function PenggajianCreate() {
                     bersih: acc.bersih + penggajianBersih,
                   };
                 }, { gajiEfektif: 0, tunjangan: 0, lembur: 0, bonus: 0, pph21: 0, bpjs: 0, kotor: 0, bersih: 0 });
-                const tc = "px-2 py-2 text-right font-mono tabular-nums whitespace-nowrap";
+                const tc = "px-1 py-2 text-right font-mono tabular-nums whitespace-nowrap";
                 return (
                   <tfoot>
                     <tr className="border-t-2 border-border bg-muted/50 font-semibold">
                       <td className="px-2 py-2">Total</td>
                       <td className={tc}>{formatRupiah(totals.gajiEfektif)}</td>
-                      <td className={tc}>{formatIntIDR(totals.tunjangan)}</td>
-                      <td className={tc}>{formatIntIDR(totals.lembur)}</td>
-                      <td className={tc}>{formatIntIDR(totals.bonus)}</td>
-                      <td className={tc}>{formatIntIDR(totals.pph21)}</td>
-                      <td className={tc}>{formatIntIDR(totals.bpjs)}</td>
+                      <td className={tc}>{formatRupiah(totals.tunjangan)}</td>
+                      <td className={tc}>{formatRupiah(totals.lembur)}</td>
+                      <td className={tc}>{formatRupiah(totals.bonus)}</td>
+                      <td className={tc}>{formatRupiah(totals.pph21)}</td>
+                      <td className={tc}>{formatRupiah(totals.bpjs)}</td>
                       <td className={tc}>{formatRupiah(totals.kotor)}</td>
                       <td className={`${tc} ${totals.bersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(totals.bersih)}</td>
                     </tr>
