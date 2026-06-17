@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DataTable } from "@/components/shared/data-table";
-
 import { SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiahCompact } from "@/lib/format";
 import { calcSlip } from "@/lib/schemas/penggajian";
@@ -39,9 +38,8 @@ const statusFilterOptions = [
   { label: "Probation", value: "probation" },
 ];
 
-const colGrid = "160px 100px 90px 80px 80px 90px 90px 110px 110px";
 const inputCls =
-  "w-full rounded px-1.5 py-0.5 text-right text-sm font-mono bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
+  "w-full rounded px-1.5 py-1 text-right text-sm font-mono bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
 
 export function PenggajianCreate() {
   const router = useRouter();
@@ -53,7 +51,7 @@ export function PenggajianCreate() {
   const mulaiStr = mulai ? format(mulai, "yyyy-MM-dd") : "";
   const selesaiStr = selesai ? format(selesai, "yyyy-MM-dd") : "";
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
-  const [phase, setPhase] = React.useState<"select" | "table">("select");
+  const [step, setStep] = React.useState<1 | 2>(1);
   const [rows, setRows] = React.useState<SlipRow[]>([]);
 
   const toggleKaryawan = (id: string) =>
@@ -74,7 +72,6 @@ export function PenggajianCreate() {
         <Checkbox
           checked={selectedIds.length === activeKaryawan.length ? true : selectedIds.length > 0 ? "indeterminate" : false}
           onCheckedChange={toggleAll}
-          disabled={phase === "table"}
           aria-label="Pilih semua"
         />
       ),
@@ -82,7 +79,6 @@ export function PenggajianCreate() {
         <Checkbox
           checked={selectedIds.includes(row.original.id)}
           onCheckedChange={() => toggleKaryawan(row.original.id)}
-          disabled={phase === "table"}
           aria-label={`Pilih ${row.original.nama}`}
         />
       ),
@@ -107,11 +103,11 @@ export function PenggajianCreate() {
       meta: { align: "right" as const, mono: true },
       cell: ({ row }) => formatRupiahCompact(row.original.gajiPokok),
     },
-  ], [selectedIds, phase]);
+  ], [selectedIds]);
 
   const handleLanjut = () => {
     setRows(selectedIds.map(makeDefaultRow));
-    setPhase("table");
+    setStep(2);
   };
 
   const updateRow = (idx: number, patch: Partial<SlipRow>) =>
@@ -154,111 +150,123 @@ export function PenggajianCreate() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => router.back()} className="size-8">
+        <Button variant="ghost" size="icon" onClick={() => step === 2 ? setStep(1) : router.back()} className="size-8">
           <ArrowLeft className="size-4" />
         </Button>
         <div className="flex items-center gap-2">
           <Wallet className="size-5 text-muted-foreground" />
           <h1 className="text-xl font-semibold tracking-tight">Buat Penggajian</h1>
         </div>
-      </div>
-
-      {/* Toolbar: periode + CTA */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Periode</span>
-          <DatePicker value={mulai} onChange={setMulai} placeholder="Mulai" className="w-40" />
-          <span className="text-muted-foreground text-sm">–</span>
-          <DatePicker value={selesai} onChange={setSelesai} placeholder="Selesai" className="w-40" />
+        <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className={step === 1 ? "font-semibold text-foreground" : ""}>1. Pilih Karyawan</span>
+          <ChevronRight className="size-3" />
+          <span className={step === 2 ? "font-semibold text-foreground" : ""}>2. Komponen Gaji</span>
         </div>
-        {phase === "select" && (
-          <Button disabled={!canLanjut} onClick={handleLanjut}>
-            Atur Komponen Gaji {selectedIds.length > 0 && `(${selectedIds.length} karyawan)`} <ChevronRight className="size-4 ml-1" />
-          </Button>
-        )}
       </div>
 
-      {/* Karyawan table */}
-      <div className="space-y-4">
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <SectionLabel>Pilih Karyawan</SectionLabel>
-            {selectedIds.length > 0 && (
-              <span className="text-sm text-muted-foreground">{selectedIds.length} dipilih</span>
-            )}
-          </div>
-          <DataTable
-            columns={karyawanColumns}
-            data={activeKaryawan}
-            searchColumns={["nama", "jabatan"]}
-            searchPlaceholder="Cari nama atau jabatan…"
-            filterColumn="statusKepegawaian"
-            filterPlaceholder="Semua status"
-            filterOptions={statusFilterOptions}
-            rowActions={false}
-            compact
-            initialPageSize={10}
-            emptyMessage="Tidak ada karyawan aktif"
-          />
-        </section>
-      </div>
-
-      {phase === "table" && (
-        <div className="space-y-3">
-          <SectionLabel>Komponen Gaji</SectionLabel>
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <div
-              className="grid items-center gap-1 px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground"
-              style={{ gridTemplateColumns: colGrid }}
-            >
-              <span>Nama</span>
-              <span className="text-right">Gaji Efektif</span>
-              <span className="text-right">Tunjangan</span>
-              <span className="text-right">Lembur</span>
-              <span className="text-right">Bonus</span>
-              <span className="text-right">PPh 21</span>
-              <span className="text-right">BPJS</span>
-              <span className="text-right">Kotor</span>
-              <span className="text-right">Bersih</span>
+      {/* Step 1: Pilih Karyawan */}
+      {step === 1 && (
+        <>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Periode</span>
+              <DatePicker value={mulai} onChange={setMulai} placeholder="Mulai" className="w-40" />
+              <span className="text-muted-foreground text-sm">–</span>
+              <DatePicker value={selesai} onChange={setSelesai} placeholder="Selesai" className="w-40" />
             </div>
-            {rows.map((row, idx) => {
-              const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
-              const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row });
-              return (
-                <div
-                  key={row.karyawanId}
-                  className="grid items-center gap-1 border-t border-border px-2 py-1.5"
-                  style={{ gridTemplateColumns: colGrid }}
-                >
-                  <div>
-                    <p className="text-sm font-medium truncate">{k.nama}</p>
-                    <p className="text-xs text-muted-foreground">{k.statusKepegawaian}</p>
-                  </div>
-                  <span className="text-right text-sm font-mono tabular-nums">{formatRupiahCompact(gajiPokokEfektif)}</span>
-                  {numInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}
-                  {numInput(row.lembur, (v) => updateRow(idx, { lembur: v }))}
-                  {numInput(row.bonus, (v) => updateRow(idx, { bonus: v }))}
-                  {numInput(row.pph21, (v) => updateRow(idx, { pph21: v }))}
-                  {numInput(row.bpjsPotongan, (v) => updateRow(idx, { bpjsPotongan: v }))}
-                  <span className="text-right text-sm font-mono tabular-nums">{formatRupiahCompact(penggajianKotor)}</span>
-                  <span className={`text-right text-sm font-mono tabular-nums font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>
-                    {formatRupiahCompact(penggajianBersih)}
-                  </span>
-                </div>
-              );
-            })}
+            <Button disabled={!canLanjut} onClick={handleLanjut}>
+              Atur Komponen Gaji {selectedIds.length > 0 && `(${selectedIds.length} karyawan)`} <ChevronRight className="size-4 ml-1" />
+            </Button>
           </div>
 
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <Button variant="outline" onClick={() => setPhase("select")}>← Ubah Pilihan</Button>
-            <Button
-              onClick={handleSimpan}
-              disabled={!rowsValid || createBatch.isPending}
-              loading={createBatch.isPending}
-            >
-              Simpan Penggajian
-            </Button>
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <SectionLabel>Pilih Karyawan</SectionLabel>
+              {selectedIds.length > 0 && (
+                <span className="text-sm text-muted-foreground">{selectedIds.length} dipilih</span>
+              )}
+            </div>
+            <DataTable
+              columns={karyawanColumns}
+              data={activeKaryawan}
+              searchColumns={["nama", "jabatan"]}
+              searchPlaceholder="Cari nama atau jabatan…"
+              filterColumn="statusKepegawaian"
+              filterPlaceholder="Semua status"
+              filterOptions={statusFilterOptions}
+              rowActions={false}
+              compact
+              initialPageSize={10}
+              emptyMessage="Tidak ada karyawan aktif"
+            />
+          </section>
+        </>
+      )}
+
+      {/* Step 2: Komponen Gaji */}
+      {step === 2 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {selectedIds.length} karyawan &middot; Periode {mulai && format(mulai, "d MMM yyyy")} – {selesai && format(selesai, "d MMM yyyy")}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setStep(1)}>
+                <ArrowLeft className="size-4 mr-1" /> Ubah Pilihan
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSimpan}
+                disabled={!rowsValid || createBatch.isPending}
+                loading={createBatch.isPending}
+              >
+                Simpan Penggajian
+              </Button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase">
+                  <th className="px-3 py-2 text-left">Nama</th>
+                  <th className="px-3 py-2 text-right">Gaji Efektif</th>
+                  <th className="px-3 py-2 text-right">Tunjangan</th>
+                  <th className="px-3 py-2 text-right">Lembur</th>
+                  <th className="px-3 py-2 text-right">Bonus</th>
+                  <th className="px-3 py-2 text-right">PPh 21</th>
+                  <th className="px-3 py-2 text-right">BPJS</th>
+                  <th className="px-3 py-2 text-right">Kotor</th>
+                  <th className="px-3 py-2 text-right">Bersih</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, idx) => {
+                  const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
+                  const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row });
+                  return (
+                    <tr key={row.karyawanId} className="border-b border-border last:border-0">
+                      <td className="px-3 py-2">
+                        <p className="font-medium">{k.nama}</p>
+                        <p className="text-xs text-muted-foreground">{k.jabatan}</p>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiahCompact(gajiPokokEfektif)}</td>
+                      <td className="px-1 py-1">{numInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}</td>
+                      <td className="px-1 py-1">{numInput(row.lembur, (v) => updateRow(idx, { lembur: v }))}</td>
+                      <td className="px-1 py-1">{numInput(row.bonus, (v) => updateRow(idx, { bonus: v }))}</td>
+                      <td className="px-1 py-1">{numInput(row.pph21, (v) => updateRow(idx, { pph21: v }))}</td>
+                      <td className="px-1 py-1">{numInput(row.bpjsPotongan, (v) => updateRow(idx, { bpjsPotongan: v }))}</td>
+                      <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiahCompact(penggajianKotor)}</td>
+                      <td className={`px-3 py-2 text-right font-mono tabular-nums font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>
+                        {formatRupiahCompact(penggajianBersih)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
