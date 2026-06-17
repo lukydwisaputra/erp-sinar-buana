@@ -39,7 +39,7 @@ const statusFilterOptions = [
 ];
 
 const inputCls =
-  "w-full rounded px-1.5 py-1 text-right text-sm font-mono bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
+  "w-full rounded px-1 py-0.5 text-right text-xs font-mono bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
 
 function InlineMoneyInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [focused, setFocused] = React.useState(false);
@@ -258,17 +258,17 @@ export function PenggajianCreate() {
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full table-fixed text-sm">
+            <table className="w-full table-fixed text-xs">
               <colgroup>
-                <col className="w-[14%]" />
                 <col className="w-[12%]" />
-                <col className="w-[10%]" />
-                <col className="w-[7%]" />
-                <col className="w-[7%]" />
-                <col className="w-[7%]" />
-                <col className="w-[7%]" />
-                <col className="w-[14%]" />
-                <col className="w-[14%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[6%]" />
+                <col className="w-[9%]" />
+                <col className="w-[13%]" />
+                <col className="w-[13%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase">
@@ -290,9 +290,9 @@ export function PenggajianCreate() {
                   const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Amount });
                   return (
                     <tr key={row.karyawanId} className="border-b border-border last:border-0">
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1.5">
                         <p className="font-medium truncate">{k.nama}</p>
-                        <p className="text-xs text-muted-foreground truncate">{k.jabatan}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{k.jabatan}</p>
                       </td>
                       <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiah(gajiPokokEfektif)}</td>
                       <td className="px-1 py-1">{moneyInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}</td>
