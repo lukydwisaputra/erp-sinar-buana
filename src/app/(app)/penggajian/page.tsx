@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Wallet, Plus } from "lucide-react";
@@ -15,11 +16,34 @@ function periodStr(p: PenggajianBatch["periode"]) {
   return `${fmt(p.mulai)} – ${fmt(p.selesai)}`;
 }
 
+function bulanKey(periode: PenggajianBatch["periode"]) {
+  const d = new Date(periode.mulai);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function bulanLabel(key: string) {
+  const [y, m] = key.split("-");
+  const d = new Date(Number(y), Number(m) - 1);
+  return d.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+}
+
+type BatchRow = PenggajianBatch & { bulan: string };
+
 export default function PenggajianPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useBatchList();
 
-  const columns: ColumnDef<PenggajianBatch>[] = [
+  const rows: BatchRow[] = React.useMemo(
+    () => (data ?? []).map((b) => ({ ...b, bulan: bulanKey(b.periode) })),
+    [data],
+  );
+
+  const bulanOptions = React.useMemo(() => {
+    const keys = [...new Set(rows.map((r) => r.bulan))].sort().reverse();
+    return keys.map((k) => ({ label: bulanLabel(k), value: k }));
+  }, [rows]);
+
+  const columns: ColumnDef<BatchRow>[] = [
     {
       accessorKey: "id", header: "ID", meta: { mono: true },
       cell: ({ row }) => (
@@ -33,6 +57,10 @@ export default function PenggajianPage() {
     {
       accessorKey: "periode", header: "Periode",
       cell: ({ row }) => periodStr(row.original.periode),
+    },
+    {
+      accessorKey: "bulan", header: "Bulan",
+      cell: ({ row }) => bulanLabel(row.original.bulan),
     },
     {
       id: "jumlahKaryawan", header: "Karyawan",
@@ -77,10 +105,13 @@ export default function PenggajianPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={data ?? []}
+          data={rows}
           loading={isLoading}
           searchColumn="id"
           searchPlaceholder="Cari ID penggajian…"
+          filterColumn="bulan"
+          filterPlaceholder="Semua bulan"
+          filterOptions={bulanOptions}
           emptyMessage="Belum ada penggajian"
         />
       )}
