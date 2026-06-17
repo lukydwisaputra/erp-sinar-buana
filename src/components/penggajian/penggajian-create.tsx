@@ -190,9 +190,20 @@ export function PenggajianCreate() {
         </section>
 
         {phase === "select" && (
-          <Button disabled={!canLanjut} onClick={handleLanjut}>
-            Lanjut <ChevronRight className="size-4 ml-1" />
-          </Button>
+          <div className="space-y-1.5">
+            <Button disabled={!canLanjut} onClick={handleLanjut}>
+              Atur Komponen Gaji {selectedIds.length > 0 && `(${selectedIds.length} karyawan)`} <ChevronRight className="size-4 ml-1" />
+            </Button>
+            {!canLanjut && (
+              <p className="text-xs text-muted-foreground">
+                {!periodeValid && !selectedIds.length
+                  ? "Isi periode dan pilih minimal 1 karyawan untuk melanjutkan."
+                  : !periodeValid
+                    ? "Isi periode penggajian terlebih dahulu."
+                    : "Pilih minimal 1 karyawan untuk melanjutkan."}
+              </p>
+            )}
+          </div>
         )}
       </div>
 
