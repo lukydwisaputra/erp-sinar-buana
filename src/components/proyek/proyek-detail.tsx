@@ -1,13 +1,18 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FolderKanban, Building2, MapPin, CalendarDays, Banknote, ExternalLink, Clock, ChevronUp, ChevronDown, Trash2, Plus, LayoutList } from "lucide-react";
+import {
+  FolderKanban, Building2, MapPin, CalendarDays, Check,
+  ChevronUp, ChevronDown, Trash2, Plus, CalendarIcon, CornerDownRight, ChevronDown as ChevronDownIcon,
+} from "lucide-react";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -16,385 +21,533 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { InfoRow, InfoList } from "@/components/shared/detail-drawer";
-import { formatRupiah, formatRupiahCompact } from "@/lib/format";
-import { useUpdateProyekStatus, useProyekLog, useUpdateMilestone, useMoveMilestone, useAddMilestone, useDeleteMilestone, useReplaceMilestonesWithTemplate } from "@/lib/query/proyek";
-import { getMilestoneTemplate } from "@/lib/data/proyek";
+import {
+  useProyek, useUpdateProyekStatus,
+  useUpdateMilestone, useMoveMilestone, useAddMilestone, useDeleteMilestone,
+} from "@/lib/query/proyek";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
+import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Proyek, ProyekStatus, Milestone, MilestoneStatus } from "@/lib/schemas/proyek";
+import { MilestoneModal } from "@/components/proyek/milestone-modal";
+import { RealisasiRabForm } from "@/components/realisasi-rab/realisasi-rab-form";
+import { useRealisasiRabByProyek } from "@/lib/query/realisasi-rab";
+import { formatRupiah } from "@/lib/format";
 
-const STATUS: Record<ProyekStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
-  po_kontrak:        { label: "PO/Kontrak",         variant: "info" },
-  collecting_data:   { label: "Pengumpulan Data",    variant: "info" },
-  drafting:          { label: "Penyusunan",          variant: "warning" },
-  tunggu_pengesahan: { label: "Tunggu Pengesahan",   variant: "warning" },
-  pending:           { label: "Pending",             variant: "secondary" },
-  selesai:           { label: "Selesai",             variant: "success" },
-  batal:             { label: "Batal",               variant: "destructive" },
+const STATUS: Record<ProyekStatus, { label: string; variant: "info" | "warning" | "success" | "secondary" | "destructive" }> = {
+  belum_mulai: { label: "Belum Mulai",     variant: "secondary" },
+  on_track:    { label: "Sedang Berjalan", variant: "info" },
+  terlambat:   { label: "Terlambat",       variant: "destructive" },
+  selesai:     { label: "Selesai",         variant: "success" },
+  dibatalkan:  { label: "Dibatalkan",      variant: "secondary" },
 };
 
 const TRANSITIONS: Record<ProyekStatus, ProyekStatus[]> = {
-  po_kontrak:        ["collecting_data", "batal"],
-  collecting_data:   ["drafting", "batal"],
-  drafting:          ["tunggu_pengesahan", "batal"],
-  tunggu_pengesahan: ["pending", "selesai"],
-  pending:           ["drafting", "selesai"],
-  selesai:           [],
-  batal:             [],
+  belum_mulai: ["on_track"],
+  on_track:    ["terlambat", "selesai"],
+  terlambat:   ["on_track", "selesai"],
+  selesai:     [],
+  dibatalkan:  [],
 };
 
-const MILESTONE_STATUS_OPTIONS: { value: MilestoneStatus; label: string }[] = [
-  { value: "belum_mulai", label: "Belum Mulai" },
-  { value: "on_track",    label: "On Track" },
-  { value: "terlambat",   label: "Terlambat" },
-  { value: "selesai",     label: "Selesai" },
+const MILESTONE_STATUS: {
+  value: MilestoneStatus;
+  label: string;
+  variant: "secondary" | "info" | "warning" | "success";
+}[] = [
+  { value: "belum_mulai", label: "Belum Mulai",     variant: "secondary" },
+  { value: "on_track",    label: "Sedang Berjalan", variant: "info" },
+  { value: "terlambat",   label: "Terlambat",       variant: "warning" },
+  { value: "selesai",     label: "Selesai",         variant: "success" },
 ];
 
-const MILESTONE_STATUS_STYLE: Record<MilestoneStatus, string> = {
-  belum_mulai: "text-muted-foreground",
-  on_track:    "text-blue-600 dark:text-blue-400",
-  terlambat:   "text-amber-600 dark:text-amber-400",
-  selesai:     "text-green-600 dark:text-green-400",
-};
+const MILESTONE_STATUS_MAP = Object.fromEntries(
+  MILESTONE_STATUS.map((s) => [s.value, s]),
+) as Record<MilestoneStatus, (typeof MILESTONE_STATUS)[0]>;
 
-const activeKaryawan = karyawanFixtures.filter((k) => k.status === "aktif");
+const COL = "20px 1fr 100px 110px 110px 140px 72px 28px";
+
+type PersonOption = { id: string; nama: string; jabatan: string; group: "PIC" | "Karyawan" };
+
+function buildPersonOptions(perusahaanId: string): PersonOption[] {
+  const pics = (perusahaanFixtures.find((p) => p.id === perusahaanId)?.pic ?? []).map((p, i) => ({
+    id: `PIC-${perusahaanId}-${i}`,
+    nama: p.nama,
+    jabatan: p.jabatan,
+    group: "PIC" as const,
+  }));
+  const karyawan = karyawanFixtures
+    .filter((k) => k.status === "aktif")
+    .map((k) => ({ id: k.id, nama: k.nama, jabatan: k.jabatan, group: "Karyawan" as const }));
+  return [...pics, ...karyawan];
+}
+
+function MilestoneAssigneeField({
+  assignees,
+  personOptions,
+  onChange,
+}: {
+  assignees: { id: string; nama: string }[];
+  personOptions: PersonOption[];
+  onChange: (next: { id: string; nama: string }[]) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [q, setQ] = React.useState("");
+  const selectedIds = new Set(assignees.map((a) => a.id));
+
+  const filtered = q.trim()
+    ? personOptions.filter((o) => o.nama.toLowerCase().includes(q.toLowerCase()) || o.jabatan.toLowerCase().includes(q.toLowerCase()))
+    : personOptions;
+
+  const toggle = (person: PersonOption) => {
+    const next = selectedIds.has(person.id)
+      ? assignees.filter((a) => a.id !== person.id)
+      : [...assignees, { id: person.id, nama: person.nama }];
+    onChange(next);
+  };
+
+  return (
+    <TooltipProvider>
+      <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQ(""); }}>
+        <div className="flex items-center gap-1">
+          {assignees.length === 0 ? (
+            <PopoverTrigger asChild>
+              <button type="button" className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1">—</button>
+            </PopoverTrigger>
+          ) : (
+            <div className="flex items-center gap-1">
+              <div className="flex">
+                {assignees.map((a, i) => {
+                  const jabatan = personOptions.find((p) => p.id === a.id)?.jabatan;
+                  return (
+                    <Tooltip key={a.id}>
+                      <TooltipTrigger asChild>
+                        <Avatar className="size-6 ring-2 ring-background cursor-default" style={{ marginLeft: i === 0 ? 0 : "-7px" }}>
+                          <AvatarFallback className="text-[9px]">{initials(a.nama)}</AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <span className="font-medium">{a.nama}</span>
+                        {jabatan && <span className="text-background/60 ml-1">· {jabatan}</span>}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+              <PopoverTrigger asChild>
+                <button type="button" className="size-4 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100">
+                  <Plus className="size-2.5" />
+                </button>
+              </PopoverTrigger>
+            </div>
+          )}
+        </div>
+        <PopoverContent className="w-60 p-0" align="start" sideOffset={4}>
+          <div className="p-2 border-b border-border">
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Cari nama atau jabatan…"
+              className="w-full rounded-md bg-muted/50 px-2 py-1.5 text-xs outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
+            />
+          </div>
+          <div className="max-h-56 overflow-y-auto p-1">
+            {filtered.length === 0 && (
+              <p className="py-4 text-center text-xs text-muted-foreground">Tidak ditemukan</p>
+            )}
+            {(["PIC", "Karyawan"] as const).map((group) => {
+              const items = filtered.filter((o) => o.group === group);
+              if (!items.length) return null;
+              return (
+                <div key={group}>
+                  <p className="mt-1 mb-0.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">{group}</p>
+                  {items.map((person) => (
+                    <button key={person.id} type="button" onClick={() => toggle(person)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60 transition-colors">
+                      <Avatar className="size-6 shrink-0">
+                        <AvatarFallback className="text-[9px]">{initials(person.nama)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs leading-tight">{person.nama}</p>
+                        <p className="truncate text-[10px] text-muted-foreground leading-tight">{person.jabatan}</p>
+                      </div>
+                      {selectedIds.has(person.id) && <Check className="size-3 shrink-0 text-primary" />}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </TooltipProvider>
+  );
+}
+
+function flattenTree(milestones: Milestone[]): Array<{ m: Milestone; depth: 0 | 1 | 2 }> {
+  const byParent = new Map<string | null, Milestone[]>();
+  for (const m of milestones) {
+    const key = m.parentId ?? null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key)!.push(m);
+  }
+  const sort = (arr: Milestone[]) => [...arr].sort((a, b) => a.urutan - b.urutan);
+  const result: Array<{ m: Milestone; depth: 0 | 1 | 2 }> = [];
+  for (const parent of sort(byParent.get(null) ?? [])) {
+    result.push({ m: parent, depth: 0 });
+    for (const sub of sort(byParent.get(parent.id) ?? [])) {
+      result.push({ m: sub, depth: 1 });
+      for (const leaf of sort(byParent.get(sub.id) ?? [])) {
+        result.push({ m: leaf, depth: 2 });
+      }
+    }
+  }
+  return result;
+}
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
-function tanggalID(iso: string) {
-  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+function MilestoneDatePicker({
+  value, onChange, placeholder = "Pilih tanggal",
+}: { value: string | null; onChange: (v: string | null) => void; placeholder?: string }) {
+  const selected = value ? new Date(value + "T00:00:00") : undefined;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-xs bg-transparent hover:bg-muted/50 transition-colors text-left"
+        >
+          <CalendarIcon className="size-3 shrink-0 text-muted-foreground" />
+          {selected
+            ? format(selected, "dd MMM yy", { locale: idLocale })
+            : <span className="text-muted-foreground">{placeholder}</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
+        <Calendar
+          mode="single" selected={selected} defaultMonth={selected}
+          onSelect={(d) => onChange(d ? format(d, "yyyy-MM-dd") : null)}
+          locale={idLocale} autoFocus
+        />
+        {value && (
+          <div className="border-t border-border p-2">
+            <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => onChange(null)}>
+              Hapus tanggal
+            </button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function MilestoneRow({
-  m, proyekId, isFirst, isLast, autoFocus,
+  m, proyekId, depth, autoFocus, onAddChild, allMilestones, onOpenModal, personOptions,
 }: {
   m: Milestone;
   proyekId: string;
-  isFirst: boolean;
-  isLast: boolean;
+  depth: 0 | 1 | 2;
   autoFocus?: boolean;
+  onAddChild?: () => void;
+  allMilestones: Milestone[];
+  onOpenModal: (m: Milestone) => void;
+  personOptions: PersonOption[];
 }) {
-  const router = useRouter();
   const updateMilestone = useUpdateMilestone();
   const moveMilestone   = useMoveMilestone();
   const deleteMilestone = useDeleteMilestone();
 
-  const [nama, setNama]         = React.useState(m.nama);
-  const [targetDate, setTarget] = React.useState(m.targetDate ?? "");
-  const [actualDate, setActual] = React.useState(m.actualDate ?? "");
+  // When autoFocus (newly added, empty name) — show inline input; otherwise show clickable text
+  const isNew = autoFocus && m.nama === "";
+  const [nama, setNama] = React.useState(m.nama);
+  const [showDelete, setShowDelete] = React.useState(false);
   const namaRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => { setNama(m.nama); }, [m.nama]);
-  React.useEffect(() => { setTarget(m.targetDate ?? ""); }, [m.targetDate]);
-  React.useEffect(() => { setActual(m.actualDate ?? ""); }, [m.actualDate]);
-  React.useEffect(() => { if (autoFocus) namaRef.current?.focus(); }, [autoFocus]);
+  React.useEffect(() => { if (isNew) namaRef.current?.focus(); }, [isNew]);
 
   const save = (patch: Partial<Omit<Milestone, "id" | "urutan">>) =>
-    updateMilestone.mutate({ proyekId, milestoneId: m.id, patch }, {
-      onSuccess: () => router.refresh(),
-    });
+    updateMilestone.mutate({ proyekId, milestoneId: m.id, patch });
+
+  const siblings = allMilestones
+    .filter((s) => (s.parentId ?? null) === (m.parentId ?? null))
+    .sort((a, b) => a.urutan - b.urutan);
+  const sibFirst = siblings[0]?.id === m.id;
+  const sibLast  = siblings[siblings.length - 1]?.id === m.id;
 
   const inputCls = "w-full rounded px-1.5 py-0.5 text-sm bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
+  const statusInfo = MILESTONE_STATUS_MAP[m.status];
+  const indent = depth === 2 ? "pl-10" : depth === 1 ? "pl-5" : "pl-0";
 
   return (
-    <div
-      className="grid items-center gap-2 border-b border-border px-2 py-1.5 last:border-0"
-      style={{ gridTemplateColumns: "24px 1fr 130px 110px 110px 110px 80px 28px" }}
-    >
-      {/* Reorder */}
-      <div className="flex flex-col gap-0">
-        <button
-          type="button"
-          disabled={isFirst || moveMilestone.isPending}
-          onClick={() => moveMilestone.mutate(
-            { proyekId, milestoneId: m.id, direction: "up" },
-            { onSuccess: () => router.refresh() },
-          )}
-          className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
-        >
-          <ChevronUp className="size-3" />
-        </button>
-        <button
-          type="button"
-          disabled={isLast || moveMilestone.isPending}
-          onClick={() => moveMilestone.mutate(
-            { proyekId, milestoneId: m.id, direction: "down" },
-            { onSuccess: () => router.refresh() },
-          )}
-          className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-30"
-        >
-          <ChevronDown className="size-3" />
-        </button>
-      </div>
-
-      {/* Nama */}
-      <input
-        ref={namaRef}
-        className={inputCls}
-        value={nama}
-        placeholder="Nama milestone…"
-        onChange={(e) => setNama(e.target.value)}
-        onBlur={() => { if (nama !== m.nama) save({ nama }); }}
-      />
-
-      {/* Assignee */}
-      <select
-        className={`${inputCls} cursor-pointer`}
-        value={m.assigneeNama ?? ""}
-        onChange={(e) => save({ assigneeNama: e.target.value || null })}
+    <>
+      <div
+        className="group grid items-center gap-2 border-b border-border px-3 py-2 last:border-0 hover:bg-muted/20 transition-colors"
+        style={{ gridTemplateColumns: COL }}
       >
-        <option value="">—</option>
-        {activeKaryawan.map((k) => (
-          <option key={k.id} value={k.nama}>{k.nama}</option>
-        ))}
-      </select>
+        {/* Reorder */}
+        <div className="flex flex-col gap-0">
+          <button
+            type="button" disabled={sibFirst || moveMilestone.isPending}
+            onClick={() => moveMilestone.mutate({ proyekId, milestoneId: m.id, direction: "up" })}
+            className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
+          >
+            <ChevronUp className="size-3" />
+          </button>
+          <button
+            type="button" disabled={sibLast || moveMilestone.isPending}
+            onClick={() => moveMilestone.mutate({ proyekId, milestoneId: m.id, direction: "down" })}
+            className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
+          >
+            <ChevronDown className="size-3" />
+          </button>
+        </div>
 
-      {/* Target Date */}
-      <input
-        type="date"
-        className={inputCls}
-        value={targetDate}
-        onChange={(e) => setTarget(e.target.value)}
-        onBlur={() => {
-          const val = targetDate || null;
-          if (val !== m.targetDate) save({ targetDate: val });
-        }}
-      />
+        {/* Nama */}
+        <div className={cn("flex items-center gap-1 min-w-0 overflow-hidden", indent)}>
+          {depth > 0 && <span className="shrink-0 text-muted-foreground/40 text-xs">└</span>}
+          {isNew ? (
+            <input
+              ref={namaRef}
+              className={cn(inputCls, "flex-1 min-w-0 truncate")}
+              value={nama}
+              placeholder="Nama milestone…"
+              onChange={(e) => setNama(e.target.value)}
+              onBlur={() => {
+                if (nama.trim() === "") {
+                  deleteMilestone.mutate({ proyekId, milestoneId: m.id });
+                } else {
+                  save({ nama });
+                }
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => onOpenModal(m)}
+              className="flex-1 min-w-0 text-left px-1.5 py-0.5 rounded text-sm truncate hover:bg-muted/50 transition-colors"
+            >
+              {m.nama || <span className="text-muted-foreground italic">Tanpa judul</span>}
+            </button>
+          )}
+          {depth < 2 && onAddChild && (
+            <button
+              type="button"
+              onClick={onAddChild}
+              title={depth === 0 ? "Tambah sub-milestone" : "Tambah leaf milestone"}
+              className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <CornerDownRight className="size-3" />
+            </button>
+          )}
+        </div>
 
-      {/* Actual Date */}
-      <input
-        type="date"
-        className={inputCls}
-        value={actualDate}
-        onChange={(e) => setActual(e.target.value)}
-        onBlur={() => {
-          const val = actualDate || null;
-          if (val !== m.actualDate) save({ actualDate: val });
-        }}
-      />
+        {/* Assignee */}
+        <MilestoneAssigneeField
+          assignees={m.assignees}
+          personOptions={personOptions}
+          onChange={(next) => save({ assignees: next })}
+        />
 
-      {/* Status */}
-      <select
-        className={`${inputCls} cursor-pointer font-medium ${MILESTONE_STATUS_STYLE[m.status]}`}
-        value={m.status}
-        onChange={(e) => save({ status: e.target.value as MilestoneStatus })}
-      >
-        {MILESTONE_STATUS_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+        {/* Target */}
+        <MilestoneDatePicker value={m.targetDate} onChange={(v) => { if (v !== m.targetDate) save({ targetDate: v }); }} placeholder="Target" />
 
-      {/* Tagih Termin badge */}
-      <div className="flex items-center">
-        {m.status === "selesai" && m.pemicuTermin && (
-          <Link href={`/faktur/${encodeURIComponent(m.pemicuTermin.fakturId)}`}>
-            <Badge variant="warning" className="cursor-pointer text-xs whitespace-nowrap">
+        {/* Aktual */}
+        <MilestoneDatePicker value={m.actualDate} onChange={(v) => { if (v !== m.actualDate) save({ actualDate: v }); }} placeholder="Aktual" />
+
+        {/* Status */}
+        <div className="flex justify-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-muted/50 transition-colors">
+                <Badge variant={statusInfo.variant} className="text-xs">{statusInfo.label}</Badge>
+                <ChevronDownIcon className="size-3 text-muted-foreground shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              {MILESTONE_STATUS.map((s) => (
+                <DropdownMenuItem key={s.value} onSelect={() => save({ status: s.value })} className="gap-2">
+                  <Badge variant={s.variant} className="text-xs">{s.label}</Badge>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Tagih termin */}
+        <div className="flex items-center">
+          {m.status === "selesai" && m.pemicuTermin && (
+            <Badge variant="warning" className="text-xs whitespace-nowrap">
               Tagih {m.pemicuTermin.persen}%
             </Badge>
-          </Link>
-        )}
-      </div>
-
-      {/* Delete */}
-      <button
-        type="button"
-        onClick={() => {
-          deleteMilestone.mutate({ proyekId, milestoneId: m.id }, {
-            onSuccess: () => {
-              toast.success("Milestone dihapus.");
-              router.refresh();
-            },
-          });
-        }}
-        className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors"
-        aria-label="Hapus milestone"
-      >
-        <Trash2 className="size-3.5" />
-      </button>
-    </div>
-  );
-}
-
-function MilestoneTab({ proyek }: { proyek: Proyek }) {
-  const router = useRouter();
-  const addMilestone    = useAddMilestone();
-  const replaceTemplate = useReplaceMilestonesWithTemplate();
-  const [newId, setNewId]                   = React.useState<string | null>(null);
-  const [templateConfirm, setTemplateConfirm] = React.useState(false);
-
-  const sorted   = [...proyek.milestones].sort((a, b) => a.urutan - b.urutan);
-  const template = getMilestoneTemplate(proyek.layananNama);
-
-  const handleAddMilestone = () => {
-    const id = `ML-${Date.now()}`;
-    const maxUrutan = sorted.length > 0 ? Math.max(...sorted.map((m) => m.urutan)) : 0;
-    addMilestone.mutate(
-      {
-        proyekId: proyek.id,
-        milestone: {
-          id, nama: "", urutan: maxUrutan + 1,
-          assigneeNama: null, targetDate: null, actualDate: null,
-          status: "belum_mulai", pemicuTermin: null,
-        },
-      },
-      { onSuccess: () => { setNewId(id); router.refresh(); } },
-    );
-  };
-
-  const handleLoadTemplate = () => {
-    if (!template) return;
-    replaceTemplate.mutate(
-      { proyekId: proyek.id, templateMilestones: template.milestones },
-      {
-        onSuccess: () => {
-          toast.success("Template milestone dimuat.");
-          setTemplateConfirm(false);
-          router.refresh();
-        },
-      },
-    );
-  };
-
-  return (
-    <div className="mt-4 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {template && (
-            <Button variant="outline" size="sm" onClick={() => setTemplateConfirm(true)} disabled={replaceTemplate.isPending}>
-              <LayoutList className="size-3.5 mr-1.5" /> Muat Template
-            </Button>
           )}
         </div>
-        <Button size="sm" onClick={handleAddMilestone} disabled={addMilestone.isPending}>
-          <Plus className="size-3.5 mr-1.5" /> Tambah Milestone
-        </Button>
-      </div>
 
-      {sorted.length > 0 && (
-        <div
-          className="grid items-center gap-2 px-2 pb-1 text-xs font-medium text-muted-foreground"
-          style={{ gridTemplateColumns: "24px 1fr 130px 110px 110px 110px 80px 28px" }}
+        {/* Delete */}
+        <button
+          type="button"
+          onClick={() => setShowDelete(true)}
+          className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+          aria-label="Hapus milestone"
         >
-          <span /><span>Nama</span><span>Assignee</span><span>Target</span>
-          <span>Aktual</span><span>Status</span><span /><span />
-        </div>
-      )}
-
-      <div className="rounded-lg border border-border">
-        {sorted.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            Belum ada milestone. Tambah atau muat template.
-          </p>
-        ) : (
-          sorted.map((m, i) => (
-            <MilestoneRow
-              key={m.id}
-              m={m}
-              proyekId={proyek.id}
-              isFirst={i === 0}
-              isLast={i === sorted.length - 1}
-              autoFocus={m.id === newId}
-            />
-          ))
-        )}
+          <Trash2 className="size-3.5" />
+        </button>
       </div>
 
-      <AlertDialog open={templateConfirm} onOpenChange={setTemplateConfirm}>
+      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Muat template milestone?</AlertDialogTitle>
+            <AlertDialogTitle>Hapus milestone?</AlertDialogTitle>
             <AlertDialogDescription>
-              Muat template dari &ldquo;{template?.templateName}&rdquo;? Milestone yang ada akan digantikan.
+              &ldquo;{m.nama || "Milestone ini"}&rdquo; dan semua sub-milestonenya akan dihapus permanen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
-              disabled={replaceTemplate.isPending}
-              onClick={handleLoadTemplate}
+              variant="destructive"
+              disabled={deleteMilestone.isPending}
+              onClick={() => deleteMilestone.mutate({ proyekId, milestoneId: m.id }, {
+                onSuccess: () => toast.success("Milestone dihapus."),
+              })}
             >
-              Muat Template
+              Hapus
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
 
-function InfoTab({ proyek }: { proyek: Proyek }) {
+function MilestoneTab({
+  proyekId, perusahaanId, milestones, onOpenModal,
+}: {
+  proyekId: string;
+  perusahaanId: string;
+  milestones: Milestone[];
+  onOpenModal: (m: Milestone) => void;
+}) {
+  const addMilestone = useAddMilestone();
+  const [newId, setNewId] = React.useState<string | null>(null);
+
+  const personOptions = React.useMemo(() => buildPersonOptions(perusahaanId), [perusahaanId]);
+  const flat = flattenTree(milestones);
+
+  const doAdd = (parentId: string | null) => {
+    const id = `ML-${Date.now()}`;
+    const siblings = milestones.filter((m) => (m.parentId ?? null) === parentId);
+    const maxUrutan = siblings.length > 0 ? Math.max(...siblings.map((m) => m.urutan)) : 0;
+    addMilestone.mutate(
+      {
+        proyekId,
+        milestone: {
+          id, parentId, nama: "", description: null, descriptionAttachments: [], urutan: maxUrutan + 1,
+          assignees: [], targetDate: null, actualDate: null,
+          status: "belum_mulai", pemicuTermin: null,
+        },
+      },
+      { onSuccess: () => setNewId(id) },
+    );
+  };
+
   return (
-    <div className="mt-4 max-w-lg">
-      <InfoList>
-        <InfoRow label="Perusahaan" value={proyek.perusahaanNama} />
-        <InfoRow label="Area" value={proyek.area} />
-        <InfoRow label="Tahun" value={String(proyek.tahun)} />
-        <InfoRow
-          label="Layanan"
-          value={
-            <div className="flex flex-wrap gap-1">
-              {proyek.layananNama.map((n) => <Badge key={n} variant="info" className="text-xs">{n}</Badge>)}
-            </div>
-          }
-        />
-        <InfoRow
-          label="Nilai Kontrak"
-          value={<span className="font-mono tabular-nums">{formatRupiah(proyek.nilaiKontrak)}</span>}
-        />
-        {proyek.sphId && (
-          <InfoRow
-            label="SPH"
-            value={
-              <Link
-                href={`/penawaran/${encodeURIComponent(proyek.sphId)}`}
-                className="inline-flex items-center gap-1 font-mono text-primary hover:underline"
-              >
-                {proyek.sphId} <ExternalLink className="size-3" />
-              </Link>
-            }
+    <div className="overflow-hidden rounded-lg border border-border">
+      {/* Header */}
+      <div
+        className="grid items-center gap-2 bg-muted/50 px-3 py-2.5 text-xs font-medium tracking-wide text-muted-foreground uppercase"
+        style={{ gridTemplateColumns: COL }}
+      >
+        <span />
+        <span>Nama</span>
+        <span>Assignee</span>
+        <span>Target</span>
+        <span>Aktual</span>
+        <span className="text-center">Status</span>
+        <span />
+        <span />
+      </div>
+
+      <div className="border-t border-border">
+        {flat.map(({ m, depth }) => (
+          <MilestoneRow
+            key={m.id}
+            m={m}
+            proyekId={proyekId}
+            depth={depth}
+            autoFocus={m.id === newId}
+            allMilestones={milestones}
+            onAddChild={depth < 2 ? () => doAdd(m.id) : undefined}
+            onOpenModal={onOpenModal}
+            personOptions={personOptions}
           />
-        )}
-        <InfoRow label="Dibuat" value={tanggalID(proyek.createdAt)} />
-      </InfoList>
+        ))}
+
+        <button
+          type="button"
+          disabled={addMilestone.isPending}
+          onClick={() => doAdd(null)}
+          className={cn(
+            "flex w-full items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors",
+            flat.length > 0 && "border-t border-border",
+          )}
+        >
+          <Plus className="size-3.5" />
+          Tambah milestone
+        </button>
+      </div>
     </div>
   );
 }
 
-function LogTab({ proyekId }: { proyekId: string }) {
-  const { data: log = [], isLoading } = useProyekLog(proyekId);
-  const sorted = [...log].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
-
-  if (isLoading) return <p className="mt-4 text-sm text-muted-foreground">Memuat log…</p>;
-  if (sorted.length === 0) {
-    return <p className="mt-4 text-sm text-muted-foreground">Belum ada aktivitas.</p>;
-  }
-
+function PerusahaanPic({ perusahaanId }: { perusahaanId: string }) {
+  const pics = perusahaanFixtures.find((p) => p.id === perusahaanId)?.pic ?? [];
+  if (pics.length === 0) return null;
   return (
-    <ul className="mt-4 space-y-3">
-      {sorted.map((entry) => (
-        <li key={entry.id} className="flex items-start gap-3">
-          <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-          <div>
-            <p className="text-sm">{entry.description}</p>
-            <p className="text-xs text-muted-foreground">
-              {new Date(entry.timestamp).toLocaleString("id-ID")}
-            </p>
-          </div>
-        </li>
-      ))}
-    </ul>
+    <TooltipProvider>
+      <div className="flex">
+        {pics.map((pic, i) => (
+          <Tooltip key={i}>
+            <TooltipTrigger asChild>
+              <Avatar
+                className="size-7 ring-2 ring-background cursor-default"
+                style={{ marginLeft: i === 0 ? 0 : "-8px" }}
+              >
+                <AvatarFallback className="text-[10px]">{initials(pic.nama)}</AvatarFallback>
+              </Avatar>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <span className="font-medium">{pic.nama}</span>
+              <span className="text-background/60 ml-1">· {pic.jabatan}</span>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
   );
 }
 
-export function ProyekDetail({ proyek }: { proyek: Proyek }) {
-  const router = useRouter();
+export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
+  const { data } = useProyek(initial.id, initial);
+  const proyek = data ?? initial;
+
   const updateStatus = useUpdateProyekStatus();
   const [statusTarget, setStatusTarget] = React.useState<ProyekStatus | null>(null);
+  const [modalMilestone, setModalMilestone] = React.useState<Milestone | null>(null);
+  const [realisasiOpen, setRealisasiOpen] = React.useState(false);
+  const { data: realisasiList = [] } = useRealisasiRabByProyek(proyek.id);
+  const totalRealisasi = realisasiList.reduce((s, r) => s + r.jumlah, 0);
   const nextStatuses = TRANSITIONS[proyek.status];
+
+  // When proyek data updates (after mutation), sync the open milestone so modal shows fresh data
+  const openMilestoneId = modalMilestone?.id ?? null;
+  const freshMilestone = openMilestoneId
+    ? (proyek.milestones.find((m) => m.id === openMilestoneId) ?? null)
+    : null;
 
   const handleConfirmStatus = () => {
     if (!statusTarget) return;
@@ -404,7 +557,6 @@ export function ProyekDetail({ proyek }: { proyek: Proyek }) {
         onSuccess: () => {
           toast.success(`Status diubah: ${STATUS[statusTarget].label}`);
           setStatusTarget(null);
-          router.refresh();
         },
       },
     );
@@ -418,16 +570,13 @@ export function ProyekDetail({ proyek }: { proyek: Proyek }) {
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
               <FolderKanban className="size-5 text-muted-foreground shrink-0" />
-              <h1 className="text-xl font-semibold tracking-tight leading-tight">{proyek.nama}</h1>
+              <span className="font-mono text-sm text-muted-foreground">{proyek.id}</span>
               <Badge variant={STATUS[proyek.status].variant}>{STATUS[proyek.status].label}</Badge>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><Building2 className="size-3.5" />{proyek.perusahaanNama}</span>
               <span className="flex items-center gap-1"><MapPin className="size-3.5" />{proyek.area}</span>
               <span className="flex items-center gap-1"><CalendarDays className="size-3.5" />{proyek.tahun}</span>
-              <span className="flex items-center gap-1 font-mono tabular-nums" title={formatRupiah(proyek.nilaiKontrak)}>
-                <Banknote className="size-3.5" />{formatRupiahCompact(proyek.nilaiKontrak)}
-              </span>
             </div>
           </div>
 
@@ -437,16 +586,16 @@ export function ProyekDetail({ proyek }: { proyek: Proyek }) {
                 <Button variant="outline" size="sm">Ubah Status</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {nextStatuses.filter((s) => s !== "batal").map((s) => (
+                {nextStatuses.filter((s) => s !== "selesai").map((s) => (
                   <DropdownMenuItem key={s} onSelect={() => setStatusTarget(s)}>
                     {STATUS[s].label}
                   </DropdownMenuItem>
                 ))}
-                {nextStatuses.includes("batal") && (
+                {nextStatuses.includes("selesai") && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onSelect={() => setStatusTarget("batal")}>
-                      Batalkan Proyek
+                    <DropdownMenuItem onSelect={() => setStatusTarget("selesai")}>
+                      {STATUS.selesai.label}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -455,59 +604,63 @@ export function ProyekDetail({ proyek }: { proyek: Proyek }) {
           )}
         </div>
 
-        {proyek.assignees.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            {proyek.assignees.map((a) => (
-              <Avatar key={a.karyawanId} className="size-7" title={a.nama}>
-                <AvatarFallback className="text-[10px]">{initials(a.nama)}</AvatarFallback>
-              </Avatar>
-            ))}
-            <span className="text-xs text-muted-foreground ml-1">
-              {proyek.assignees.map((a) => a.nama).join(", ")}
-            </span>
-          </div>
-        )}
+        <PerusahaanPic perusahaanId={proyek.perusahaanId} />
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="milestone">
-        <TabsList>
-          <TabsTrigger value="milestone">Milestone</TabsTrigger>
-          <TabsTrigger value="info">Info Proyek</TabsTrigger>
-          <TabsTrigger value="log">Log Aktivitas</TabsTrigger>
-        </TabsList>
-        <TabsContent value="milestone">
-          <MilestoneTab proyek={proyek} />
-        </TabsContent>
-        <TabsContent value="info">
-          <InfoTab proyek={proyek} />
-        </TabsContent>
-        <TabsContent value="log">
-          <LogTab proyekId={proyek.id} />
-        </TabsContent>
-      </Tabs>
+      {/* Milestone table */}
+      <MilestoneTab
+        proyekId={proyek.id}
+        perusahaanId={proyek.perusahaanId}
+        milestones={proyek.milestones}
+        onOpenModal={setModalMilestone}
+      />
+
+      {/* Milestone detail modal */}
+      <MilestoneModal
+        open={!!freshMilestone}
+        onOpenChange={(open) => { if (!open) setModalMilestone(null); }}
+        milestone={freshMilestone}
+        proyek={proyek}
+      />
+
+      {/* Realisasi RAB */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold">Realisasi RAB</h3>
+          <Button size="sm" variant="outline" onClick={() => setRealisasiOpen(true)}>+ Catat</Button>
+        </div>
+        {realisasiList.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada realisasi dicatat.</p>
+        ) : (
+          <div className="space-y-1">
+            {realisasiList.map((r) => (
+              <div key={r.id} className="flex justify-between text-sm py-1 border-b last:border-0">
+                <span className="text-muted-foreground">{r.tanggal} · {r.kategori === "personil" ? "A" : "B"} · {r.rabLineLabel}</span>
+                <span className="font-medium tabular-nums">{formatRupiah(r.jumlah)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-sm pt-2 font-semibold">
+              <span>Total Realisasi</span>
+              <span className="tabular-nums">{formatRupiah(totalRealisasi)}</span>
+            </div>
+          </div>
+        )}
+        <RealisasiRabForm proyekId={proyek.id} open={realisasiOpen} onOpenChange={setRealisasiOpen} />
+      </div>
 
       {/* Status confirm dialog */}
       <AlertDialog open={!!statusTarget} onOpenChange={(o) => !o && setStatusTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {statusTarget === "batal" ? "Batalkan proyek ini?" : `Ubah status ke ${statusTarget ? STATUS[statusTarget].label : ""}?`}
+              {`Ubah status ke ${statusTarget ? STATUS[statusTarget].label : ""}?`}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {statusTarget === "batal"
-                ? "Status proyek akan berubah menjadi Batal. Tindakan ini tidak dapat dibatalkan."
-                : "Status proyek akan diperbarui."}
-            </AlertDialogDescription>
+            <AlertDialogDescription>Status proyek akan diperbarui.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              variant={statusTarget === "batal" ? "destructive" : "default"}
-              disabled={updateStatus.isPending}
-              onClick={handleConfirmStatus}
-            >
-              {statusTarget === "batal" ? "Ya, Batalkan" : "Ubah Status"}
+            <AlertDialogAction disabled={updateStatus.isPending} onClick={handleConfirmStatus}>
+              Ubah Status
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
