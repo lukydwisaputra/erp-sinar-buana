@@ -40,3 +40,28 @@ export type ProyekProfit = {
   persenAnggaranTerpakai: number | null;
   kesehatan: KesehatanProyek;
 };
+
+/** Single projected cashflow event within the forecast horizon. */
+export type ForecastEntry = {
+  tanggal: string;
+  label: string;
+  jumlah: number;
+  jenis: "masuk" | "keluar";
+  sumber: "faktur" | "pajak" | "penggajian";
+  refId: string;
+};
+
+/** Running balance snapshot at end of each calendar week. */
+export type WeeklyProjection = {
+  weekStart: string;
+  saldoAkhir: number;
+};
+
+/** Full forecast view. */
+export type ForecastView = {
+  saldoSaatIni: number;
+  entries: ForecastEntry[];
+  weeklyProjections: WeeklyProjection[];
+  runwayBulan: number | null;
+  monthlyObligation: number;
+};
