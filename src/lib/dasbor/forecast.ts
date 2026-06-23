@@ -20,13 +20,15 @@ function mondayOf(dateStr: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-function nextPayrollDate(today: string): string {
+/** Next occurrence of the same day-of-month as `tanggalBayar`, on or after `today`. */
+function nextOccurrence(tanggalBayar: string, today: string): string {
+  const payDay = parseInt(tanggalBayar.slice(8, 10), 10);
   const d = new Date(today + "T00:00:00Z");
   const y = d.getUTCFullYear();
   const m = d.getUTCMonth();
-  const d25 = new Date(Date.UTC(y, m, 25));
-  if (d <= d25) return d25.toISOString().slice(0, 10);
-  return new Date(Date.UTC(y, m + 1, 25)).toISOString().slice(0, 10);
+  const thisMonth = new Date(Date.UTC(y, m, payDay));
+  if (thisMonth.toISOString().slice(0, 10) >= today) return thisMonth.toISOString().slice(0, 10);
+  return new Date(Date.UTC(y, m + 1, payDay)).toISOString().slice(0, 10);
 }
 
 export function saldoArusKas(entries: ArusKasEntry[]): number {
@@ -81,14 +83,16 @@ export function forecastOutflows(
 
   if (batches.length > 0) {
     const latest = [...batches].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-    const payDate = nextPayrollDate(today);
+    // If tanggalBayar is still upcoming, use it directly; else project next occurrence.
+    const isUpcoming = latest.tanggalBayar >= today;
+    const payDate = isUpcoming ? latest.tanggalBayar : nextOccurrence(latest.tanggalBayar, today);
     if (payDate <= horizon) {
       const jumlah = Math.round(
         latest.slips.reduce((s, slip) => s + calcSlip(slip).penggajianBersih, 0),
       );
       entries.push({
         tanggal: payDate,
-        label: "Penggajian " + latest.periode.mulai.slice(0, 7),
+        label: (isUpcoming ? "Penggajian " : "Penggajian (est.) ") + payDate.slice(0, 7),
         jumlah,
         jenis: "keluar",
         sumber: "penggajian",

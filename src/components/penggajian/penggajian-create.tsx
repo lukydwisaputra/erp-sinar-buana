@@ -13,10 +13,8 @@ import { SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiah, formatIntIDR, parseRupiah } from "@/lib/format";
 import { calcSlip } from "@/lib/schemas/penggajian";
 import { useCreateBatch } from "@/lib/query/penggajian";
-import { karyawanFixtures } from "@/lib/fixtures/karyawan";
+import { useKaryawanList } from "@/lib/query/karyawan";
 import type { Karyawan } from "@/lib/schemas/karyawan";
-
-const activeKaryawan = karyawanFixtures.filter((k) => k.status === "aktif");
 
 type SlipRow = {
   karyawanId: string;
@@ -26,11 +24,6 @@ type SlipRow = {
   pph21Pct: number;
   bpjsPotongan: number;
 };
-
-function makeDefaultRow(karyawanId: string): SlipRow {
-  const k = activeKaryawan.find((k) => k.id === karyawanId)!;
-  return { karyawanId, tunjangan: k.tunjangan, lembur: 0, bonus: 0, pph21Pct: 0, bpjsPotongan: 0 };
-}
 
 const statusFilterOptions = [
   { label: "Tetap", value: "tetap" },
@@ -74,15 +67,27 @@ function InlineMoneyInput({ value, onChange }: { value: number; onChange: (v: nu
 export function PenggajianCreate() {
   const router = useRouter();
   const createBatch = useCreateBatch();
+  const { data: allKaryawan = [] } = useKaryawanList();
+  const activeKaryawan = React.useMemo(
+    () => allKaryawan.filter((k) => k.status === "aktif"),
+    [allKaryawan],
+  );
 
   const [mulai, setMulai] = React.useState<Date | undefined>();
   const [selesai, setSelesai] = React.useState<Date | undefined>();
+  const [tanggalBayar, setTanggalBayar] = React.useState<Date | undefined>();
 
   const mulaiStr = mulai ? format(mulai, "yyyy-MM-dd") : "";
   const selesaiStr = selesai ? format(selesai, "yyyy-MM-dd") : "";
+  const tanggalBayarStr = tanggalBayar ? format(tanggalBayar, "yyyy-MM-dd") : "";
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [step, setStep] = React.useState<1 | 2>(1);
   const [rows, setRows] = React.useState<SlipRow[]>([]);
+
+  const findKaryawan = React.useCallback(
+    (id: string) => activeKaryawan.find((k) => k.id === id)!,
+    [activeKaryawan],
+  );
 
   const toggleKaryawan = (id: string) =>
     setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -134,10 +139,13 @@ export function PenggajianCreate() {
       meta: { mono: true, className: "w-[20%]" },
       cell: ({ row }) => formatRupiah(row.original.gajiPokok),
     },
-  ], [selectedIds]);
+  ], [selectedIds, activeKaryawan]);
 
   const handleLanjut = () => {
-    setRows(selectedIds.map(makeDefaultRow));
+    setRows(selectedIds.map((id) => {
+      const k = findKaryawan(id);
+      return { karyawanId: id, tunjangan: k.tunjangan, lembur: 0, bonus: 0, pph21Pct: 0, bpjsPotongan: 0 };
+    }));
     setStep(2);
   };
 
@@ -149,20 +157,20 @@ export function PenggajianCreate() {
   );
 
   function pph21Idr(row: SlipRow) {
-    const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
+    const k = findKaryawan(row.karyawanId);
     const kotor = k.gajiPokok * k.pengali + row.tunjangan + row.lembur + row.bonus;
     return Math.round(kotor * row.pph21Pct / 100);
   }
 
   const rowsValid = rows.every((row) => {
-    const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
+    const k = findKaryawan(row.karyawanId);
     const { penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Idr(row) });
     return penggajianBersih >= 0;
   });
 
   const handleSimpan = async () => {
     const slips = rows.map((row) => {
-      const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
+      const k = findKaryawan(row.karyawanId);
       return {
         karyawanId: k.id, karyawanNama: k.nama, jabatan: k.jabatan,
         statusKepegawaian: k.statusKepegawaian, pengali: k.pengali, gajiPokok: k.gajiPokok,
@@ -171,11 +179,11 @@ export function PenggajianCreate() {
         bankNama: k.bank.nama, bankNomor: k.bank.nomor, bankAtasNama: k.bank.atasNama,
       };
     });
-    const batch = await createBatch.mutateAsync({ periode: { mulai: mulaiStr, selesai: selesaiStr }, slips });
+    const batch = await createBatch.mutateAsync({ periode: { mulai: mulaiStr, selesai: selesaiStr }, tanggalBayar: tanggalBayarStr, slips });
     router.push(`/penggajian/${batch.id}`);
   };
 
-  const periodeValid = mulaiStr && selesaiStr && mulaiStr <= selesaiStr;
+  const periodeValid = mulaiStr && selesaiStr && mulaiStr <= selesaiStr && !!tanggalBayarStr;
   const canLanjut = !!periodeValid && selectedIds.length > 0;
 
   return (
@@ -200,11 +208,17 @@ export function PenggajianCreate() {
       {step === 1 && (
         <>
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Periode</span>
-              <DatePicker value={mulai} onChange={setMulai} placeholder="Mulai" className="w-40" />
-              <span className="text-muted-foreground text-sm">–</span>
-              <DatePicker value={selesai} onChange={setSelesai} placeholder="Selesai" className="w-40" />
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Periode</span>
+                <DatePicker value={mulai} onChange={setMulai} placeholder="Mulai" className="w-40" />
+                <span className="text-muted-foreground text-sm">–</span>
+                <DatePicker value={selesai} onChange={setSelesai} placeholder="Selesai" className="w-40" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Tanggal Bayar</span>
+                <DatePicker value={tanggalBayar} onChange={setTanggalBayar} placeholder="Pilih tanggal" className="w-40" />
+              </div>
             </div>
             <Button disabled={!canLanjut} onClick={handleLanjut}>
               Atur Komponen Gaji {selectedIds.length > 0 && `(${selectedIds.length} karyawan)`} <ChevronRight className="size-4 ml-1" />
@@ -286,7 +300,7 @@ export function PenggajianCreate() {
               </thead>
               <tbody>
                 {rows.map((row, idx) => {
-                  const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
+                  const k = findKaryawan(row.karyawanId);
                   const pph21Amount = pph21Idr(row);
                   const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Amount });
                   return (
@@ -325,7 +339,7 @@ export function PenggajianCreate() {
               </tbody>
               {rows.length > 0 && (() => {
                 const totals = rows.reduce((acc, row) => {
-                  const k = activeKaryawan.find((k) => k.id === row.karyawanId)!;
+                  const k = findKaryawan(row.karyawanId);
                   const pph21Amount = pph21Idr(row);
                   const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Amount });
                   return {

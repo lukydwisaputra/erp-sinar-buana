@@ -41,6 +41,7 @@ export let penggajianFixtures: PenggajianBatch[] = [
   {
     id: "GAJ-001",
     periode: { mulai: "2026-03-24", selesai: "2026-04-24" },
+    tanggalBayar: "2026-04-25",
     createdAt: "2026-04-25T08:00:00.000Z",
     slips: [
       // kIdx 0 = Budi Santoso — slip ke-1
@@ -58,6 +59,7 @@ export let penggajianFixtures: PenggajianBatch[] = [
   {
     id: "GAJ-002",
     periode: { mulai: "2026-04-24", selesai: "2026-05-24" },
+    tanggalBayar: "2026-05-25",
     createdAt: "2026-05-25T08:00:00.000Z",
     slips: [
       // kIdx 0 = Budi Santoso — slip ke-2 (bulan kedua)

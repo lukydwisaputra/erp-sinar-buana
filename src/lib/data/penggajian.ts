@@ -15,6 +15,7 @@ export type SlipEditFields = {
 
 export type CreateBatchInput = {
   periode: { mulai: string; selesai: string };
+  tanggalBayar: string;
   slips: Omit<SlipGaji, "id" | "batchId" | "status" | "paidAt">[];
 };
 
@@ -66,11 +67,19 @@ export async function createBatch(input: CreateBatchInput): Promise<PenggajianBa
   const batch: PenggajianBatch = {
     id: batchId,
     periode: input.periode,
+    tanggalBayar: input.tanggalBayar,
     slips,
     createdAt: new Date().toISOString(),
   };
   penggajianFixtures.push(penggajianBatchSchema.parse(batch));
   return penggajianBatchSchema.parse(penggajianFixtures[penggajianFixtures.length - 1]);
+}
+
+export async function deleteBatch(id: string): Promise<void> {
+  await delay(300);
+  const idx = penggajianFixtures.findIndex((b) => b.id === id);
+  if (idx === -1) throw new Error(`Batch ${id} not found`);
+  penggajianFixtures.splice(idx, 1);
 }
 
 export async function updateSlip(

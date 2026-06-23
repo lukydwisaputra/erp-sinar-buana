@@ -33,6 +33,8 @@ export const penggajianBatchSchema = z.object({
     mulai: z.string(),
     selesai: z.string(),
   }),
+  /** Planned payment date (ISO yyyy-mm-dd) set by user when creating the batch. */
+  tanggalBayar: z.string(),
   slips: z.array(slipGajiSchema),
   createdAt: z.string(),
 });

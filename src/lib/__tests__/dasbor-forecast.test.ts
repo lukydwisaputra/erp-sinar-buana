@@ -34,6 +34,7 @@ const mkKewajiban = (id: string, jatuhTempo: string, status: "belum_setor" | "di
 
 const mkBatch = (id: string, netPerSlip: number): PenggajianBatch => ({
   id, periode: { mulai: "2026-06-01", selesai: "2026-06-30" },
+  tanggalBayar: "2026-05-25",
   createdAt: "2026-06-22T00:00:00.000Z",
   slips: [{
     id: "s1", batchId: id, karyawanId: "K1", karyawanNama: "Budi",
@@ -107,16 +108,16 @@ describe("forecastOutflows", () => {
   it("includes next payroll projection when latest batch exists and within horizon", () => {
     const batch = mkBatch("B1", 10_000_000);
     const result = forecastOutflows([], [batch], TODAY, 90);
-    // nextPayrollDate("2026-06-22") = "2026-06-25" (25th of June, since 22 <= 25)
+    // tanggalBayar="2026-05-25" (past) → nextOccurrence(day=25, today="2026-06-22") = "2026-06-25"
     expect(result).toHaveLength(1);
     expect(result[0].sumber).toBe("penggajian");
     expect(result[0].jenis).toBe("keluar");
     expect(result[0].jumlah).toBe(10_000_000);
   });
 
-  it("projects payroll to next month's 25th when today is past the 25th", () => {
+  it("projects payroll to next month when today is past the batch's pay day", () => {
     const batch = mkBatch("B1", 10_000_000);
-    // today = Jun 26 (past the 25th) → nextPayrollDate = Jul 25
+    // tanggalBayar="2026-05-25" (past), today="2026-06-26" → nextOccurrence = "2026-07-25"
     const result = forecastOutflows([], [batch], "2026-06-26", 90);
     expect(result).toHaveLength(1);
     expect(result[0].tanggal).toBe("2026-07-25");

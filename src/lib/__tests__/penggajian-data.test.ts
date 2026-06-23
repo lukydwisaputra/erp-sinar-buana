@@ -73,7 +73,7 @@ describe("createBatch", () => {
     const b = await getBatch("GAJ-001");
     const slip = b!.slips[0];
     const result = await createBatch({
-      periode: { mulai: "2026-05-24", selesai: "2026-06-24" },
+      periode: { mulai: "2026-05-24", selesai: "2026-06-24" }, tanggalBayar: "2026-06-24",
       slips: [{
         karyawanId: slip.karyawanId,
         karyawanNama: slip.karyawanNama,
