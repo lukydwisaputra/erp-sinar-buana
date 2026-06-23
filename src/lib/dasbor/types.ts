@@ -65,3 +65,26 @@ export type ForecastView = {
   runwayBulan: number | null;
   monthlyObligation: number;
 };
+
+export type AlertJenis =
+  | "faktur_terlambat"
+  | "faktur_jatuh_tempo"
+  | "pajak_terlambat"
+  | "pajak_jatuh_tempo"
+  | "bukti_potong_belum"
+  | "proyek_over_budget"
+  | "proyek_margin_slip";
+
+export type AlertPrioritas = "tinggi" | "sedang";
+
+/** Single item in the Needs Attention feed. */
+export type AlertItem = {
+  id: string;
+  jenis: AlertJenis;
+  prioritas: AlertPrioritas;
+  judul: string;
+  detail: string;
+  refId: string;
+  refType: "faktur" | "pajak" | "proyek";
+  tanggal?: string;
+};
