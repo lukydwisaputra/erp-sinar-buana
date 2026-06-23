@@ -1,6 +1,7 @@
 "use client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import type { ForecastView } from "@/lib/dasbor/types";
 
@@ -11,16 +12,21 @@ interface ProjectedCashProps {
 
 export function ProjectedCash({ forecastView, isLoading }: ProjectedCashProps) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center justify-between">
-          <span>Proyeksi Kas (90 Hari)</span>
-          {forecastView?.runwayBulan !== undefined && forecastView.runwayBulan !== null && (
-            <span className="font-normal text-muted-foreground text-xs">
-              Runway: <strong className="text-foreground">{forecastView.runwayBulan} bln</strong>
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle>Proyeksi Kas (90 Hari)</CardTitle>
+        {forecastView?.runwayBulan !== undefined && forecastView.runwayBulan !== null && (
+          <CardDescription>
+            Runway: <strong className="text-foreground">{forecastView.runwayBulan} bln</strong>
+          </CardDescription>
+        )}
+        {forecastView && (
+          <CardAction>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {formatRupiahCompact(forecastView.saldoSaatIni)}
             </span>
-          )}
-        </CardTitle>
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -31,29 +37,24 @@ export function ProjectedCash({ forecastView, isLoading }: ProjectedCashProps) {
           <p className="text-sm text-muted-foreground py-2">Tidak ada data proyeksi.</p>
         ) : (
           <>
-            <div className="text-xs text-muted-foreground mb-2">
-              Saldo saat ini: <strong className="text-foreground">{formatRupiahCompact(forecastView.saldoSaatIni)}</strong>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-xs text-muted-foreground">
-                    <th className="text-left py-1.5 font-medium">Minggu</th>
-                    <th className="text-right py-1.5 font-medium">Saldo Akhir</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {forecastView.weeklyProjections.map((w) => (
-                    <tr key={w.weekStart}>
-                      <td className="py-1.5">{w.weekStart}</td>
-                      <td className={`py-1.5 text-right tabular-nums ${w.saldoAkhir < 0 ? "text-destructive" : ""}`}>
-                        {formatRupiah(w.saldoAkhir)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Minggu</TableHead>
+                  <TableHead className="text-right">Saldo Akhir</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {forecastView.weeklyProjections.map((w) => (
+                  <TableRow key={w.weekStart}>
+                    <TableCell>{w.weekStart}</TableCell>
+                    <TableCell className={`text-right tabular-nums font-mono ${w.saldoAkhir < 0 ? "text-destructive" : ""}`}>
+                      {formatRupiah(w.saldoAkhir)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
             {forecastView.entries.length > 0 && (
               <details className="mt-3">
                 <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">

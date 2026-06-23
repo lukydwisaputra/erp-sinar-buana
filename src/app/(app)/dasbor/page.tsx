@@ -47,7 +47,7 @@ export default function DasborPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <LayoutDashboard className="size-5 text-muted-foreground" />
-          <h1 className="text-xl font-semibold">Dasbor</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Dasbor</h1>
         </div>
         <PeriodPicker value={periode} onChange={setPeriode} />
       </div>

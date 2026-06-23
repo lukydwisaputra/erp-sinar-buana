@@ -1,5 +1,5 @@
 "use client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRupiahCompact } from "@/lib/format";
 import type { LabaRugi, ForecastView } from "@/lib/dasbor/types";
@@ -14,14 +14,16 @@ interface KpiStripProps {
 function KpiCard({ label, value, sub }: { label: string; value: string | undefined; sub?: string }) {
   return (
     <Card>
-      <CardContent className="pt-4 pb-3">
-        <p className="text-xs text-muted-foreground font-medium">{label}</p>
+      <CardHeader>
+        <CardDescription className="text-xs tracking-wide uppercase">{label}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-1">
         {value === undefined ? (
-          <Skeleton className="mt-1 h-6 w-24" />
+          <Skeleton className="h-7 w-28" />
         ) : (
-          <p className="mt-1 text-lg font-semibold tabular-nums">{value}</p>
+          <p className="font-mono text-2xl font-semibold tabular-nums text-foreground">{value}</p>
         )}
-        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
       </CardContent>
     </Card>
   );

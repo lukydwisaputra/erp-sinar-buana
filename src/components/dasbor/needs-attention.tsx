@@ -1,5 +1,5 @@
 "use client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bell } from "lucide-react";
@@ -22,15 +22,17 @@ const JENIS_LABEL: Record<string, string> = {
 
 export function NeedsAttention({ alerts, isLoading }: NeedsAttentionProps) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
           <Bell className="size-4" />
           Perlu Perhatian
-          {!isLoading && alerts.length > 0 && (
-            <Badge variant="destructive" className="ml-1">{alerts.length}</Badge>
-          )}
         </CardTitle>
+        {!isLoading && alerts.length > 0 && (
+          <CardAction>
+            <Badge variant="destructive">{alerts.length}</Badge>
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -47,7 +49,7 @@ export function NeedsAttention({ alerts, isLoading }: NeedsAttentionProps) {
               <li key={a.id} className="flex items-start gap-3 py-2.5">
                 <Badge
                   variant={a.prioritas === "tinggi" ? "destructive" : "warning"}
-                  className="mt-0.5 shrink-0 text-[10px] uppercase"
+                  className="mt-0.5 shrink-0 uppercase"
                 >
                   {JENIS_LABEL[a.jenis] ?? a.jenis}
                 </Badge>

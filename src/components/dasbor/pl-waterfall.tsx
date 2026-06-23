@@ -25,9 +25,9 @@ function Row({ label, value, bold, indent }: { label: string; value: number | un
 export function PlWaterfall({ labaRugi, isLoading }: PlWaterfallProps) {
   const d = isLoading ? undefined : labaRugi;
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Laba Rugi (Akrual)</CardTitle>
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle>Laba Rugi (Akrual)</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="divide-y">
