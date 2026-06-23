@@ -1,4 +1,3 @@
-"use client";
 import type { Periode } from "@/lib/dasbor/types";
 
 export type PeriodePreset = "mtd" | "qtd" | "ytd";
