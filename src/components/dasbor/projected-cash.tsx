@@ -60,8 +60,8 @@ export function ProjectedCash({ forecastView, isLoading }: ProjectedCashProps) {
                   {forecastView.entries.length} transaksi terjadwal
                 </summary>
                 <div className="mt-2 space-y-1">
-                  {forecastView.entries.map((e, i) => (
-                    <div key={i} className="flex justify-between text-xs">
+                  {forecastView.entries.map((e) => (
+                    <div key={`${e.sumber}-${e.refId}-${e.tanggal}`} className="flex justify-between text-xs">
                       <span className="text-muted-foreground">{e.tanggal} · {e.label}</span>
                       <span className={e.jenis === "masuk" ? "text-green-600" : "text-red-600"}>
                         {e.jenis === "masuk" ? "+" : "−"}{formatRupiahCompact(e.jumlah)}

@@ -44,38 +44,3 @@ export function periodePreset(preset: PeriodePreset): Periode {
     selesai: `${year}-${pad(month)}-${pad(date)}`,
   };
 }
-
-/**
- * Format a Periode as a human-readable string (Indonesian).
- * e.g. "1 Jun – 23 Jun 2026"
- */
-export function labelPeriode(periode: Periode): string {
-  const [startYear, startMonth, startDay] = periode.mulai.split("-");
-  const [endYear, endMonth, endDay] = periode.selesai.split("-");
-
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "Mei",
-    "Jun",
-    "Jul",
-    "Agu",
-    "Sep",
-    "Okt",
-    "Nov",
-    "Des",
-  ];
-
-  const startMonthName = months[parseInt(startMonth) - 1];
-  const endMonthName = months[parseInt(endMonth) - 1];
-
-  // If same month, show "1 Jun – 23 Jun 2026"
-  if (startMonth === endMonth) {
-    return `${parseInt(startDay)} ${startMonthName} – ${parseInt(endDay)} ${endMonthName} ${endYear}`;
-  }
-
-  // Different months: "1 Jun – 23 Jul 2026"
-  return `${parseInt(startDay)} ${startMonthName} – ${parseInt(endDay)} ${endMonthName} ${endYear}`;
-}
