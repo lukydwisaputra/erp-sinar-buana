@@ -15,6 +15,8 @@ const base: FakturFormValues = {
   terminIndex: 2,
   ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
   catatan: [], status: "terkirim", tanggalBayar: "",
+  bankNama: "", bankAtasNama: "", bankNoRekening: "",
+  jabatanPenerima: "Direktur", picAktif: false, picNama: "", picJabatan: "",
 };
 
 describe("computeFaktur", () => {

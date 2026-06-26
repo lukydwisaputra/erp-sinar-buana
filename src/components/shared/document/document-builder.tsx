@@ -21,7 +21,7 @@ export function DocumentBuilder({
   doc,
   onKirim,
 }: {
-  title: string;
+  title: React.ReactNode;
   subtitle: string;
   previewTitle: string;
   actions?: React.ReactNode;

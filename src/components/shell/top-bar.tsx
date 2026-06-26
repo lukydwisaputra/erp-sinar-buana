@@ -1,10 +1,12 @@
 "use client";
+import * as React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Search, User } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import {
-  Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -16,21 +18,62 @@ import {
 import { ThemeToggle } from "@/components/design-system/theme-toggle";
 import { NAV_LOOKUP } from "@/lib/nav";
 
-function useCurrentLabel() {
+type Crumb = { label: string; href: string };
+
+function titleCase(seg: string) {
+  return seg
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Builds a breadcrumb trail from the current pathname. */
+function useBreadcrumbs(): Crumb[] {
   const pathname = usePathname();
-  const base = "/" + (pathname.split("/")[1] ?? "");
-  return NAV_LOOKUP[base] ?? "Beranda";
+  return React.useMemo(() => {
+    const segs = pathname.split("/").filter(Boolean);
+    if (segs.length === 0 || segs[0] === "dasbor") {
+      return [{ label: "Beranda", href: "/dasbor" }];
+    }
+    const crumbs: Crumb[] = [{ label: "Beranda", href: "/dasbor" }];
+    let acc = "";
+    segs.forEach((seg, i) => {
+      acc += "/" + seg;
+      let label: string;
+      if (i === 0) label = NAV_LOOKUP[acc] ?? titleCase(seg);
+      else if (seg === "baru") label = "Baru";
+      else label = decodeURIComponent(seg);
+      crumbs.push({ label, href: acc });
+    });
+    return crumbs;
+  }, [pathname]);
 }
 
 export function TopBar() {
-  const current = useCurrentLabel();
+  const crumbs = useBreadcrumbs();
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-1 h-5" />
       <Breadcrumb>
         <BreadcrumbList>
-          <BreadcrumbItem><BreadcrumbPage>{current}</BreadcrumbPage></BreadcrumbItem>
+          {crumbs.map((c, i) => {
+            const isLast = i === crumbs.length - 1;
+            return (
+              <React.Fragment key={c.href}>
+                <BreadcrumbItem className="max-w-[40ch] truncate">
+                  {isLast ? (
+                    <BreadcrumbPage className="truncate">{c.label}</BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink asChild>
+                      <Link href={c.href} className="truncate">{c.label}</Link>
+                    </BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
+                {!isLast && <BreadcrumbSeparator />}
+              </React.Fragment>
+            );
+          })}
         </BreadcrumbList>
       </Breadcrumb>
 

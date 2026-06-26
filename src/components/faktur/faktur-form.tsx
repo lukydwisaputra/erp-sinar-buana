@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 import type { FakturFormValues } from "@/lib/schemas/faktur";
+import type { PIC } from "@/lib/schemas/perusahaan";
 import { BuilderSection } from "@/components/shared/builder-layout";
 import { MoneyInput } from "@/components/shared/money-input";
 import { cn } from "@/lib/utils";
@@ -18,9 +19,12 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-export function FakturForm({ form }: { form: UseFormReturn<FakturFormValues> }) {
+export function FakturForm({ form, picOptions = [] }: { form: UseFormReturn<FakturFormValues>; picOptions?: PIC[] }) {
   const values = form.watch();
   const errors = form.formState.errors;
 
@@ -34,12 +38,44 @@ export function FakturForm({ form }: { form: UseFormReturn<FakturFormValues> }) 
               {values.sphId || "—"}
             </div>
           </Field>
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <DateField label="Tanggal" value={values.tanggal} invalid={!!errors.tanggal}
               onChange={(v) => form.setValue("tanggal", v, { shouldValidate: true })} />
             <DateField label="Jatuh Tempo" value={values.jatuhTempo} invalid={!!errors.jatuhTempo}
               onChange={(v) => form.setValue("jatuhTempo", v, { shouldValidate: true })} />
           </div>
+        </div>
+      </BuilderSection>
+
+      <BuilderSection title="Penerima">
+        <div className="space-y-3">
+          {picOptions.length > 0 && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={values.picAktif}
+                  onCheckedChange={(c) => {
+                    form.setValue("picAktif", c === true);
+                    if (!(c === true)) { form.setValue("picNama", ""); form.setValue("picJabatan", ""); }
+                  }}
+                />
+                Cantumkan nama PIC
+              </label>
+              {values.picAktif && (
+                <FakturPicPicker
+                  options={picOptions}
+                  selectedNama={values.picNama}
+                  onPick={(p) => { form.setValue("picNama", p.nama); form.setValue("picJabatan", p.jabatan); }}
+                />
+              )}
+            </div>
+          )}
+          {!values.picAktif && (
+            <div>
+              <label className="text-xs text-muted-foreground">Jabatan Penerima</label>
+              <Input value={values.jabatanPenerima} onChange={(e) => form.setValue("jabatanPenerima", e.target.value)} placeholder="Direktur" />
+            </div>
+          )}
         </div>
       </BuilderSection>
 
@@ -63,7 +99,7 @@ export function FakturForm({ form }: { form: UseFormReturn<FakturFormValues> }) 
       </BuilderSection>
 
       <BuilderSection title="Pajak">
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
           <TaxRow label="PPN" aktif={values.ppnAktif} persen={values.ppnPersen}
             onToggle={(c) => form.setValue("ppnAktif", c)} onPersen={(n) => form.setValue("ppnPersen", n)} />
           <TaxRow label="PPh 23" aktif={values.pph23Aktif} persen={values.pph23Persen}
@@ -75,6 +111,23 @@ export function FakturForm({ form }: { form: UseFormReturn<FakturFormValues> }) 
         <CatatanEditor catatan={values.catatan} onChange={(v) => form.setValue("catatan", v)} />
       </BuilderSection>
 
+      <BuilderSection title="Rekening Bank">
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Bank</label>
+            <Input value={values.bankNama} onChange={(e) => form.setValue("bankNama", e.target.value)} placeholder="BNI" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Atas Nama</label>
+            <Input value={values.bankAtasNama} onChange={(e) => form.setValue("bankAtasNama", e.target.value)} placeholder="SINAR BUANA MANDIRI JAYA" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Nomor Rekening</label>
+            <Input value={values.bankNoRekening} onChange={(e) => form.setValue("bankNoRekening", e.target.value)} placeholder="0559332815" className="font-mono" />
+          </div>
+        </div>
+      </BuilderSection>
+
       <BuilderSection title="Status & Pembayaran">
         <div className="flex flex-wrap items-end gap-4">
           <div className="w-48">
@@ -82,7 +135,7 @@ export function FakturForm({ form }: { form: UseFormReturn<FakturFormValues> }) 
             <Select value={values.status} onValueChange={(v) => form.setValue("status", v as FakturFormValues["status"])}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="draft">Draf</SelectItem>
                 <SelectItem value="terkirim">Terkirim</SelectItem>
                 <SelectItem value="lunas">Lunas</SelectItem>
               </SelectContent>
@@ -102,7 +155,7 @@ function DateField({ label, value, onChange, invalid }: { label: string; value: 
   const [open, setOpen] = React.useState(false);
   const date = value ? new Date(value + "T00:00:00") : undefined;
   return (
-    <Field data-invalid={invalid} className="w-56">
+    <Field data-invalid={invalid}>
       <FieldLabel>{label}</FieldLabel>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -133,20 +186,20 @@ function ItemsEditor({ items, onChange, resetKey }: { items: FakturFormValues["i
             <label className="text-xs text-muted-foreground">Uraian</label>
             <Input value={it.uraian} onChange={(e) => update(i, { uraian: e.target.value })} placeholder="Penyusunan…" />
           </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="w-20">
+          <div className="flex items-end gap-3">
+            <div className="w-20 shrink-0">
               <label className="text-xs text-muted-foreground">Volume</label>
               <Input type="number" min={1} value={it.volume} onChange={(e) => update(i, { volume: Number(e.target.value) })} className="text-right font-mono tabular-nums" />
             </div>
-            <div className="w-24">
+            <div className="w-24 shrink-0">
               <label className="text-xs text-muted-foreground">Satuan</label>
               <Input value={it.satuan} onChange={(e) => update(i, { satuan: e.target.value })} placeholder="Paket" />
             </div>
-            <div className="w-44">
+            <div className="min-w-0 flex-1">
               <label className="text-xs text-muted-foreground">Biaya Satuan</label>
               <MoneyInput key={`${i}:${resetKey}`} defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} showTerbilang={false} className="w-full" />
             </div>
-            <Button type="button" variant="ghost" size="icon" className="ml-auto" aria-label="Hapus baris" onClick={() => removeRow(i)}>
+            <Button type="button" variant="ghost" size="icon" className="shrink-0" aria-label="Hapus baris" onClick={() => removeRow(i)}>
               <Trash2Icon className="size-4 text-destructive" />
             </Button>
           </div>
@@ -160,16 +213,46 @@ function ItemsEditor({ items, onChange, resetKey }: { items: FakturFormValues["i
 function TaxRow({ label, aktif, persen, onToggle, onPersen }: { label: string; aktif: boolean; persen: number; onToggle: (c: boolean) => void; onPersen: (n: number) => void }) {
   return (
     <div className="flex items-center gap-3">
-      <label className="flex w-28 items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm">
         <Checkbox checked={aktif} onCheckedChange={(c) => onToggle(c === true)} /> {label}
       </label>
-      {aktif && (
-        <div className="flex items-center gap-1">
-          <Input type="number" min={0} value={persen} onChange={(e) => onPersen(Number(e.target.value) || 0)} className="w-20 text-right font-mono tabular-nums" />
-          <span className="text-sm text-muted-foreground">%</span>
-        </div>
-      )}
+      <div className="flex items-center gap-1">
+        <Input type="number" min={0} value={aktif ? persen : ""} disabled={!aktif} onChange={(e) => onPersen(Number(e.target.value) || 0)} className="w-20 font-mono tabular-nums" />
+        <span className="text-sm text-muted-foreground">%</span>
+      </div>
     </div>
+  );
+}
+
+function FakturPicPicker({ options, selectedNama, onPick }: { options: PIC[]; selectedNama: string; onPick: (p: PIC) => void }) {
+  const [open, setOpen] = React.useState(false);
+  const selected = options.find((p) => p.nama === selectedNama);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" role="combobox" className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}>
+          {selected ? `${selected.nama} — ${selected.jabatan}` : "Pilih PIC…"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Cari PIC…" />
+          <CommandList>
+            <CommandEmpty>Tidak ada PIC.</CommandEmpty>
+            <CommandGroup>
+              {options.map((p) => (
+                <CommandItem key={p.nama} value={p.nama} onSelect={() => { onPick(p); setOpen(false); }}>
+                  <div>
+                    <p>{p.nama}</p>
+                    <p className="text-xs text-muted-foreground">{p.jabatan}</p>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 

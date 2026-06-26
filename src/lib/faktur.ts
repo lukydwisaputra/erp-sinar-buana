@@ -97,6 +97,7 @@ export type DealTerminRow = {
 export type DealRekap = {
   key: string;
   sphId: string;
+  baseInvId: string | null;
   perusahaanNama: string;
   totalBiaya: number;
   totalAfterTax: number;
@@ -160,9 +161,14 @@ export function groupFakturByDeal(fakturs: Faktur[]): DealRekap[] {
       issuedFakturs.length > 0
         ? issuedFakturs.reduce((max, f) => (f.terminIndex > max.terminIndex ? f : max))
         : null;
+    // Derive base INV number by stripping the termin suffix (e.g. -T1) from any issued faktur ID
+    const firstIssued = arr.find((f) => f.id.startsWith("INV/"));
+    const baseInvId = firstIssued ? firstIssued.id.replace(/-T\d+$/, "") : null;
+
     return {
       key,
       sphId: rep.sphId,
+      baseInvId,
       perusahaanNama: rep.perusahaanNama,
       totalBiaya: total,
       totalAfterTax,
@@ -172,6 +178,16 @@ export function groupFakturByDeal(fakturs: Faktur[]): DealRekap[] {
       persenTerbayar: totalAfterTax ? (terbayar / totalAfterTax) * 100 : 0,
     };
   });
+}
+
+export type DealStatus = "draft" | "belum_lunas" | "jatuh_tempo" | "lunas" | "dibatalkan";
+
+export function getDealStatus(deal: DealRekap): DealStatus {
+  if (deal.termins.some((t) => t.status === "dibatalkan")) return "dibatalkan";
+  if (deal.termins.every((t) => t.status === "lunas"))     return "lunas";
+  if (deal.termins.some((t) => t.overdue))                 return "jatuh_tempo";
+  if (deal.termins.some((t) => t.status === "menunggu"))   return "belum_lunas";
+  return "draft";
 }
 
 const ROMAN: [number, string][] = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];

@@ -3,9 +3,9 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Ban, Download, Lock, Save, Send, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
@@ -18,11 +18,23 @@ import { DocumentFooter } from "@/components/shared/document/document-footer";
 import { FakturForm } from "@/components/faktur/faktur-form";
 import { FakturDocument } from "@/components/faktur/faktur-document";
 import { fakturFormSchema, type FakturFormValues, type Faktur } from "@/lib/schemas/faktur";
+import { isFakturOverdue } from "@/lib/faktur";
+
+type BadgeVariant = "info" | "warning" | "success" | "secondary" | "destructive";
+
+function fakturBadge(f: Faktur): { label: string; variant: BadgeVariant } {
+  if (f.status === "lunas")      return { label: "Lunas",       variant: "success" };
+  if (f.status === "dibatalkan") return { label: "Dibatalkan",  variant: "secondary" };
+  if (f.status === "draft")      return { label: "Draf",        variant: "info" };
+  // terkirim — check overdue first
+  if (isFakturOverdue(f))        return { label: "Jatuh Tempo", variant: "destructive" };
+  return { label: "Belum Lunas", variant: "warning" };
+}
 import { companyProfile } from "@/lib/company-profile";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { usePending } from "@/lib/use-pending";
 import { delay } from "@/lib/data/_delay";
-import { useCancelFaktur } from "@/lib/query/faktur";
+import { useCancelFaktur, useFaktur, useUpdateFaktur } from "@/lib/query/faktur";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function plusDaysISO(n: number) {
@@ -82,7 +94,10 @@ function FakturReadOnlyView({ existing }: { existing: Faktur }) {
 
         <div className="overflow-hidden rounded-lg border border-border">
           <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
-            <p className="text-sm font-semibold">{noFaktur} — Pratinjau Faktur</p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">{noFaktur}</span>
+              {(() => { const b = fakturBadge(existing); return <Badge variant={b.variant} className="text-xs">{b.label}</Badge>; })()}
+            </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Download className="size-4" /> Unduh
@@ -120,8 +135,8 @@ function FakturReadOnlyView({ existing }: { existing: Faktur }) {
 // ─── Editable builder ────────────────────────────────────────────────────────
 
 function FakturEditView({ existing }: { existing?: Faktur }) {
-  const router = useRouter();
   const cancelFaktur = useCancelFaktur();
+  const updateFaktur = useUpdateFaktur();
 
   const noFaktur = existing?.id ?? "INV/???/????";
   const picOptions = perusahaanFixtures.find((p) => p.id === (existing?.perusahaanId ?? ""))?.pic ?? [];
@@ -135,20 +150,36 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
 
   const onSimpan = () =>
     runSave(
-      form.handleSubmit(async () => {
-        await delay();
-        toast.success("Demo: draf tidak benar-benar disimpan");
+      form.handleSubmit(async (data) => {
+        if (!existing) {
+          toast.success("Demo: draf tidak benar-benar disimpan");
+          return;
+        }
+        await updateFaktur.mutateAsync({ id: existing.id, patch: data });
+        toast.success("Faktur berhasil disimpan");
       }),
     );
-  const onKirim = form.handleSubmit(async () => {
-    await delay();
-    toast.success("Demo: faktur tidak benar-benar dikirim");
+  const onKirim = form.handleSubmit(async (data) => {
+    if (!existing) {
+      toast.success("Demo: faktur tidak benar-benar dikirim");
+      return;
+    }
+    await updateFaktur.mutateAsync({ id: existing.id, patch: { ...data, status: "terkirim" } });
+    form.setValue("status", "terkirim");
+    toast.success("Faktur berhasil dikirim");
   });
 
   return (
     <>
       <DocumentBuilder
-        title={existing ? existing.id : "Faktur"}
+        title={
+          existing ? (
+            <span className="flex items-center gap-2">
+              {existing.id}
+              {(() => { const b = fakturBadge(existing); return <Badge variant={b.variant} className="text-xs">{b.label}</Badge>; })()}
+            </span>
+          ) : "Faktur"
+        }
         subtitle="Susun Faktur per termin. Pratinjau diperbarui otomatis."
         previewTitle="Pratinjau Faktur"
         actions={
@@ -159,7 +190,7 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
               </Button>
             )}
             <Button variant="secondary" loading={saving} onClick={onSimpan}>
-              <Save className="size-4" /> Simpan Draf
+              <Save className="size-4" /> Simpan
             </Button>
           </>
         }
@@ -182,6 +213,7 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
             <AlertDialogCancel>Kembali</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              disabled={cancelFaktur.isPending}
               onClick={() => {
                 if (!existing) return;
                 cancelFaktur.mutate(
@@ -190,7 +222,6 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
                     onSuccess: () => {
                       toast.success("Faktur berhasil dibatalkan.");
                       setCancelOpen(false);
-                      router.refresh();
                     },
                   },
                 );
@@ -208,8 +239,12 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
 // ─── Public entry point ───────────────────────────────────────────────────────
 
 export function FakturBuilder({ existing }: { existing?: Faktur }) {
-  if (existing && (existing.status === "lunas" || existing.status === "dibatalkan")) {
-    return <FakturReadOnlyView existing={existing} />;
+  const { data: live } = useFaktur(existing?.id ?? "", existing);
+  const faktur = live ?? existing;
+  const status = faktur?.status;
+
+  if (faktur && (status === "lunas" || status === "dibatalkan")) {
+    return <FakturReadOnlyView existing={faktur} />;
   }
-  return <FakturEditView existing={existing} />;
+  return <FakturEditView existing={faktur} />;
 }

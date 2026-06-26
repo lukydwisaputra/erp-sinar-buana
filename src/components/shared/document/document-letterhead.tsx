@@ -8,27 +8,27 @@ export function DocumentLetterhead({
 }): React.JSX.Element {
   if (variant === "strip") {
     return (
-      <div className="flex items-center gap-3 border-b border-[var(--doc-rule)] px-8 py-3">
-        <Logo className="size-10 text-[11px]" />
+      <div className="flex items-center gap-2 border-b border-[var(--doc-rule)] px-8 py-1.5">
+        <Logo className="size-7 text-[9px]" />
         <div>
-          <p className="text-xs font-bold text-[var(--doc-blue)]">{companyProfile.nama}</p>
-          <p className="text-[10px] tracking-wide text-[var(--doc-blue-2)]">{companyProfile.tagline}</p>
+          <p className="text-[11px] font-bold leading-tight text-[var(--doc-blue)]">{companyProfile.nama}</p>
+          <p className="text-[9px] tracking-wide text-[var(--doc-blue-2)]">{companyProfile.tagline}</p>
         </div>
       </div>
     );
   }
   return (
     <div className="relative flex items-stretch justify-between overflow-hidden">
-      <div className="relative h-24 w-3/5">
+      <div className="relative h-14 w-3/5">
         <div className="absolute inset-0 bg-[var(--doc-blue)]" style={{ clipPath: "polygon(0 0, 100% 0, 78% 100%, 0 100%)" }} />
         <div className="absolute inset-0 bg-[var(--doc-blue-2)]" style={{ clipPath: "polygon(0 55%, 88% 55%, 70% 100%, 0 100%)" }} />
       </div>
-      <div className="flex flex-col items-end justify-center px-8 py-3 text-right">
-        <Logo className="size-14 text-sm" />
-        <p className="mt-1 whitespace-nowrap text-[11px] font-bold leading-tight text-[var(--doc-blue)]">
+      <div className="flex flex-col items-end justify-center px-8 py-2 text-right">
+        <Logo className="size-9 text-[9px]" />
+        <p className="whitespace-nowrap text-[11px] font-bold leading-tight text-[var(--doc-blue)]">
           {companyProfile.nama}
         </p>
-        <p className="text-[10px] tracking-wide text-[var(--doc-blue-2)]">{companyProfile.tagline}</p>
+        <p className="text-[9px] tracking-wide text-[var(--doc-blue-2)]">{companyProfile.tagline}</p>
       </div>
     </div>
   );

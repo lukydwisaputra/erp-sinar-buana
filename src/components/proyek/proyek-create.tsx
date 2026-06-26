@@ -11,6 +11,7 @@ import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiah } from "@/lib/format";
+import { afterTaxAmount } from "@/lib/faktur";
 import { useCreateProyek } from "@/lib/query/proyek";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
 import type { Sph } from "@/lib/schemas/penawaran";
@@ -31,7 +32,10 @@ export function ProyekCreate({ sph }: { sph: Sph }) {
 
   const defaultNama = `Proyek — ${sph.perusahaanNama}`;
   const layananNama = sph.items.map((i) => i.nama);
-  const nilaiKontrak = sph.items.reduce((s, i) => s + i.harga * i.volume, 0);
+  const totalBiaya = sph.items.reduce((s, i) => s + i.harga * i.volume, 0);
+  const nilaiKontrak = afterTaxAmount(
+    totalBiaya, sph.ppnAktif, sph.ppnPersen, sph.pph23Aktif, sph.pph23Persen,
+  );
 
   const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -59,7 +63,7 @@ export function ProyekCreate({ sph }: { sph: Sph }) {
       sphId: sph.id,
       assignees,
     });
-    router.push(`/proyek/${proyek.id}`);
+    router.push(`/proyek/${encodeURIComponent(proyek.id)}`);
   });
 
   return (

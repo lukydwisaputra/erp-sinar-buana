@@ -7,7 +7,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/components/ui/input-group";
-import { parseRupiah } from "@/lib/format";
+import { parseRupiah, formatIntIDR } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 
 export function MoneyInput({
@@ -23,7 +23,7 @@ export function MoneyInput({
 }) {
   const [value, setValue] = React.useState(defaultValue);
   const [text, setText] = React.useState(
-    defaultValue ? defaultValue.toLocaleString("id-ID") : ""
+    defaultValue ? formatIntIDR(defaultValue) : ""
   );
 
   return (
@@ -44,12 +44,12 @@ export function MoneyInput({
             onValueChange?.(n);
           }}
           onBlur={() =>
-            setText(value ? value.toLocaleString("id-ID") : "")
+            setText(value ? formatIntIDR(value) : "")
           }
         />
       </InputGroup>
       {showTerbilang && (
-        <p className="mt-1 text-xs capitalize text-muted-foreground">
+        <p className="mt-1 text-xs capitalize text-muted-foreground text-right">
           {value ? `${terbilang(value)} rupiah` : "—"}
         </p>
       )}

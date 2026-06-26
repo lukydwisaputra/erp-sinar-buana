@@ -84,6 +84,9 @@
   --primary: oklch(76.2% 0.154 159);
   --primary-foreground: oklch(26.6% 0.063 153);
 
+  /* link — brand-deep green (#006239) for AA contrast on white */
+  --link: oklch(43.7% 0.104 157);
+
   /* tinted neutrals */
   --secondary: oklch(96.8% 0.005 156);
   --secondary-foreground: oklch(20.5% 0.010 156);
@@ -150,6 +153,9 @@
 
   --primary: oklch(76.2% 0.154 159);
   --primary-foreground: oklch(26.6% 0.063 153);
+
+  /* link — primary itself is readable on dark backgrounds */
+  --link: oklch(76.2% 0.154 159);
 
   --secondary: oklch(28.0% 0.006 156);
   --secondary-foreground: oklch(94.5% 0.004 156);
@@ -265,7 +271,16 @@
    * print flow. visibility:hidden would keep the tall app in layout and emit
    * blank pages — display:none removes it entirely. */
   body > :not(.doc-print) { display: none !important; }
-  .doc-print { display: block !important; position: static; width: 100%; }
+  .doc-print {
+    display: block !important;
+    position: static;
+    width: 100%;
+    /* Force background colors/images to render — without this, browsers
+     * suppress all bg-* colors (letterhead bands, footer band, table headers)
+     * and the document appears blank in the PDF. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 
   .doc-print .doc-page {
     width: 210mm !important;
@@ -274,6 +289,7 @@
     min-height: 0 !important;
     margin: 0 auto !important;
     box-shadow: none !important;
+    outline: none !important;
   }
   /* Break BETWEEN consecutive pages only — never after the last one. Using
    * break-after + :last-child fails when the document's .doc-page is followed
@@ -303,6 +319,8 @@
     right: 0;
     --doc-blue: #1f4e96;
     --doc-blue-soft: #dcebf7;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 }
 @page { size: A4; margin: 0; }

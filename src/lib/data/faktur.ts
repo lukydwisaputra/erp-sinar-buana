@@ -85,6 +85,26 @@ export async function updateFakturStatus(id: string, newStatus: FakturStatus): P
   fakturFixtures[idx] = { ...fakturFixtures[idx], status: newStatus };
 }
 
+export async function updateFaktur(
+  id: string,
+  patch: Partial<Omit<Faktur, "id">>,
+): Promise<Faktur> {
+  await delay(300);
+  const idx = fakturFixtures.findIndex((f) => f.id === id);
+  if (idx === -1) throw new Error(`Faktur ${id} not found`);
+  fakturFixtures[idx] = { ...fakturFixtures[idx], ...patch };
+  return fakturSchema.parse(fakturFixtures[idx]);
+}
+
+export async function cancelAllFakturBySph(sphId: string): Promise<void> {
+  await delay(200);
+  for (let i = 0; i < fakturFixtures.length; i++) {
+    if (fakturFixtures[i].sphId === sphId) {
+      fakturFixtures[i] = { ...fakturFixtures[i], status: "dibatalkan" };
+    }
+  }
+}
+
 export async function deleteAllFakturBySph(sphId: string): Promise<void> {
   await delay(300);
   for (let i = fakturFixtures.length - 1; i >= 0; i--) {

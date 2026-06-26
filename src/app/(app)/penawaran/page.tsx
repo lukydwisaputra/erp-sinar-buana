@@ -3,14 +3,23 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
-  FileText, Plus, EllipsisVerticalIcon, SquarePenIcon, Trash2Icon,
-  SendIcon, CircleCheckIcon, FileIcon, BanIcon, FolderKanban,
+  FileText, Plus, EllipsisIcon, SquarePenIcon, Trash2Icon,
+  SendIcon, CircleCheckIcon, FileIcon, BanIcon, FolderKanban, SlidersHorizontal,
+  CalendarIcon,
 } from "lucide-react";
+import type { DateRange } from "react-day-picker";
+import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
+import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -21,11 +30,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatRupiah } from "@/lib/format";
 import { totalPenawaran } from "@/lib/sph";
+import { afterTaxAmount } from "@/lib/faktur";
 import {
   usePenawaranList, useUpdatePenawaranStatus, useDeletePenawaran,
 } from "@/lib/query/penawaran";
 import { useDeleteFakturBySph } from "@/lib/query/faktur";
-import { useProyekList } from "@/lib/query/proyek";
+import { useProyekList, useDeleteProyekBySph } from "@/lib/query/proyek";
 import type { Sph, SphStatus } from "@/lib/schemas/penawaran";
 
 const STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
@@ -40,7 +50,7 @@ const STATUS_DIALOG: Record<SphStatus, { title: string; description: string; act
   draft:      { title: "Ubah ke Draf?",       description: "Status penawaran akan dikembalikan ke Draf.",                               action: "Ubah ke Draf" },
   terkirim:   { title: "Ubah ke Terkirim?",   description: "Penawaran akan ditandai sebagai sudah dikirimkan ke klien.",                action: "Ubah ke Terkirim" },
   deal:       { title: "Ubah ke Disetujui?",  description: "Faktur termin akan dibuat otomatis. Tindakan ini tidak dapat dibatalkan.",  action: "Disetujui" },
-  ditolak:    { title: "Batalkan penawaran?",  description: "Status berubah ke Ditolak. Tindakan ini tidak dapat dibatalkan.",          action: "Batalkan", destructive: true },
+  ditolak:    { title: "Tolak Penawaran?",     description: "Status berubah ke Ditolak. Tindakan ini tidak dapat dibatalkan.",          action: "Tolak", destructive: true },
   dibatalkan: { title: "Batalkan penawaran?",  description: "Status berubah ke Dibatalkan.",                                            action: "Batalkan", destructive: true },
 };
 
@@ -50,12 +60,17 @@ function tanggalID(iso: string) {
   });
 }
 
+const STATUS_OPTIONS: MultiSelectOption[] = (Object.keys(STATUS) as SphStatus[]).map((s) => ({
+  value: s, label: STATUS[s].label, variant: STATUS[s].variant,
+}));
+
 export default function PenawaranPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = usePenawaranList();
   const updateStatus    = useUpdatePenawaranStatus();
-  const deletePenawaran = useDeletePenawaran();
+  const deletePenawaran  = useDeletePenawaran();
   const deleteFakturBySph = useDeleteFakturBySph();
+  const deleteProyekBySph = useDeleteProyekBySph();
   const { data: proyekList } = useProyekList();
   const sphToProyekId = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -66,6 +81,49 @@ export default function PenawaranPage() {
   const [statusTarget, setStatusTarget] = React.useState<{ sph: Sph; nextStatus: SphStatus } | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Sph | null>(null);
 
+  // Filter dialog
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const [pendingStatus, setPendingStatus] = React.useState<SphStatus[]>([]);
+  const [pendingRange, setPendingRange] = React.useState<DateRange | undefined>();
+  const [appliedStatus, setAppliedStatus] = React.useState<SphStatus[]>([]);
+  const [appliedRange, setAppliedRange] = React.useState<DateRange | undefined>();
+
+  const hasFilter = appliedStatus.length > 0 || !!(appliedRange?.from || appliedRange?.to);
+  const hasPending = pendingStatus.length > 0 || !!(pendingRange?.from || pendingRange?.to);
+  const filterCount = appliedStatus.length + (appliedRange?.from || appliedRange?.to ? 1 : 0);
+
+  const openFilter = () => {
+    setPendingStatus(appliedStatus);
+    setPendingRange(appliedRange);
+    setFilterOpen(true);
+  };
+  const applyFilter = () => {
+    setAppliedStatus(pendingStatus);
+    setAppliedRange(pendingRange);
+    setFilterOpen(false);
+  };
+  const resetFilter = () => {
+    setPendingStatus([]); setPendingRange(undefined);
+    setAppliedStatus([]); setAppliedRange(undefined);
+    setFilterOpen(false);
+  };
+
+
+  const filteredData = React.useMemo(() => {
+    let base = data ?? [];
+    if (appliedStatus.length > 0)
+      base = base.filter((sph) => appliedStatus.includes(sph.status));
+    if (appliedRange?.from || appliedRange?.to) {
+      base = base.filter((sph) => {
+        const d = new Date(sph.tanggal + "T00:00:00");
+        if (appliedRange.from && d < appliedRange.from) return false;
+        if (appliedRange.to && d > appliedRange.to) return false;
+        return true;
+      });
+    }
+    return base;
+  }, [data, appliedStatus, appliedRange]);
+
   const columns: ColumnDef<Sph>[] = [
     {
       accessorKey: "id", header: "No. SPH", meta: { mono: true },
@@ -73,7 +131,7 @@ export default function PenawaranPage() {
         <button
           type="button"
           onClick={() => router.push(`/penawaran/${encodeURIComponent(row.original.id)}`)}
-          className="rounded-sm font-mono text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {row.original.id}
         </button>
@@ -83,10 +141,16 @@ export default function PenawaranPage() {
     { accessorKey: "tanggal", header: "Tanggal", cell: ({ row }) => tanggalID(row.original.tanggal) },
     {
       id: "total", header: "Total Penawaran", meta: { mono: true },
-      cell: ({ row }) => formatRupiah(totalPenawaran(row.original.items)),
+      accessorFn: (row) =>
+        afterTaxAmount(totalPenawaran(row.items), row.ppnAktif, row.ppnPersen, row.pph23Aktif, row.pph23Persen),
+      cell: ({ row }) => {
+        const sph = row.original;
+        const total = totalPenawaran(sph.items);
+        return formatRupiah(afterTaxAmount(total, sph.ppnAktif, sph.ppnPersen, sph.pph23Aktif, sph.pph23Persen));
+      },
     },
     {
-      accessorKey: "status", header: "Status",
+      accessorKey: "status", header: "Status", meta: { className: "text-center" },
       cell: ({ row }) => {
         const s = STATUS[row.original.status];
         return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -107,7 +171,7 @@ export default function PenawaranPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="size-8" aria-label="Aksi baris">
-                  <EllipsisVerticalIcon className="size-4" />
+                  <EllipsisIcon className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -146,13 +210,13 @@ export default function PenawaranPage() {
 
                 <DropdownMenuSeparator />
 
-                {/* Batalkan → Ditolak — enabled only for draft or terkirim */}
+                {/* Tolak → Ditolak — enabled only for terkirim */}
                 <DropdownMenuItem
-                  disabled={sph.status !== "draft" && sph.status !== "terkirim"}
+                  disabled={sph.status !== "terkirim"}
                   variant="destructive"
                   onSelect={(e) => { e.preventDefault(); setStatusTarget({ sph, nextStatus: "ditolak" }); }}
                 >
-                  <BanIcon className="mr-2 size-4" /> Batalkan
+                  <BanIcon className="mr-2 size-4" /> Tolak
                 </DropdownMenuItem>
 
                 {/* Hapus — disabled only when deal */}
@@ -163,22 +227,14 @@ export default function PenawaranPage() {
                 >
                   <Trash2Icon className="mr-2 size-4" /> Hapus
                 </DropdownMenuItem>
-                {isDeal && (
+                {isDeal && sphToProyekId.has(sph.id) && (
                   <>
                     <DropdownMenuSeparator />
-                    {sphToProyekId.has(sph.id) ? (
-                      <DropdownMenuItem
-                        onSelect={() => router.push(`/proyek/${sphToProyekId.get(sph.id)}`)}
-                      >
-                        <FolderKanban className="mr-2 size-4" /> Lihat Proyek
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem
-                        onSelect={() => router.push(`/proyek/baru?sphId=${encodeURIComponent(sph.id)}`)}
-                      >
-                        <FolderKanban className="mr-2 size-4" /> Buat Proyek
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem
+                      onSelect={() => router.push(`/proyek/${encodeURIComponent(sphToProyekId.get(sph.id) ?? "")}`)}
+                    >
+                      <FolderKanban className="mr-2 size-4" /> Lihat Proyek
+                    </DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>
@@ -208,14 +264,94 @@ export default function PenawaranPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={data ?? []}
+          data={filteredData}
           loading={isLoading}
-          searchColumn="perusahaanNama"
-          searchPlaceholder="Cari perusahaan…"
+          searchColumns={["id", "perusahaanNama"]}
+          searchPlaceholder="Cari No. SPH atau perusahaan…"
           emptyMessage="Belum ada penawaran"
           rowActions={false}
+          compact
+          toolbarActions={
+            <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
+              <SlidersHorizontal className="size-3.5" />
+              Filter
+              {hasFilter && (
+                <Badge variant="secondary" className="px-1.5 py-0 text-xs">{filterCount}</Badge>
+              )}
+            </Button>
+          }
         />
       )}
+
+      {/* Filter dialog */}
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Filter Penawaran</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 py-1">
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</p>
+              <MultiSelectFilter
+                options={STATUS_OPTIONS}
+                value={pendingStatus}
+                onChange={(v) => setPendingStatus(v as SphStatus[])}
+                placeholder="Pilih status…"
+                searchPlaceholder="Cari status…"
+                noun="status"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tanggal</p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background px-3 text-sm text-left focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <CalendarIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                    {pendingRange?.from ? (
+                      pendingRange.to ? (
+                        <span>
+                          {pendingRange.from.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                          {" — "}
+                          {pendingRange.to.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      ) : (
+                        <span>{pendingRange.from.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      )
+                    ) : (
+                      <span className="text-muted-foreground">Pilih rentang tanggal</span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={pendingRange}
+                    onSelect={setPendingRange}
+                    locale={idLocale}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row items-center gap-2">
+            <Button
+              variant={hasPending ? "ghost" : "outline"}
+              size="sm"
+              className="mr-auto"
+              onClick={resetFilter}
+            >
+              {hasPending ? "Reset" : "Tutup"}
+            </Button>
+            <Button size="sm" onClick={applyFilter}>Terapkan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm: Status change (Terkirim / Disetujui / Batalkan) */}
       <AlertDialog open={!!statusTarget} onOpenChange={(o) => !o && setStatusTarget(null)}>
@@ -254,31 +390,29 @@ export default function PenawaranPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Hapus {deleteTarget?.id}?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.status === "dibatalkan"
-                ? "Semua faktur terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan."
-                : "Tindakan ini tidak dapat dibatalkan."}
+              Faktur dan proyek terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={deletePenawaran.isPending || deleteFakturBySph.isPending}
+              disabled={deletePenawaran.isPending || deleteFakturBySph.isPending || deleteProyekBySph.isPending}
               onClick={() => {
                 if (!deleteTarget) return;
+                const sphId = deleteTarget.id;
                 const doDelete = () => {
-                  deletePenawaran.mutate(deleteTarget.id, {
+                  deletePenawaran.mutate(sphId, {
                     onSuccess: () => {
-                      toast.success(`${deleteTarget.id} dihapus.`);
+                      toast.success(`${sphId} dihapus.`);
                       setDeleteTarget(null);
                     },
                   });
                 };
-                if (deleteTarget.status === "dibatalkan") {
-                  deleteFakturBySph.mutate(deleteTarget.id, { onSuccess: doDelete });
-                } else {
-                  doDelete();
-                }
+                const deleteProyekThenSph = () => {
+                  deleteProyekBySph.mutate(sphId, { onSuccess: doDelete });
+                };
+                deleteFakturBySph.mutate(sphId, { onSuccess: deleteProyekThenSph });
               }}
             >
               Hapus

@@ -1,7 +1,11 @@
+/** Locale-agnostic thousands separator (dot, Indonesian style). SSR-safe. */
+export function formatIntIDR(n: number): string {
+  return Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 export function formatRupiah(value: number): string {
   const rounded = Math.round(value);
-  const abs = Math.abs(rounded).toLocaleString("id-ID");
-  return `${rounded < 0 ? "-" : ""}Rp ${abs}`;
+  return `${rounded < 0 ? "-" : ""}Rp ${formatIntIDR(rounded)}`;
 }
 
 export function parseRupiah(input: string): number {
@@ -18,7 +22,7 @@ export function formatRupiahCompact(value: number): string {
   const sign = value < 0 ? "-" : "";
   const abs = Math.abs(value);
   const scaled = (n: number, suffix: string) => {
-    const s = n.toFixed(2).replace(/\.?0+$/, "").replace(".", ",");
+    const s = n.toFixed(3).replace(/\.?0+$/, "").replace(".", ",");
     return `${sign}Rp ${s} ${suffix}`;
   };
   if (abs >= 1_000_000_000_000) return scaled(abs / 1_000_000_000_000, "T");

@@ -9,6 +9,7 @@ import { usePending } from "@/lib/use-pending";
 import { createPortal } from "react-dom";
 import { Download, Lock, Save, Send, XCircle } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { DocumentBuilder } from "@/components/shared/document/document-builder";
@@ -28,7 +29,22 @@ import {
   sphFormSchema,
   type SphFormValues,
   type Sph,
+  type SphStatus,
 } from "@/lib/schemas/penawaran";
+
+const SPH_STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
+  draft:      { label: "Draf",       variant: "info" },
+  terkirim:   { label: "Terkirim",   variant: "warning" },
+  deal:       { label: "Disetujui",  variant: "success" },
+  ditolak:    { label: "Ditolak",    variant: "destructive" },
+  dibatalkan: { label: "Dibatalkan", variant: "secondary" },
+};
+
+function StatusBadge({ status }: { status: SphStatus }) {
+  const s = SPH_STATUS[status];
+  return <Badge variant={s.variant}>{s.label}</Badge>;
+}
+import { useSph } from "@/lib/query/penawaran";
 
 const perusahaanOptions: PerusahaanOption[] = perusahaanFixtures.map((p) => ({
   id: p.id,
@@ -74,6 +90,7 @@ const emptyValues: SphFormValues = {
   picAktif: false,
   picNama: "",
   picJabatan: "",
+  kelengkapan: [],
 };
 
 function sphToFormValues(existing: Sph): SphFormValues {
@@ -98,7 +115,17 @@ function sphToFormValues(existing: Sph): SphFormValues {
     picAktif:         existing.picAktif,
     picNama:          existing.picNama,
     picJabatan:       existing.picJabatan,
+    kelengkapan:      existing.kelengkapan ?? [],
   };
+}
+
+function SphHeaderBar({ noSph, status }: { noSph: string; status: SphStatus }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-semibold">{noSph}</span>
+      <StatusBadge status={status} />
+    </div>
+  );
 }
 
 function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
@@ -125,7 +152,7 @@ function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
         </Alert>
         <div className="overflow-hidden rounded-lg border border-border">
           <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
-            <p className="text-sm font-semibold">{noSph} — Pratinjau Dokumen</p>
+            <SphHeaderBar noSph={noSph} status={existing.status} />
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Download className="size-4" /> Unduh
@@ -179,7 +206,7 @@ function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string })
         </Alert>
         <div className="overflow-hidden rounded-lg border border-border">
           <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
-            <p className="text-sm font-semibold">{noSph} — Pratinjau Dokumen</p>
+            <SphHeaderBar noSph={noSph} status={existing.status} />
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Download className="size-4" /> Unduh
             </Button>
@@ -256,12 +283,19 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
 
   return (
     <DocumentBuilder
-      title={existing ? existing.id : "Buat SPH"}
+      title={
+        existing ? (
+          <span className="flex items-center gap-2">
+            {existing.id}
+            <StatusBadge status={existing.status} />
+          </span>
+        ) : "Buat SPH"
+      }
       subtitle="Susun Surat Penawaran Harga. Pratinjau diperbarui otomatis."
       previewTitle="Pratinjau SPH"
       actions={
         <Button variant="secondary" loading={saving} onClick={onSimpan}>
-          <Save className="size-4" /> Simpan Draf
+          <Save className="size-4" /> Simpan
         </Button>
       }
       form={<SphForm form={form} perusahaanOptions={perusahaanOptions} layananOptions={layananOptions} />}
@@ -273,15 +307,18 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
 }
 
 export function SphBuilder({ existing }: { existing?: Sph }) {
-  const noSph = existing?.id ?? "SPH/006/6.2026";
+  const { data: live } = useSph(existing?.id ?? "", existing);
+  const sph = live ?? existing;
+  const noSph = sph?.id ?? "SPH/006/6.2026";
+  const status = sph?.status;
 
-  if (existing?.status === "deal") {
-    return <SphDealView existing={existing} noSph={noSph} />;
+  if (sph && status === "deal") {
+    return <SphDealView existing={sph} noSph={noSph} />;
   }
 
-  if (existing?.status === "dibatalkan" || existing?.status === "ditolak") {
-    return <SphCancelledView existing={existing} noSph={noSph} />;
+  if (sph && (status === "dibatalkan" || status === "ditolak")) {
+    return <SphCancelledView existing={sph} noSph={noSph} />;
   }
 
-  return <SphEditView existing={existing} noSph={noSph} />;
+  return <SphEditView existing={sph} noSph={noSph} />;
 }

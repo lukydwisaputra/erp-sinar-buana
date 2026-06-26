@@ -28,6 +28,19 @@ export const sphItemSchema = z.object({
   rab: itemRabSchema,
   jadwal: itemJadwalSchema,
 });
+export const sphKelengkapanItemSchema = z.object({
+  persyaratan: z.string(),
+  status: z.enum(["ada", "tidak", ""]).default(""),
+  keterangan: z.string().default(""),
+});
+export const sphKelengkapanSchema = z.object({
+  templateId: z.string(),
+  nama: z.string(),
+  items: z.array(sphKelengkapanItemSchema),
+});
+export type SphKelengkapanItem = z.infer<typeof sphKelengkapanItemSchema>;
+export type SphKelengkapan = z.infer<typeof sphKelengkapanSchema>;
+
 export const sphTerminSchema = z.object({
   label: z.string(),
   persen: z.coerce.number(),
@@ -57,6 +70,7 @@ export const sphFormSchema = z.object({
   picAktif: z.boolean().default(false),
   picNama: z.string().default(""),
   picJabatan: z.string().default(""),
+  kelengkapan: z.array(sphKelengkapanSchema).default([]),
 });
 export type SphFormValues = z.infer<typeof sphFormSchema>;
 

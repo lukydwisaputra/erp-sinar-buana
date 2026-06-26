@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, FileText, FolderKanban, ReceiptText, Wallet,
   ArrowRightLeft, Landmark, Building2, BookOpen, Users, Send,
-  Settings, UserCog, Building, type LucideIcon,
+  Settings, UserCog, Building, ClipboardList, type LucideIcon,
 } from "lucide-react";
 
 export type NavItem = { label: string; href: string; icon: LucideIcon };
@@ -25,6 +25,7 @@ export const NAV: NavGroup[] = [
     { label: "Perusahaan", href: "/perusahaan", icon: Building2 },
     { label: "Katalog Layanan", href: "/katalog", icon: BookOpen },
     { label: "Karyawan", href: "/karyawan", icon: Users },
+    { label: "Kelengkapan Administrasi", href: "/kelengkapan", icon: ClipboardList },
   ]},
   { label: "Administrasi", items: [
     { label: "Pengiriman Dokumen", href: "/dokumen", icon: Send },

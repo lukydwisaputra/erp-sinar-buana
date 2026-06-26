@@ -1,19 +1,27 @@
 import { z } from "zod";
 
-export const proyekStatus = z.enum([
-  "po_kontrak", "collecting_data", "drafting",
-  "tunggu_pengesahan", "pending", "selesai", "batal",
-]);
-
 export const milestoneStatus = z.enum([
   "belum_mulai", "on_track", "terlambat", "selesai",
 ]);
 
+export const proyekStatus = z.enum([
+  "belum_mulai", "on_track", "terlambat", "selesai", "dibatalkan",
+]);
+
+export const milestoneAttachmentSchema = z.object({
+  name: z.string(),
+  url: z.string(),
+  type: z.string().optional(),
+});
+
 export const milestoneSchema = z.object({
   id: z.string(),
+  parentId: z.string().nullable(),
   nama: z.string(),
   urutan: z.number(),
-  assigneeNama: z.string().nullable(),
+  description: z.string().nullable(),
+  descriptionAttachments: z.array(milestoneAttachmentSchema).default([]),
+  assignees: z.array(z.object({ id: z.string(), nama: z.string() })).default([]),
   targetDate: z.string().nullable(),
   actualDate: z.string().nullable(),
   status: milestoneStatus,

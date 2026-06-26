@@ -3,6 +3,8 @@ import { useRouter } from "next/navigation";
 import { Eye, Lock } from "lucide-react";
 
 import type { DealRekap, DealTerminRow, TerminPaymentStatus } from "@/lib/faktur";
+import { groupFakturByDeal } from "@/lib/faktur";
+import { useFakturList } from "@/lib/query/faktur";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +17,7 @@ const TERMIN_BADGE: Record<TerminPaymentStatus, { label: string; variant: BadgeV
   menunggu:   { label: "Menunggu Bayar",     variant: "warning" },
   draft:      { label: "Draf",              variant: "info" },
   belum:      { label: "Belum Difakturkan",  variant: "secondary" },
-  dibatalkan: { label: "Dibatalkan",         variant: "destructive" },
+  dibatalkan: { label: "Dibatalkan",         variant: "secondary" },
 };
 
 export function DealTerminCard({ deal, currentId }: { deal: DealRekap; currentId?: string }) {
@@ -25,7 +27,7 @@ export function DealTerminCard({ deal, currentId }: { deal: DealRekap; currentId
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border bg-muted/30 p-4">
         <div>
           <div className="font-mono text-xs text-muted-foreground">
-            {deal.sphId || "Faktur Manual"}
+            {(deal.baseInvId ?? deal.sphId) || "Faktur Manual"}
           </div>
           <div className="font-medium">{deal.perusahaanNama}</div>
         </div>
@@ -115,4 +117,20 @@ function TerminLine({
       )}
     </div>
   );
+}
+
+export function DealTerminCardLive({
+  lookupKey,
+  currentId,
+  placeholder,
+}: {
+  lookupKey: string;
+  currentId: string;
+  placeholder: DealRekap;
+}) {
+  const { data: fakturs } = useFakturList();
+  const deal = fakturs
+    ? (groupFakturByDeal(fakturs).find((d) => d.key === lookupKey) ?? placeholder)
+    : placeholder;
+  return <DealTerminCard deal={deal} currentId={currentId} />;
 }

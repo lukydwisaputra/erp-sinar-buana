@@ -29,12 +29,12 @@ function JadwalSheet({
 
   return (
     <DocumentPage header={<DocumentLetterhead variant="strip" />}>
-      <div className="px-8 py-6 text-sm">
+      <div className="px-8 py-6 text-[11px]">
         <div className="text-center font-bold leading-snug">
           <p>ESTIMASI JADWAL RENCANA KEGIATAN</p>
           <p>{serviceName.toUpperCase()}</p>
           {pageInfo && (
-            <p className="text-xs font-normal text-[var(--doc-blue-2)]">
+            <p className="text-[9px] font-normal text-[var(--doc-blue-2)]">
               Halaman {pageInfo.page} dari {pageInfo.total} — Bulan {startMonth}
               {endMonth > startMonth ? `–${endMonth}` : ""}
             </p>
@@ -42,7 +42,7 @@ function JadwalSheet({
         </div>
 
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full border-collapse border border-[var(--doc-rule)] text-xs">
+          <table className="w-full border-collapse border border-[var(--doc-rule)] text-[9px]">
             <thead className="bg-[var(--doc-blue-soft)] text-center font-bold">
               <tr>
                 <th rowSpan={3} className="border border-[var(--doc-rule)] px-2 py-1">NO</th>

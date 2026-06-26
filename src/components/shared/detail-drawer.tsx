@@ -62,7 +62,7 @@ export function ContactCard({ name, role, phone, email }: {
       </div>
       <div className="mt-2.5 grid gap-1 text-xs">
         <a href={`tel:${phone}`} className="font-mono text-muted-foreground hover:text-foreground">{phone}</a>
-        <a href={`mailto:${email}`} className="truncate text-primary hover:underline">{email}</a>
+        <a href={`mailto:${email}`} className="truncate text-[var(--link)] hover:underline">{email}</a>
       </div>
     </div>
   );

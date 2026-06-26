@@ -18,7 +18,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   ChevronsUpDownIcon,
-  EllipsisVerticalIcon,
+  EllipsisIcon,
   InboxIcon,
   SquarePenIcon,
   Trash2Icon,
@@ -70,6 +70,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 declare module "@tanstack/react-table" {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -89,8 +95,9 @@ export type DataTableFilterOption = { label: string; value: string };
 export type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  /** Column id to wire the text filter input to. */
+  /** Column id(s) to wire the text filter input to. Provide multiple to search across ID + name etc. */
   searchColumn?: string;
+  searchColumns?: string[];
   searchPlaceholder?: string;
   /** Column id to wire the status <Select> to (+ its options). */
   filterColumn?: string;
@@ -112,6 +119,10 @@ export type DataTableProps<TData, TValue> = {
   rowActions?: boolean;
   onEdit?: (row: TData) => void;
   onDelete?: (row: TData) => void;
+  /** Extra elements rendered at the right end of the toolbar (e.g. a Filter button). */
+  toolbarActions?: React.ReactNode;
+  /** Reduce cell vertical padding from py-3 to py-2 for denser rows. */
+  compact?: boolean;
 };
 
 /**
@@ -130,6 +141,7 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchColumn,
+  searchColumns,
   searchPlaceholder = "Cari…",
   filterColumn,
   filterPlaceholder = "Semua status",
@@ -138,16 +150,19 @@ export function DataTable<TData, TValue>({
   error = null,
   onRetry,
   emptyMessage = "Tidak ada data.",
-  pageSizeOptions = [5, 10, 20],
-  initialPageSize = 5,
+  pageSizeOptions = [10, 20, 50],
+  initialPageSize = 10,
   rowActions = true,
   onEdit,
   onDelete,
+  toolbarActions,
+  compact = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = React.useState("");
+
+  const searchCols = searchColumns ?? (searchColumn ? [searchColumn] : []);
 
   const tableColumns = React.useMemo<ColumnDef<TData, TValue>[]>(() => {
     if (!rowActions) return columns;
@@ -172,9 +187,17 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data,
     columns: tableColumns,
-    state: { sorting, columnFilters },
+    state: { sorting, columnFilters, globalFilter },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, _columnId, value) => {
+      const q = String(value).toLowerCase();
+      return searchCols.some((key) => {
+        const v = (row.original as Record<string, unknown>)[key];
+        return String(v ?? "").toLowerCase().includes(q);
+      });
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -186,16 +209,12 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="flex w-full flex-col gap-3">
-      {(searchColumn || (filterColumn && filterOptions)) && (
+      {(searchCols.length > 0 || (filterColumn && filterOptions) || toolbarActions) && (
         <div className="flex flex-wrap items-center gap-2">
-          {searchColumn && (
+          {searchCols.length > 0 && (
             <Input
-              value={
-                (table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""
-              }
-              onChange={(e) =>
-                table.getColumn(searchColumn)?.setFilterValue(e.target.value)
-              }
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
               placeholder={searchPlaceholder}
               className="h-9 w-84"
             />
@@ -225,14 +244,16 @@ export function DataTable<TData, TValue>({
               </SelectContent>
             </Select>
           )}
+          {toolbarActions}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-border">
+      <TooltipProvider delayDuration={200}>
+      <div className="overflow-x-auto rounded-lg border border-border">
         <Table>
-          <TableHeader>
+          <TableHeader className="[&_tr]:border-b-0 bg-muted/50">
             {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id} className="hover:bg-transparent">
+              <TableRow key={hg.id} className="hover:bg-muted/50">
                 {hg.headers.map((header) => {
                   const meta = header.column.columnDef.meta;
                   const canSort = header.column.getCanSort();
@@ -252,7 +273,7 @@ export function DataTable<TData, TValue>({
                           type="button"
                           onClick={header.column.getToggleSortingHandler()}
                           className={cn(
-                            "inline-flex items-center gap-1 rounded-sm outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                            "inline-flex items-center gap-1 rounded-sm uppercase outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
                             meta?.align === "right" && "flex-row-reverse"
                           )}
                         >
@@ -280,7 +301,7 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody className="border-t border-border">
             {error ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={colCount} className="h-40">
@@ -302,7 +323,7 @@ export function DataTable<TData, TValue>({
                     {table.getVisibleLeafColumns().map((col) => {
                       const meta = col.columnDef.meta;
                       return (
-                        <TableCell key={col.id} className="px-4 py-3">
+                        <TableCell key={col.id} className={cn("px-4", compact ? "py-2" : "py-3")}>
                           <Skeleton
                             className={cn(
                               "h-4 w-24",
@@ -332,20 +353,26 @@ export function DataTable<TData, TValue>({
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta;
+                    const content = flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext()
+                    );
                     return (
                       <TableCell
                         key={cell.id}
                         className={cn(
-                          "px-4 py-3",
+                          "px-4",
+                          compact ? "py-2" : "py-3",
                           meta?.align === "right" && "text-right",
                           meta?.mono && "font-mono tabular-nums",
-                          meta?.collapse && "w-0",
+                          meta?.collapse ? "w-0" : "max-w-[360px]",
                           meta?.className
                         )}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
+                        {meta?.collapse ? (
+                          content
+                        ) : (
+                          <TruncatingCell align={meta?.align}>{content}</TruncatingCell>
                         )}
                       </TableCell>
                     );
@@ -356,11 +383,74 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
+      </TooltipProvider>
 
       {!loading && !error && data.length > 0 && (
         <DataTablePagination table={table} pageSizeOptions={pageSizeOptions} />
       )}
     </div>
+  );
+}
+
+/**
+ * Truncates a body cell to its column width with an ellipsis, and reveals the
+ * full text in a tooltip *only when* the content actually overflows. Works for
+ * any cell content (text, links, badges); tooltip text is read from the
+ * rendered DOM (`textContent`). Columns with `meta.collapse` skip this.
+ */
+function TruncatingCell({
+  children,
+  align,
+}: {
+  children: React.ReactNode;
+  align?: "left" | "right";
+}) {
+  const ref = React.useRef<HTMLSpanElement>(null);
+  const [overflowing, setOverflowing] = React.useState(false);
+  const [text, setText] = React.useState("");
+
+  const measure = React.useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const over = el.scrollWidth > el.clientWidth + 1;
+    setOverflowing((prev) => (prev !== over ? over : prev));
+    const t = el.textContent ?? "";
+    setText((prev) => (prev !== t ? t : prev));
+  }, []);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  // Re-check after every render so content changes (filter/sort/paginate) update overflow.
+  React.useEffect(() => {
+    measure();
+  });
+
+  const span = (
+    <span ref={ref} className="block max-w-full truncate align-middle">
+      {children}
+    </span>
+  );
+
+  if (!overflowing) return span;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{span}</TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align={align === "right" ? "end" : "start"}
+        className="max-w-xs break-words"
+      >
+        {text}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -375,7 +465,7 @@ function RowActions({ onEdit, onDelete }: { onEdit?: () => void; onDelete?: () =
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8" aria-label="Aksi baris">
-            <EllipsisVerticalIcon className="size-4" />
+            <EllipsisIcon className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-36">

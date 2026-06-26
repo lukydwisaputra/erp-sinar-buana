@@ -2,18 +2,24 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CalendarIcon, ChevronLeft, ChevronRight, Wallet, Plus, X } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Wallet, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { formatRupiah } from "@/lib/format";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useBatchList } from "@/lib/query/penggajian";
-import type { PenggajianBatch } from "@/lib/schemas/penggajian";
+import { useBatchList, useDeleteBatch } from "@/lib/query/penggajian";
+import { calcSlip, type PenggajianBatch } from "@/lib/schemas/penggajian";
 
 function periodStr(p: PenggajianBatch["periode"]) {
   const fmt = (d: string) =>
@@ -104,7 +110,9 @@ function MonthPicker({
 export default function PenggajianPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useBatchList();
+  const deleteBatch = useDeleteBatch();
   const [filterMonth, setFilterMonth] = React.useState<Date | undefined>();
+  const [deleteTarget, setDeleteTarget] = React.useState<PenggajianBatch | null>(null);
 
   const filterKey = filterMonth
     ? `${filterMonth.getFullYear()}-${String(filterMonth.getMonth() + 1).padStart(2, "0")}`
@@ -128,7 +136,8 @@ export default function PenggajianPage() {
       ),
     },
     {
-      accessorKey: "periode", header: "Periode",
+      id: "periode", header: "Periode",
+      accessorFn: (row) => row.periode.mulai,
       cell: ({ row }) => periodStr(row.original.periode),
     },
     {
@@ -136,11 +145,27 @@ export default function PenggajianPage() {
       cell: ({ row }) => bulanLabel(row.original.bulan),
     },
     {
-      id: "jumlahKaryawan", header: "Karyawan",
-      cell: ({ row }) => row.original.slips.length,
+      id: "totalKotor", header: "Total Gaji Kotor",
+      meta: { align: "right", mono: true },
+      accessorFn: (row) => row.slips.reduce((sum, s) => sum + calcSlip(s).penggajianKotor, 0),
+      cell: ({ row }) => {
+        const total = row.original.slips.reduce((sum, s) => sum + calcSlip(s).penggajianKotor, 0);
+        return formatRupiah(total);
+      },
+    },
+    {
+      id: "totalBersih", header: "Total Gaji Bersih",
+      meta: { align: "right", mono: true },
+      accessorFn: (row) => row.slips.reduce((sum, s) => sum + calcSlip(s).penggajianBersih, 0),
+      cell: ({ row }) => {
+        const total = row.original.slips.reduce((sum, s) => sum + calcSlip(s).penggajianBersih, 0);
+        return formatRupiah(total);
+      },
     },
     {
       id: "sudahDibayar", header: "Sudah Dibayar",
+      meta: { className: "text-center" },
+      accessorFn: (row) => row.slips.filter((s) => s.status === "sudah_dibayar").length,
       cell: ({ row }) => {
         const paid = row.original.slips.filter((s) => s.status === "sudah_dibayar").length;
         const total = row.original.slips.length;
@@ -153,11 +178,20 @@ export default function PenggajianPage() {
       },
     },
     {
-      accessorKey: "createdAt", header: "Dibuat",
-      cell: ({ row }) =>
-        new Date(row.original.createdAt).toLocaleDateString("id-ID", {
-          day: "numeric", month: "long", year: "numeric",
-        }),
+      id: "actions", header: "", enableSorting: false, meta: { collapse: true },
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            aria-label="Hapus penggajian"
+            onClick={() => setDeleteTarget(row.original)}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ),
     },
   ];
 
@@ -168,7 +202,7 @@ export default function PenggajianPage() {
           <Wallet className="size-5 text-muted-foreground" />
           <h1 className="text-xl font-semibold tracking-tight">Penggajian</h1>
         </div>
-        <Button size="sm" onClick={() => router.push("/penggajian/baru")}>
+        <Button onClick={() => router.push("/penggajian/baru")}>
           <Plus className="size-4 mr-1.5" /> Buat Penggajian
         </Button>
       </div>
@@ -184,8 +218,38 @@ export default function PenggajianPage() {
           searchPlaceholder="Cari ID penggajian…"
           toolbarActions={<MonthPicker value={filterMonth} onChange={setFilterMonth} />}
           emptyMessage="Belum ada penggajian"
+          rowActions={false}
         />
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus {deleteTarget?.id}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Penggajian beserta seluruh slip gajinya akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteBatch.isPending}
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteBatch.mutate(deleteTarget.id, {
+                  onSuccess: () => {
+                    toast.success(`${deleteTarget.id} dihapus.`);
+                    setDeleteTarget(null);
+                  },
+                });
+              }}
+            >
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

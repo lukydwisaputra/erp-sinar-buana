@@ -27,7 +27,7 @@ describe("createArusKas", () => {
       jenis: "debit",
       tanggal: "2026-06-01",
       jumlah: 1_500_000,
-      kategori: "operasional",
+      kategori: "Operasional",
       keterangan: "Test pengeluaran",
     });
     expect(entry.id).toMatch(/^AKS-/);

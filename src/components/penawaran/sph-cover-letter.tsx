@@ -37,7 +37,7 @@ export function SphCoverLetter({
   return (
     <DocumentPage header={<DocumentLetterhead />}>
       {/* Body -------------------------------------------------------------- */}
-      <div className="px-8 pt-6 text-sm leading-relaxed">
+      <div className="px-8 text-[11px] leading-relaxed">
         {/* 2. Letter meta */}
         <div className="flex items-start justify-between gap-6">
           <div className="grid grid-cols-[auto_auto_1fr] gap-x-2">
@@ -61,8 +61,15 @@ export function SphCoverLetter({
         {/* 3. Kepada */}
         <div className="mt-6">
           <p>Kepada Yth.</p>
-          <p>Bpk/Ibu Direktur</p>
           <p className="font-semibold">{values.perusahaanNama || "—"}</p>
+          {values.picAktif && values.picNama ? (
+            <>
+              <p>u.p. Bapak/Ibu {values.picNama}</p>
+              <p>{values.picJabatan}</p>
+            </>
+          ) : (
+            <p>u.p. Bapak/Ibu {values.jabatanPenerima || "Direktur"}</p>
+          )}
           <p>Di Tempat</p>
         </div>
 
@@ -71,7 +78,7 @@ export function SphCoverLetter({
         <p className="mt-2 text-justify indent-8">{values.kalimatPembuka}</p>
 
         {/* 5. Service table */}
-        <table className="mt-4 w-full border-collapse border border-[var(--doc-rule)] text-sm">
+        <table className="mt-4 w-full border-collapse border border-[var(--doc-rule)]">
           <thead>
             <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
               <th className="border border-[var(--doc-rule)] px-2 py-1">No</th>
@@ -136,7 +143,7 @@ export function SphCoverLetter({
                         className="border border-[var(--doc-rule)] px-2 py-1 text-right"
                       >
                         {t.label}{t.pemicu ? ` — ${t.pemicu}` : ""}{" "}
-                        <span className="text-xs">(Termasuk Pajak)</span>
+                        <span className="text-[9px]">(Termasuk Pajak)</span>
                       </td>
                       <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
                         {formatRupiah(net)}
@@ -182,9 +189,9 @@ export function SphCoverLetter({
         </table>
 
         {/* 6. Catatan */}
-        <div className="mt-4">
+        <div className="mt-4 text-[9px]">
           <p className="font-bold">Catatan:</p>
-          <ul className="list-disc pl-5 text-sm">
+          <ul className="list-disc pl-5">
             {values.masaBerlakuAktif && (
               <li>Penawaran harga berlaku {values.masaBerlakuHari} hari kalender</li>
             )}

@@ -46,7 +46,7 @@ export function SphRabPage({
 
   return (
     <DocumentPage header={<DocumentLetterhead variant="strip" />}>
-      <div className="px-8 py-6 text-sm">
+      <div className="px-8 py-6 text-[11px]">
         {/* Title */}
         <div className="text-center font-bold leading-snug">
           <p>RINCIAN ANGGARAN BIAYA</p>
@@ -56,7 +56,7 @@ export function SphRabPage({
 
         {/* A. Rincian Biaya Personil */}
         <p className="mt-6 font-bold">A. Rincian Biaya Personil</p>
-        <table className="mt-2 w-full border-collapse border border-[var(--doc-rule)] text-sm">
+        <table className="mt-2 w-full border-collapse border border-[var(--doc-rule)]">
           <thead>
             <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
               <th className="border border-[var(--doc-rule)] px-2 py-1">No</th>
@@ -83,7 +83,7 @@ export function SphRabPage({
 
         {/* B. Rincian Biaya Langsung */}
         <p className="mt-6 font-bold">B. Rincian Biaya Langsung</p>
-        <table className="mt-2 w-full border-collapse border border-[var(--doc-rule)] text-sm">
+        <table className="mt-2 w-full border-collapse border border-[var(--doc-rule)]">
           <thead>
             <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
               <th className="border border-[var(--doc-rule)] px-2 py-1">No</th>
@@ -109,7 +109,7 @@ export function SphRabPage({
         </table>
 
         {/* Total */}
-        <table className="mt-6 w-full max-w-md border-collapse border border-[var(--doc-rule)] text-sm">
+        <table className="mt-6 w-full max-w-md border-collapse border border-[var(--doc-rule)]">
           <tbody>
             <tr>
               <td className="border border-[var(--doc-rule)] px-2 py-1">Biaya Personil</td>

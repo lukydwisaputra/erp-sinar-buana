@@ -1,32 +1,79 @@
 import { delay } from "@/lib/data/_delay";
 import { proyekFixtures } from "@/lib/fixtures/proyek";
 import { proyekSchema, type Proyek, type ProyekStatus, type Milestone } from "@/lib/schemas/proyek";
-import { katalogFixtures } from "@/lib/fixtures/katalog";
+import { afterTaxAmount } from "@/lib/faktur";
+import { proyekHashids } from "@/lib/id-generator";
+import type { Sph } from "@/lib/schemas/penawaran";
 
 export type ListProyekParams = { q?: string };
 
-export type ProyekCreateInput = Omit<Proyek, "id" | "milestones" | "createdAt" | "status"> & {
-  status?: ProyekStatus;
-};
+export type ProyekCreateInput = Omit<Proyek, "id" | "milestones" | "createdAt" | "status">;
 
 export type ProyekLogEntry = {
   id: string;
   proyekId: string;
+  milestoneId: string | null;
   timestamp: string;
   description: string;
 };
 
-const logStore: ProyekLogEntry[] = [];
-let _logId = 1;
-let _proyekSeq = 5;
+export type MilestoneAttachment = { name: string; url: string; type?: string };
 
-function appendLog(proyekId: string, description: string) {
+export type MilestoneComment = {
+  id: string;
+  proyekId: string;
+  milestoneId: string;
+  author: string;
+  content: string;
+  attachments: MilestoneAttachment[];
+  timestamp: string;
+};
+
+const logStore: ProyekLogEntry[] = [];
+const commentStore: MilestoneComment[] = [];
+let _logId = 1;
+let _commentId = 1;
+let _proyekSeq = 4;
+
+function appendLog(proyekId: string, description: string, milestoneId: string | null = null) {
   logStore.push({
     id: `LOG-${String(_logId++).padStart(4, "0")}`,
     proyekId,
+    milestoneId,
     timestamp: new Date().toISOString(),
     description,
   });
+}
+
+export function createProyekFromSph(sph: Sph): void {
+  if (proyekFixtures.some((p) => p.sphId === sph.id)) return;
+  const year = new Date().getFullYear();
+  const sphHash = sph.id.split("/")[1];
+  const id = `PRJ/${sphHash}/${year}`;
+  const totalBiaya = sph.items.reduce(
+    (sum, it) => sum + (Number(it.volume) || 0) * (Number(it.harga) || 0),
+    0,
+  );
+  const nilaiKontrak = afterTaxAmount(
+    totalBiaya, sph.ppnAktif, sph.ppnPersen, sph.pph23Aktif, sph.pph23Persen,
+  );
+  const proyek: Proyek = {
+    id,
+    nama: `Proyek — ${sph.perusahaanNama}`,
+    perusahaanId: sph.perusahaanId,
+    perusahaanNama: sph.perusahaanNama,
+    area: "",
+    tahun: year,
+    layananNama: sph.items.map((it) => it.nama),
+    status: "belum_mulai",
+    nilaiKontrak,
+    sphId: sph.id,
+    assignees: [],
+    milestones: [],
+    createdAt: new Date().toISOString(),
+  };
+  proyekFixtures.push(proyekSchema.parse(proyek));
+  appendLog(id, "Proyek dibuat otomatis dari SPH");
 }
 
 export async function listProyek(params: ListProyekParams = {}): Promise<Proyek[]> {
@@ -47,11 +94,12 @@ export async function getProyek(id: string): Promise<Proyek | null> {
 
 export async function createProyek(input: ProyekCreateInput): Promise<Proyek> {
   await delay(400);
-  const id = `PRJ-${String(_proyekSeq++).padStart(3, "0")}`;
+  const year = new Date().getFullYear();
+  const id = `PRJ/${proyekHashids.encode(_proyekSeq++)}/${year}`;
   const proyek: Proyek = {
-    status: "po_kontrak",
     ...input,
     id,
+    status: "belum_mulai",
     milestones: [],
     createdAt: new Date().toISOString(),
   };
@@ -60,18 +108,28 @@ export async function createProyek(input: ProyekCreateInput): Promise<Proyek> {
   return proyekSchema.parse(proyekFixtures[proyekFixtures.length - 1]);
 }
 
+export async function updateProyekAssignees(
+  id: string,
+  assignees: Proyek["assignees"],
+): Promise<Proyek> {
+  await delay(200);
+  const idx = proyekFixtures.findIndex((p) => p.id === id);
+  if (idx === -1) throw new Error(`Proyek ${id} not found`);
+  proyekFixtures[idx] = { ...proyekFixtures[idx], assignees };
+  return proyekSchema.parse(proyekFixtures[idx]);
+}
+
 export async function updateProyekStatus(id: string, status: ProyekStatus): Promise<Proyek> {
   await delay(300);
   const idx = proyekFixtures.findIndex((p) => p.id === id);
   if (idx === -1) throw new Error(`Proyek ${id} not found`);
   const old = proyekFixtures[idx];
   const STATUS_LABELS: Record<ProyekStatus, string> = {
-    po_kontrak: "PO/Kontrak", collecting_data: "Pengumpulan Data",
-    drafting: "Penyusunan", tunggu_pengesahan: "Tunggu Pengesahan",
-    pending: "Pending", selesai: "Selesai", batal: "Batal",
+    belum_mulai: "Belum Mulai", on_track: "Sedang Berjalan",
+    terlambat: "Terlambat", selesai: "Selesai", dibatalkan: "Dibatalkan",
   };
   proyekFixtures[idx] = { ...old, status };
-  appendLog(id, `Status diubah: ${STATUS_LABELS[old.status]} (${old.status}) → ${STATUS_LABELS[status]} (${status})`);
+  appendLog(id, `Status diubah: ${STATUS_LABELS[old.status]} → ${STATUS_LABELS[status]}`);
   return proyekSchema.parse(proyekFixtures[idx]);
 }
 
@@ -91,9 +149,38 @@ export async function updateMilestone(
   const milestones = [...proyek.milestones];
   milestones[mIdx] = updated;
   proyekFixtures[idx] = { ...proyek, milestones };
-  if (patch.status === "selesai" && oldMilestone.status !== "selesai") {
-    appendLog(proyekId, `Milestone "${updated.nama}" selesai`);
+
+  const fmtDate = (d: string | null | undefined) => {
+    if (!d) return "—";
+    return new Date(d + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  if (patch.status && patch.status !== oldMilestone.status) {
+    const LABELS: Record<string, string> = {
+      belum_mulai: "Belum Mulai", on_track: "Sedang Berjalan",
+      terlambat: "Terlambat", selesai: "Selesai",
+    };
+    appendLog(proyekId, `Status: ${LABELS[oldMilestone.status]} → ${LABELS[updated.status]}`, milestoneId);
   }
+  if (patch.nama !== undefined && patch.nama !== oldMilestone.nama) {
+    appendLog(proyekId, `Nama: "${oldMilestone.nama}" → "${patch.nama}"`, milestoneId);
+  }
+  if ("description" in patch && patch.description !== oldMilestone.description) {
+    appendLog(proyekId, "Deskripsi diperbarui", milestoneId);
+  }
+  if ("assignees" in patch) {
+    const oldNames = oldMilestone.assignees.map((a) => a.nama).join(", ") || "—";
+    const newNames = (patch.assignees ?? []).map((a) => a.nama).join(", ") || "—";
+    if (oldNames !== newNames)
+      appendLog(proyekId, `Assignee: ${oldNames} → ${newNames}`, milestoneId);
+  }
+  if ("targetDate" in patch && patch.targetDate !== oldMilestone.targetDate) {
+    appendLog(proyekId, `Target: ${fmtDate(oldMilestone.targetDate)} → ${fmtDate(patch.targetDate)}`, milestoneId);
+  }
+  if ("actualDate" in patch && patch.actualDate !== oldMilestone.actualDate) {
+    appendLog(proyekId, `Aktual: ${fmtDate(oldMilestone.actualDate)} → ${fmtDate(patch.actualDate)}`, milestoneId);
+  }
+
   return proyekSchema.parse(proyekFixtures[idx]);
 }
 
@@ -106,14 +193,20 @@ export async function moveMilestone(
   const idx = proyekFixtures.findIndex((p) => p.id === proyekId);
   if (idx === -1) throw new Error(`Proyek ${proyekId} not found`);
   const proyek = proyekFixtures[idx];
-  const sorted = [...proyek.milestones].sort((a, b) => a.urutan - b.urutan);
-  const mIdx = sorted.findIndex((m) => m.id === milestoneId);
-  const swapIdx = direction === "up" ? mIdx - 1 : mIdx + 1;
-  if (swapIdx < 0 || swapIdx >= sorted.length) return proyekSchema.parse(proyek);
-  const tempUrutan = sorted[mIdx].urutan;
-  sorted[mIdx] = { ...sorted[mIdx], urutan: sorted[swapIdx].urutan };
-  sorted[swapIdx] = { ...sorted[swapIdx], urutan: tempUrutan };
-  proyekFixtures[idx] = { ...proyek, milestones: sorted };
+  const target = proyek.milestones.find((m) => m.id === milestoneId);
+  if (!target) return proyekSchema.parse(proyek);
+  const siblings = [...proyek.milestones]
+    .filter((m) => (m.parentId ?? null) === (target.parentId ?? null))
+    .sort((a, b) => a.urutan - b.urutan);
+  const sibIdx = siblings.findIndex((m) => m.id === milestoneId);
+  const swapIdx = direction === "up" ? sibIdx - 1 : sibIdx + 1;
+  if (swapIdx < 0 || swapIdx >= siblings.length) return proyekSchema.parse(proyek);
+  const tempUrutan = siblings[sibIdx].urutan;
+  siblings[sibIdx] = { ...siblings[sibIdx], urutan: siblings[swapIdx].urutan };
+  siblings[swapIdx] = { ...siblings[swapIdx], urutan: tempUrutan };
+  const sibMap = new Map(siblings.map((m) => [m.id, m]));
+  const milestones = proyek.milestones.map((m) => sibMap.get(m.id) ?? m);
+  proyekFixtures[idx] = { ...proyek, milestones };
   return proyekSchema.parse(proyekFixtures[idx]);
 }
 
@@ -131,12 +224,38 @@ export async function deleteMilestone(proyekId: string, milestoneId: string): Pr
   const idx = proyekFixtures.findIndex((p) => p.id === proyekId);
   if (idx === -1) throw new Error(`Proyek ${proyekId} not found`);
   const proyek = proyekFixtures[idx];
-  const remaining = proyek.milestones
-    .filter((m) => m.id !== milestoneId)
-    .sort((a, b) => a.urutan - b.urutan)
-    .map((m, i) => ({ ...m, urutan: i + 1 }));
-  proyekFixtures[idx] = { ...proyek, milestones: remaining };
+  const toRemove = new Set<string>();
+  const collectDescendants = (id: string) => {
+    toRemove.add(id);
+    proyek.milestones.filter((m) => m.parentId === id).forEach((c) => collectDescendants(c.id));
+  };
+  collectDescendants(milestoneId);
+  const remaining = proyek.milestones.filter((m) => !toRemove.has(m.id));
+  const byParent = new Map<string | null, Milestone[]>();
+  for (const m of remaining) {
+    const key = m.parentId ?? null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key)!.push(m);
+  }
+  const reindexed: Milestone[] = [];
+  for (const [, group] of byParent) {
+    const sorted = [...group].sort((a, b) => a.urutan - b.urutan);
+    sorted.forEach((m, i) => reindexed.push({ ...m, urutan: i + 1 }));
+  }
+  proyekFixtures[idx] = { ...proyek, milestones: reindexed };
   return proyekSchema.parse(proyekFixtures[idx]);
+}
+
+export async function cancelProyekBySph(sphId: string): Promise<void> {
+  const proyek = proyekFixtures.find((p) => p.sphId === sphId);
+  if (!proyek) return;
+  await updateProyekStatus(proyek.id, "dibatalkan");
+}
+
+export async function deleteProyekBySph(sphId: string): Promise<void> {
+  await delay(100);
+  const idx = proyekFixtures.findIndex((p) => p.sphId === sphId);
+  if (idx !== -1) proyekFixtures.splice(idx, 1);
 }
 
 export async function listProyekLog(proyekId: string): Promise<ProyekLogEntry[]> {
@@ -144,58 +263,33 @@ export async function listProyekLog(proyekId: string): Promise<ProyekLogEntry[]>
   return logStore.filter((e) => e.proyekId === proyekId);
 }
 
-export function getMilestoneTemplate(
-  layananNama: string[],
-): { templateName: string; milestones: Omit<Milestone, "id" | "urutan">[] } | null {
-  const TEMPLATES: Record<string, Omit<Milestone, "id" | "urutan">[]> = {
-    "Pertek 5 Tahap": [
-      { nama: "Survey Lokasi", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Pengumpulan Data & Berkas Administrasi", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Penyusunan Dokumen", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Asistensi dengan Dinas LH", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Penerbitan Dokumen", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-    ],
-    "AMDAL Lengkap": [
-      { nama: "Survey Lokasi", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Pengumpulan Data & Berkas Administrasi", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Penyusunan Dokumen Kerangka Acuan (KA)", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Penyusunan Draft ANDAL & RKL-RPL", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Rapat Pembahasan dengan Komisi AMDAL", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Revisi Dokumen", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Penerbitan Dokumen AMDAL", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-    ],
-    "UKL-UPL Standar": [
-      { nama: "Survey Lokasi", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Pengumpulan Data", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Penyusunan Formulir UKL-UPL", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Asistensi dengan Dinas", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Revisi Dokumen", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-      { nama: "Pengesahan Dokumen", assigneeNama: null, targetDate: null, actualDate: null, status: "belum_mulai", pemicuTermin: null },
-    ],
-  };
-
-  for (const nama of layananNama) {
-    const katalog = katalogFixtures.find((k) => k.nama === nama && k.templateMilestone);
-    if (katalog?.templateMilestone && TEMPLATES[katalog.templateMilestone]) {
-      return { templateName: katalog.nama, milestones: TEMPLATES[katalog.templateMilestone] };
-    }
-  }
-  return null;
+export async function listMilestoneLog(proyekId: string, milestoneId: string): Promise<ProyekLogEntry[]> {
+  await delay(100);
+  return logStore.filter((e) => e.proyekId === proyekId && e.milestoneId === milestoneId);
 }
 
-export async function replaceMilestonesWithTemplate(
+export async function listMilestoneComments(proyekId: string, milestoneId: string): Promise<MilestoneComment[]> {
+  await delay(100);
+  return commentStore.filter((c) => c.proyekId === proyekId && c.milestoneId === milestoneId);
+}
+
+export async function logMilestoneActivity(proyekId: string, milestoneId: string, message: string): Promise<void> {
+  appendLog(proyekId, message, milestoneId);
+}
+
+export async function addMilestoneComment(
   proyekId: string,
-  templateMilestones: Omit<Milestone, "id" | "urutan">[],
-): Promise<Proyek> {
-  await delay(300);
-  const idx = proyekFixtures.findIndex((p) => p.id === proyekId);
-  if (idx === -1) throw new Error(`Proyek ${proyekId} not found`);
-  const milestones: Milestone[] = templateMilestones.map((m, i) => ({
-    ...m,
-    id: `ML-${proyekId}-T${i + 1}`,
-    urutan: i + 1,
-  }));
-  proyekFixtures[idx] = { ...proyekFixtures[idx], milestones };
-  appendLog(proyekId, `Template milestone dimuat`);
-  return proyekSchema.parse(proyekFixtures[idx]);
+  milestoneId: string,
+  input: { author: string; content: string; attachments: MilestoneAttachment[] },
+): Promise<MilestoneComment> {
+  await delay(200);
+  const comment: MilestoneComment = {
+    id: `CMT-${String(_commentId++).padStart(4, "0")}`,
+    proyekId,
+    milestoneId,
+    ...input,
+    timestamp: new Date().toISOString(),
+  };
+  commentStore.push(comment);
+  return comment;
 }

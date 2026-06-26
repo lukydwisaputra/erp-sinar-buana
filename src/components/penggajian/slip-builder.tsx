@@ -47,14 +47,13 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
     <>
       <div className="space-y-4">
         <Link href={`/penggajian/${batchId}`} className="print:hidden">
-          <Button variant="ghost" size="sm" className="gap-1.5">
+          <Button variant="ghost" size="sm" className="gap-1.5 mb-4">
             <ArrowLeft className="size-4" /> Kembali ke Batch
           </Button>
         </Link>
 
         <div className="overflow-hidden rounded-lg border border-border print:border-0">
-          {/* Header bar */}
-          <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3 print:hidden">
+          <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2.5 print:hidden">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">{slip.id}</span>
               <Badge variant={locked ? "success" : "warning"}>

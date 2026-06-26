@@ -1,10 +1,37 @@
-import { notFound } from "next/navigation";
-import { getProyek } from "@/lib/data/proyek";
+"use client";
+import { useParams } from "next/navigation";
+import { FolderKanban } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useProyek } from "@/lib/query/proyek";
 import { ProyekDetail } from "@/components/proyek/proyek-detail";
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const proyek = await getProyek(id);
-  if (!proyek) notFound();
+export default function Page() {
+  const { id } = useParams<{ id: string }>();
+  const decodedId = decodeURIComponent(id);
+  const { data: proyek, isLoading } = useProyek(decodedId);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <FolderKanban className="size-5 text-muted-foreground" />
+          <Skeleton className="h-7 w-64" />
+        </div>
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    );
+  }
+
+  if (!proyek) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <FolderKanban className="size-10 text-muted-foreground/40 mb-4" />
+        <p className="font-medium">Proyek tidak ditemukan</p>
+        <p className="text-sm text-muted-foreground mt-1">ID: {decodedId}</p>
+      </div>
+    );
+  }
+
   return <ProyekDetail proyek={proyek} />;
 }

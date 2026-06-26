@@ -1,17 +1,30 @@
 "use client";
+import * as React from "react";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Users, Wallet, CalendarDays, Plus } from "lucide-react";
+import { Users, Wallet, CalendarDays, CalendarIcon, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
+import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
 import { NpwpField, PhoneField, EmailField } from "@/components/shared/form-fields";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
@@ -24,10 +37,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { StatTile, InfoRow, InfoList, SectionLabel, initials } from "@/components/shared/detail-drawer";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
-import { useKaryawanList } from "@/lib/query/karyawan";
-import { delay } from "@/lib/data/_delay";
+import { useKaryawanList, useCreateKaryawan, useUpdateKaryawan, useDeleteKaryawan } from "@/lib/query/karyawan";
 import type { Karyawan } from "@/lib/schemas/karyawan";
 
 const KEPEGAWAIAN_OPTIONS = [
@@ -47,6 +61,15 @@ function KepegawaianBadge({ status }: { status: Karyawan["statusKepegawaian"] })
   return <Badge variant={k.variant}>{k.label}</Badge>;
 }
 
+const KEPEGAWAIAN_FILTER_OPTIONS: MultiSelectOption[] = KEPEGAWAIAN_OPTIONS.map((o) => ({
+  value: o.value, label: o.label, variant: KEPEGAWAIAN[o.value].variant,
+}));
+
+const STATUS_OPTIONS: MultiSelectOption[] = [
+  { value: "aktif", label: "Aktif", variant: "success" },
+  { value: "terarsip", label: "Terarsip", variant: "secondary" },
+];
+
 function masaKerja(isoDate: string): string {
   const start = new Date(isoDate);
   const years = Math.floor((Date.now() - start.getTime()) / (365.25 * 24 * 3600 * 1000));
@@ -57,13 +80,17 @@ function tanggalID(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
-function makeColumns(onOpen: (k: Karyawan) => void): ColumnDef<Karyawan>[] {
+function makeColumns(
+  onOpen: (k: Karyawan) => void,
+  onEdit: (k: Karyawan) => void,
+  onDelete: (k: Karyawan) => void,
+): ColumnDef<Karyawan>[] {
   return [
     {
       accessorKey: "id", header: "ID", meta: { mono: true },
       cell: ({ row }) => (
         <button type="button" onClick={() => onOpen(row.original)}
-          className="rounded-sm font-mono text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
           {row.original.id}
         </button>
       ),
@@ -79,15 +106,45 @@ function makeColumns(onOpen: (k: Karyawan) => void): ColumnDef<Karyawan>[] {
     },
     { accessorKey: "jabatan", header: "Jabatan" },
     {
-      accessorKey: "statusKepegawaian", header: "Status",
+      accessorKey: "statusKepegawaian", header: "Kepegawaian", meta: { className: "text-center" },
       cell: ({ row }) => <KepegawaianBadge status={row.original.statusKepegawaian} />,
+    },
+    {
+      accessorKey: "status", header: "Status", meta: { className: "text-center" },
+      cell: ({ row }) => row.original.status === "terarsip"
+        ? <Badge variant="secondary">Terarsip</Badge>
+        : <Badge variant="success">Aktif</Badge>,
     },
     {
       accessorKey: "tanggalMasuk", header: "Tanggal Masuk",
       cell: ({ row }) => tanggalID(row.original.tanggalMasuk),
     },
+    {
+      id: "actions", header: "", meta: { className: "w-10" },
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger className="outline-none">
+            <MoreHorizontal className="size-4 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onEdit(row.original)}>
+              <Pencil className="size-3.5" /> Ubah
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => onDelete(row.original)}
+            >
+              <Trash2 className="size-3.5" /> Nonaktifkan
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
   ];
 }
+
+/* ---------- detail drawer ---------- */
 
 function KaryawanDetail({ k }: { k: Karyawan }) {
   return (
@@ -107,7 +164,7 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
           <InfoRow label="NPWP" value={<span className="font-mono">{k.npwp}</span>} />
           <InfoRow label="Bank" value={`${k.bank.nama} • ${k.bank.nomor}`} />
           <InfoRow label="a.n." value={k.bank.atasNama} />
-          <InfoRow label="Email" value={<a href={`mailto:${k.email}`} className="text-primary hover:underline">{k.email}</a>} />
+          <InfoRow label="Email" value={<a href={`mailto:${k.email}`} className="text-[var(--link)] hover:underline">{k.email}</a>} />
           <InfoRow label="No. HP" value={<span className="font-mono">{k.telepon}</span>} />
           <InfoRow label="Tanggal Masuk" value={tanggalID(k.tanggalMasuk)} />
         </InfoList>
@@ -116,9 +173,9 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
   );
 }
 
-/* ---------- create form ---------- */
+/* ---------- shared form schema ---------- */
 
-const karyawanCreateSchema = z.object({
+const karyawanFormSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi."),
   jabatan: z.string().min(1, "Jabatan wajib diisi."),
   statusKepegawaian: z.enum(["tetap", "kontrak", "probation"]),
@@ -132,12 +189,16 @@ const karyawanCreateSchema = z.object({
   email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
   telepon: z.string().min(1, "Nomor HP wajib."),
   tanggalMasuk: z.string().min(1, "Tanggal masuk wajib diisi."),
+  status: z.enum(["aktif", "terarsip"]).optional(),
 });
-type KaryawanCreate = z.input<typeof karyawanCreateSchema>;
+type KaryawanForm = z.input<typeof karyawanFormSchema>;
+
+/* ---------- create form ---------- */
 
 function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const form = useForm<KaryawanCreate>({
-    resolver: zodResolver(karyawanCreateSchema),
+  const { mutateAsync, isPending } = useCreateKaryawan();
+  const form = useForm<KaryawanForm>({
+    resolver: zodResolver(karyawanFormSchema),
     defaultValues: {
       nama: "", jabatan: "", statusKepegawaian: "tetap",
       gajiPokok: undefined,
@@ -147,9 +208,19 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
-  const onSubmit = handleSubmit(async () => {
-    await delay();
-    toast.success("Demo: data tidak benar-benar disimpan");
+  const onSubmit = handleSubmit(async (values) => {
+    await mutateAsync({
+      nama: values.nama,
+      jabatan: values.jabatan,
+      statusKepegawaian: values.statusKepegawaian,
+      gajiPokok: Number(values.gajiPokok),
+      tunjangan: 0,
+      bank: values.bank,
+      npwp: values.npwp || "0000000000000000",
+      email: values.email || `${values.nama.toLowerCase().replace(/\s+/g, ".")}@sinarbuana.co.id`,
+      telepon: values.telepon,
+      tanggalMasuk: values.tanggalMasuk,
+    });
     onOpenChange(false);
     reset();
   });
@@ -161,7 +232,140 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
       title="Tambah Karyawan"
       description="Lengkapi data karyawan dan informasi penggajian."
       onSubmit={onSubmit}
+      submitLabel={isPending ? "Menyimpan…" : "Simpan"}
     >
+      <KaryawanFormFields register={register} control={control} errors={errors} />
+    </FormSheet>
+  );
+}
+
+/* ---------- edit form ---------- */
+
+function KaryawanEditForm({
+  karyawan,
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  karyawan: Karyawan;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSuccess: (updated: Karyawan) => void;
+}) {
+  const { mutateAsync, isPending } = useUpdateKaryawan();
+  const form = useForm<KaryawanForm>({
+    resolver: zodResolver(karyawanFormSchema),
+    defaultValues: {
+      nama: karyawan.nama,
+      jabatan: karyawan.jabatan,
+      statusKepegawaian: karyawan.statusKepegawaian,
+      gajiPokok: karyawan.gajiPokok,
+      bank: karyawan.bank,
+      npwp: karyawan.npwp,
+      email: karyawan.email,
+      telepon: karyawan.telepon,
+      tanggalMasuk: karyawan.tanggalMasuk,
+      status: karyawan.status,
+    },
+  });
+  const { register, handleSubmit, control, reset, formState: { errors } } = form;
+
+  React.useEffect(() => {
+    if (open) {
+      reset({
+        nama: karyawan.nama,
+        jabatan: karyawan.jabatan,
+        statusKepegawaian: karyawan.statusKepegawaian,
+        gajiPokok: karyawan.gajiPokok,
+        bank: karyawan.bank,
+        npwp: karyawan.npwp,
+        email: karyawan.email,
+        telepon: karyawan.telepon,
+        tanggalMasuk: karyawan.tanggalMasuk,
+        status: karyawan.status,
+      });
+    }
+  }, [open, karyawan, reset]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    const updated = await mutateAsync({
+      id: karyawan.id,
+      input: {
+        nama: values.nama,
+        jabatan: values.jabatan,
+        statusKepegawaian: values.statusKepegawaian,
+        gajiPokok: Number(values.gajiPokok),
+        bank: values.bank,
+        npwp: values.npwp,
+        email: values.email || karyawan.email,
+        telepon: values.telepon,
+        tanggalMasuk: values.tanggalMasuk,
+        status: values.status ?? karyawan.status,
+      },
+    });
+    onSuccess(updated);
+    onOpenChange(false);
+  });
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
+      title="Ubah Karyawan"
+      description={`Perbarui data karyawan ${karyawan.id}.`}
+      onSubmit={onSubmit}
+      submitLabel={isPending ? "Menyimpan…" : "Simpan Perubahan"}
+    >
+      <KaryawanFormFields register={register} control={control} errors={errors} withStatus />
+    </FormSheet>
+  );
+}
+
+/* ---------- date field ---------- */
+
+function DateField({ label, value, onChange, error }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  error?: { message?: string };
+}) {
+  const [open, setOpen] = React.useState(false);
+  const date = value ? new Date(value + "T00:00:00") : undefined;
+  return (
+    <Field data-invalid={!!error}>
+      <FieldLabel>{label}</FieldLabel>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" className={cn("w-full justify-start font-normal", !date && "text-muted-foreground")}>
+            <CalendarIcon />
+            {date ? format(date, "dd MMMM yyyy", { locale: idLocale }) : "Pilih tanggal"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar mode="single" selected={date} locale={idLocale} autoFocus
+            onSelect={(d) => { onChange(d ? format(d, "yyyy-MM-dd") : ""); setOpen(false); }} />
+        </PopoverContent>
+      </Popover>
+      <FieldError errors={error ? [error] : undefined} />
+    </Field>
+  );
+}
+
+/* ---------- shared form fields ---------- */
+
+function KaryawanFormFields({
+  register,
+  control,
+  errors,
+  withStatus,
+}: {
+  register: ReturnType<typeof useForm<KaryawanForm>>["register"];
+  control: ReturnType<typeof useForm<KaryawanForm>>["control"];
+  errors: ReturnType<typeof useForm<KaryawanForm>>["formState"]["errors"];
+  withStatus?: boolean;
+}) {
+  return (
+    <>
       <Field data-invalid={!!errors.nama}>
         <FieldLabel htmlFor="k-nama">Nama</FieldLabel>
         <Input id="k-nama" placeholder="Budi Santoso" aria-invalid={!!errors.nama} {...register("nama")} />
@@ -175,13 +379,13 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
       </Field>
 
       <Field data-invalid={!!errors.statusKepegawaian}>
-        <FieldLabel htmlFor="k-status">Status Kepegawaian</FieldLabel>
+        <FieldLabel htmlFor="k-kepegawaian">Status Kepegawaian</FieldLabel>
         <Controller
           control={control}
           name="statusKepegawaian"
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="k-status" className="w-full" aria-invalid={!!errors.statusKepegawaian}>
+              <SelectTrigger id="k-kepegawaian" className="w-full" aria-invalid={!!errors.statusKepegawaian}>
                 <SelectValue placeholder="Pilih status" />
               </SelectTrigger>
               <SelectContent>
@@ -225,25 +429,93 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
       </div>
 
       <NpwpField id="k-npwp" error={errors.npwp} {...register("npwp")} />
-
       <EmailField id="k-email" error={errors.email} {...register("email")} />
-
       <PhoneField id="k-telepon" error={errors.telepon} {...register("telepon")} />
 
-      <Field data-invalid={!!errors.tanggalMasuk}>
-        <FieldLabel htmlFor="k-tanggal">Tanggal Masuk</FieldLabel>
-        <Input id="k-tanggal" type="date" aria-invalid={!!errors.tanggalMasuk} {...register("tanggalMasuk")} />
-        <FieldError errors={errors.tanggalMasuk ? [errors.tanggalMasuk] : undefined} />
-      </Field>
-    </FormSheet>
+      <Controller
+        control={control}
+        name="tanggalMasuk"
+        render={({ field }) => (
+          <DateField
+            label="Tanggal Masuk"
+            value={field.value ?? ""}
+            onChange={field.onChange}
+            error={errors.tanggalMasuk}
+          />
+        )}
+      />
+
+      {withStatus && (
+        <Field>
+          <FieldLabel htmlFor="k-status">Status Karyawan</FieldLabel>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="k-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aktif">Aktif</SelectItem>
+                  <SelectItem value="terarsip">Terarsip</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </Field>
+      )}
+    </>
   );
 }
 
+/* ---------- page ---------- */
+
 export default function KaryawanPage() {
   const { data, isLoading, isError, refetch } = useKaryawanList();
+  const { mutate: deleteKaryawan, isPending: isDeleting } = useDeleteKaryawan();
   const [selected, setSelected] = useState<Karyawan | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const columns = makeColumns(setSelected);
+  const [editTarget, setEditTarget] = useState<Karyawan | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Karyawan | null>(null);
+
+  // Filter state
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const [pendingKepegawaian, setPendingKepegawaian] = React.useState<Karyawan["statusKepegawaian"][]>([]);
+  const [pendingStatus, setPendingStatus] = React.useState<Karyawan["status"][]>([]);
+  const [appliedKepegawaian, setAppliedKepegawaian] = React.useState<Karyawan["statusKepegawaian"][]>([]);
+  const [appliedStatus, setAppliedStatus] = React.useState<Karyawan["status"][]>([]);
+
+  const hasFilter = appliedKepegawaian.length > 0 || appliedStatus.length > 0;
+  const hasPending = pendingKepegawaian.length > 0 || pendingStatus.length > 0;
+  const filterCount = (appliedKepegawaian.length > 0 ? 1 : 0) + (appliedStatus.length > 0 ? 1 : 0);
+
+  const openFilter = () => {
+    setPendingKepegawaian(appliedKepegawaian);
+    setPendingStatus(appliedStatus);
+    setFilterOpen(true);
+  };
+  const applyFilter = () => {
+    setAppliedKepegawaian(pendingKepegawaian);
+    setAppliedStatus(pendingStatus);
+    setFilterOpen(false);
+  };
+  const resetFilter = () => {
+    setPendingKepegawaian([]); setPendingStatus([]);
+    setAppliedKepegawaian([]); setAppliedStatus([]);
+    setFilterOpen(false);
+  };
+
+  const filteredData = React.useMemo(() => {
+    let base = data ?? [];
+    if (appliedKepegawaian.length > 0)
+      base = base.filter((k) => appliedKepegawaian.includes(k.statusKepegawaian));
+    if (appliedStatus.length > 0)
+      base = base.filter((k) => appliedStatus.includes(k.status));
+    return base;
+  }, [data, appliedKepegawaian, appliedStatus]);
+
+  const columns = makeColumns(setSelected, setEditTarget, setDeleteTarget);
 
   return (
     <div className="space-y-4">
@@ -259,12 +531,115 @@ export default function KaryawanPage() {
 
       <KaryawanCreateForm open={createOpen} onOpenChange={setCreateOpen} />
 
+      {editTarget && (
+        <KaryawanEditForm
+          karyawan={editTarget}
+          open={!!editTarget}
+          onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+          onSuccess={(updated) => {
+            if (selected?.id === updated.id) setSelected(updated);
+            setEditTarget(null);
+          }}
+        />
+      )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nonaktifkan Karyawan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deleteTarget?.nama}</strong> akan diubah statusnya menjadi <strong>Terarsip</strong>. Data tetap tersimpan dan dapat diaktifkan kembali melalui menu Ubah.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteKaryawan(deleteTarget.id, {
+                  onSuccess: () => {
+                    if (selected?.id === deleteTarget.id) setSelected(null);
+                    setDeleteTarget(null);
+                  },
+                });
+              }}
+            >
+              {isDeleting ? "Menonaktifkan…" : "Nonaktifkan"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : (
-        <DataTable columns={columns} data={data ?? []} loading={isLoading}
-          searchColumn="nama" searchPlaceholder="Cari nama karyawan…" emptyMessage="Belum ada karyawan" />
+        <DataTable
+          columns={columns}
+          data={filteredData}
+          loading={isLoading}
+          searchColumns={["id", "nama"]}
+          searchPlaceholder="Cari ID atau nama karyawan…"
+          emptyMessage="Belum ada karyawan"
+          rowActions={false}
+          toolbarActions={
+            <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
+              <SlidersHorizontal className="size-3.5" />
+              Filter
+              {hasFilter && (
+                <Badge variant="secondary" className="px-1.5 py-0 text-xs">{filterCount}</Badge>
+              )}
+            </Button>
+          }
+        />
       )}
+
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Filter Karyawan</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 py-1">
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status Kepegawaian</p>
+              <MultiSelectFilter
+                options={KEPEGAWAIAN_FILTER_OPTIONS}
+                value={pendingKepegawaian}
+                onChange={(v) => setPendingKepegawaian(v as Karyawan["statusKepegawaian"][])}
+                placeholder="Pilih status kepegawaian…"
+                searchPlaceholder="Cari…"
+                noun="status"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</p>
+              <MultiSelectFilter
+                options={STATUS_OPTIONS}
+                value={pendingStatus}
+                onChange={(v) => setPendingStatus(v as Karyawan["status"][])}
+                placeholder="Pilih status…"
+                searchPlaceholder="Cari status…"
+                noun="status"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row items-center gap-2">
+            <Button
+              variant={hasPending ? "ghost" : "outline"}
+              size="sm"
+              className="mr-auto"
+              onClick={resetFilter}
+            >
+              {hasPending ? "Reset" : "Tutup"}
+            </Button>
+            <Button size="sm" onClick={applyFilter}>Terapkan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         <SheetContent className="overflow-y-auto sm:max-w-md">

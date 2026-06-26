@@ -21,6 +21,7 @@ export function FormSheet({
   description,
   onSubmit,
   submitLabel = "Simpan",
+  submitDisabled = false,
   children,
 }: {
   open: boolean;
@@ -29,6 +30,7 @@ export function FormSheet({
   description?: string;
   onSubmit: (e: React.FormEvent) => void;
   submitLabel?: string;
+  submitDisabled?: boolean;
   children: React.ReactNode;
 }) {
   const [submitting, run] = usePending();
@@ -47,7 +49,7 @@ export function FormSheet({
             <Button type="button" variant="outline" disabled={submitting} onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit" loading={submitting}>{submitLabel}</Button>
+            <Button type="submit" loading={submitting} disabled={submitDisabled}>{submitLabel}</Button>
           </SheetFooter>
         </form>
       </SheetContent>

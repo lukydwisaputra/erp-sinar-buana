@@ -2,6 +2,7 @@ import { delay } from "@/lib/data/_delay";
 import { penawaranFixtures } from "@/lib/fixtures/penawaran";
 import { sphSchema, type Sph, type SphStatus } from "@/lib/schemas/penawaran";
 import { createFakturSetFromSph } from "@/lib/data/faktur";
+import { createProyekFromSph } from "@/lib/data/proyek";
 
 export type ListPenawaranParams = { q?: string };
 
@@ -28,6 +29,7 @@ export async function updatePenawaranStatus(id: string, newStatus: SphStatus): P
   penawaranFixtures[idx] = { ...penawaranFixtures[idx], status: newStatus };
   if (newStatus === "deal") {
     createFakturSetFromSph(penawaranFixtures[idx]);
+    createProyekFromSph(penawaranFixtures[idx]);
   }
 }
 

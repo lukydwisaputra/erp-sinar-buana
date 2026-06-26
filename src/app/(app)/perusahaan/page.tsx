@@ -1,26 +1,41 @@
 "use client";
+import * as React from "react";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Building2, FileText, FolderKanban, Plus, Receipt, Wallet, X } from "lucide-react";
+import { Building2, FileText, FolderKanban, MoreHorizontal, Pencil, Plus, Receipt, SlidersHorizontal, Trash2, Wallet, X } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
+import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
 import { NpwpField, PhoneField, EmailField } from "@/components/shared/form-fields";
-import { StatTile, InfoRow, InfoList, SectionLabel, ContactCard } from "@/components/shared/detail-drawer";
+import { StatTile, InfoRow, InfoList, SectionLabel, ContactCard, initials } from "@/components/shared/detail-drawer";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
-import { usePerusahaanList } from "@/lib/query/perusahaan";
+import { usePerusahaanList, useUpdatePerusahaan, useDeletePerusahaan } from "@/lib/query/perusahaan";
 import { delay } from "@/lib/data/_delay";
 import type { Perusahaan } from "@/lib/schemas/perusahaan";
 
@@ -32,8 +47,16 @@ function StatusBadge({ status }: { status: Perusahaan["status"] }) {
   );
 }
 
-/** Columns are built with an `onOpen` callback so the ID/Nama cells open the detail drawer. */
-function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
+const STATUS_OPTIONS: MultiSelectOption[] = [
+  { value: "aktif", label: "Aktif", variant: "success" },
+  { value: "nonaktif", label: "Nonaktif", variant: "secondary" },
+];
+
+function makeColumns(
+  onOpen: (p: Perusahaan) => void,
+  onEdit: (p: Perusahaan) => void,
+  onDelete: (p: Perusahaan) => void,
+): ColumnDef<Perusahaan>[] {
   return [
     {
       accessorKey: "id",
@@ -43,7 +66,7 @@ function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
         <button
           type="button"
           onClick={() => onOpen(row.original)}
-          className="rounded-sm font-mono text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {row.original.id}
         </button>
@@ -69,12 +92,28 @@ function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
       accessorFn: (row) => row.pic[0]?.nama ?? "",
       cell: ({ row }) => {
         const pics = row.original.pic;
-        const extra = pics.length - 1;
+        if (pics.length === 0) return <span className="text-muted-foreground">—</span>;
         return (
-          <span>
-            {pics[0]?.nama ?? "—"}
-            {extra > 0 && <span className="ml-1 text-muted-foreground">+{extra}</span>}
-          </span>
+          <TooltipProvider>
+            <div className="flex">
+              {pics.map((pic, i) => (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <Avatar
+                      className="size-7 cursor-default ring-2 ring-background"
+                      style={{ marginLeft: i === 0 ? 0 : "-8px" }}
+                    >
+                      <AvatarFallback className="text-[10px]">{initials(pic.nama)}</AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <span className="font-medium">{pic.nama}</span>
+                    <span className="ml-1 text-background/60">· {pic.jabatan}</span>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
         );
       },
     },
@@ -82,12 +121,35 @@ function makeColumns(onOpen: (p: Perusahaan) => void): ColumnDef<Perusahaan>[] {
     {
       accessorKey: "status",
       header: "Status",
+      meta: { className: "text-center" },
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      id: "actions", header: "", meta: { className: "w-10" },
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger className="outline-none">
+            <MoreHorizontal className="size-4 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onEdit(row.original)}>
+              <Pencil className="size-3.5" /> Ubah
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => onDelete(row.original)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="size-3.5" /> Hapus
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ];
 }
 
-/* ---------- detail drawer pieces ---------- */
+/* ---------- detail drawer ---------- */
 
 function PerusahaanDetail({ p }: { p: Perusahaan }) {
   const m = p.metrik;
@@ -119,40 +181,42 @@ function PerusahaanDetail({ p }: { p: Perusahaan }) {
           <InfoRow label="Alamat" value={p.alamat} />
           <InfoRow label="Kota" value={p.kota} />
           <InfoRow label="Telepon" value={<span className="font-mono">{p.telepon}</span>} />
-          <InfoRow label="Email" value={<a href={`mailto:${p.email}`} className="text-primary hover:underline">{p.email}</a>} />
+          <InfoRow label="Email" value={<a href={`mailto:${p.email}`} className="text-[var(--link)] hover:underline">{p.email}</a>} />
         </InfoList>
       </section>
     </div>
   );
 }
 
-/* ---------- create form ---------- */
+/* ---------- shared form schema ---------- */
 
-const perusahaanCreateSchema = z.object({
+const picSchema = z.object({
+  nama: z.string().min(1, "Nama PIC wajib."),
+  jabatan: z.string(),
+  telepon: z.string().min(1, "Nomor HP wajib."),
+  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
+});
+
+const perusahaanFormSchema = z.object({
   nama: z.string().min(1, "Nama perusahaan wajib diisi."),
   alamat: z.string().min(1, "Alamat wajib diisi."),
   kota: z.string().min(1, "Kota wajib diisi."),
   npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]),
   email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
-  pic: z
-    .array(
-      z.object({
-        nama: z.string().min(1, "Nama PIC wajib."),
-        jabatan: z.string(),
-        telepon: z.string().min(1, "Nomor HP wajib."),
-        email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
-      }),
-    )
-    .min(1, "Minimal satu PIC."),
+  telepon: z.string(),
+  status: z.enum(["aktif", "nonaktif"]).optional(),
+  pic: z.array(picSchema).min(1, "Minimal satu PIC."),
 });
-type PerusahaanCreate = z.infer<typeof perusahaanCreateSchema>;
+type PerusahaanForm = z.infer<typeof perusahaanFormSchema>;
 
 const emptyPic = { nama: "", jabatan: "", telepon: "", email: "" };
 
+/* ---------- create form ---------- */
+
 function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const form = useForm<PerusahaanCreate>({
-    resolver: zodResolver(perusahaanCreateSchema),
-    defaultValues: { nama: "", alamat: "", kota: "", npwp: "", email: "", pic: [{ ...emptyPic }] },
+  const form = useForm<PerusahaanForm>({
+    resolver: zodResolver(perusahaanFormSchema),
+    defaultValues: { nama: "", alamat: "", kota: "", npwp: "", email: "", telepon: "", pic: [{ ...emptyPic }] },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "pic" });
@@ -172,6 +236,114 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
       description="Lengkapi data perusahaan dan minimal satu kontak PIC."
       onSubmit={onSubmit}
     >
+      <PerusahaanFormFields register={register} control={control} errors={errors} fields={fields} append={append} remove={remove} />
+    </FormSheet>
+  );
+}
+
+/* ---------- edit form ---------- */
+
+function PerusahaanEditForm({
+  perusahaan,
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  perusahaan: Perusahaan;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSuccess: (updated: Perusahaan) => void;
+}) {
+  const { mutateAsync, isPending } = useUpdatePerusahaan();
+  const form = useForm<PerusahaanForm>({
+    resolver: zodResolver(perusahaanFormSchema),
+    defaultValues: {
+      nama: perusahaan.nama,
+      alamat: perusahaan.alamat,
+      kota: perusahaan.kota,
+      npwp: perusahaan.npwp,
+      email: perusahaan.email,
+      telepon: perusahaan.telepon,
+      status: perusahaan.status,
+      pic: perusahaan.pic,
+    },
+  });
+  const { register, handleSubmit, control, reset, formState: { errors } } = form;
+  const { fields, append, remove } = useFieldArray({ control, name: "pic" });
+
+  React.useEffect(() => {
+    if (open) {
+      reset({
+        nama: perusahaan.nama,
+        alamat: perusahaan.alamat,
+        kota: perusahaan.kota,
+        npwp: perusahaan.npwp,
+        email: perusahaan.email,
+        telepon: perusahaan.telepon,
+        status: perusahaan.status,
+        pic: perusahaan.pic,
+      });
+    }
+  }, [open, perusahaan, reset]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    const updated = await mutateAsync({
+      id: perusahaan.id,
+      input: {
+        nama: values.nama,
+        alamat: values.alamat,
+        kota: values.kota,
+        npwp: values.npwp,
+        email: values.email || perusahaan.email,
+        telepon: values.telepon,
+        status: values.status ?? perusahaan.status,
+        pic: values.pic.map((p) => ({
+          nama: p.nama,
+          jabatan: p.jabatan,
+          telepon: p.telepon,
+          email: p.email || "",
+        })),
+      },
+    });
+    onSuccess(updated);
+    onOpenChange(false);
+  });
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
+      title="Ubah Perusahaan"
+      description={`Perbarui data perusahaan ${perusahaan.id}.`}
+      onSubmit={onSubmit}
+      submitLabel={isPending ? "Menyimpan…" : "Simpan Perubahan"}
+    >
+      <PerusahaanFormFields register={register} control={control} errors={errors} fields={fields} append={append} remove={remove} withStatus />
+    </FormSheet>
+  );
+}
+
+/* ---------- shared form fields ---------- */
+
+function PerusahaanFormFields({
+  register,
+  control,
+  errors,
+  fields,
+  append,
+  remove,
+  withStatus,
+}: {
+  register: ReturnType<typeof useForm<PerusahaanForm>>["register"];
+  control: ReturnType<typeof useForm<PerusahaanForm>>["control"];
+  errors: ReturnType<typeof useForm<PerusahaanForm>>["formState"]["errors"];
+  fields: ReturnType<typeof useFieldArray<PerusahaanForm, "pic">>["fields"];
+  append: ReturnType<typeof useFieldArray<PerusahaanForm, "pic">>["append"];
+  remove: ReturnType<typeof useFieldArray<PerusahaanForm, "pic">>["remove"];
+  withStatus?: boolean;
+}) {
+  return (
+    <>
       <Field data-invalid={!!errors.nama}>
         <FieldLabel htmlFor="p-nama">Nama Perusahaan</FieldLabel>
         <Input id="p-nama" placeholder="PT Maju Bersama Industri" aria-invalid={!!errors.nama} {...register("nama")} />
@@ -180,7 +352,7 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
 
       <Field data-invalid={!!errors.alamat}>
         <FieldLabel htmlFor="p-alamat">Alamat</FieldLabel>
-        <Textarea id="p-alamat" placeholder="Jl. Jenderal Sudirman No. 1, Jakarta Selatan" aria-invalid={!!errors.alamat} {...register("alamat")} />
+        <Textarea id="p-alamat" placeholder="Jl. Jenderal Sudirman No. 1" aria-invalid={!!errors.alamat} {...register("alamat")} />
         <FieldError errors={errors.alamat ? [errors.alamat] : undefined} />
       </Field>
 
@@ -191,8 +363,29 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
       </Field>
 
       <NpwpField id="p-npwp" error={errors.npwp} {...register("npwp")} />
-
       <EmailField id="p-email" error={errors.email} {...register("email")} />
+      <PhoneField id="p-telepon" error={errors.telepon} {...register("telepon")} />
+
+      {withStatus && (
+        <Field>
+          <FieldLabel htmlFor="p-status">Status</FieldLabel>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="p-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aktif">Aktif</SelectItem>
+                  <SelectItem value="nonaktif">Nonaktif</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </Field>
+      )}
 
       <div className="space-y-3 border-t border-border pt-4">
         <div className="flex items-center justify-between">
@@ -230,20 +423,70 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
             </Field>
 
             <PhoneField id={`p-pic-${i}-telepon`} error={errors.pic?.[i]?.telepon} {...register(`pic.${i}.telepon`)} />
-
             <EmailField id={`p-pic-${i}-email`} label="Email (opsional)" error={errors.pic?.[i]?.email} {...register(`pic.${i}.email`)} />
           </div>
         ))}
       </div>
-    </FormSheet>
+    </>
   );
 }
 
+/* ---------- page ---------- */
+
 export default function PerusahaanPage() {
   const { data, isLoading, isError, refetch } = usePerusahaanList();
+  const { mutate: deletePerusahaan, isPending: isDeleting } = useDeletePerusahaan();
   const [selected, setSelected] = useState<Perusahaan | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const columns = makeColumns(setSelected);
+  const [editTarget, setEditTarget] = useState<Perusahaan | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Perusahaan | null>(null);
+
+  const columns = makeColumns(setSelected, setEditTarget, setDeleteTarget);
+
+  // Filter state
+  const [filterOpen, setFilterOpen]       = React.useState(false);
+  const [pendingStatus, setPendingStatus] = React.useState<Perusahaan["status"][]>([]);
+  const [pendingKota, setPendingKota]     = React.useState<string[]>([]);
+  const [appliedStatus, setAppliedStatus] = React.useState<Perusahaan["status"][]>([]);
+  const [appliedKota, setAppliedKota]     = React.useState<string[]>([]);
+
+  const hasFilter  = appliedStatus.length > 0 || appliedKota.length > 0;
+  const hasPending = pendingStatus.length > 0 || pendingKota.length > 0;
+  const filterCount = (appliedStatus.length > 0 ? 1 : 0) + (appliedKota.length > 0 ? 1 : 0);
+
+  const allKota = React.useMemo(() => {
+    const names = new Set<string>();
+    (data ?? []).forEach((p) => { if (p.kota) names.add(p.kota); });
+    return Array.from(names).sort();
+  }, [data]);
+
+  const kotaOptions = React.useMemo<MultiSelectOption[]>(
+    () => allKota.map((k) => ({ value: k, label: k })),
+    [allKota],
+  );
+
+  const openFilter = () => {
+    setPendingStatus(appliedStatus);
+    setPendingKota(appliedKota);
+    setFilterOpen(true);
+  };
+  const applyFilter = () => {
+    setAppliedStatus(pendingStatus);
+    setAppliedKota(pendingKota);
+    setFilterOpen(false);
+  };
+  const resetFilter = () => {
+    setPendingStatus([]); setPendingKota([]);
+    setAppliedStatus([]); setAppliedKota([]);
+    setFilterOpen(false);
+  };
+
+  const filteredData = React.useMemo(() => {
+    let base = data ?? [];
+    if (appliedStatus.length > 0) base = base.filter((p) => appliedStatus.includes(p.status));
+    if (appliedKota.length > 0)   base = base.filter((p) => appliedKota.includes(p.kota));
+    return base;
+  }, [data, appliedStatus, appliedKota]);
 
   return (
     <div className="space-y-4">
@@ -259,18 +502,113 @@ export default function PerusahaanPage() {
 
       <PerusahaanCreateForm open={createOpen} onOpenChange={setCreateOpen} />
 
+      {editTarget && (
+        <PerusahaanEditForm
+          perusahaan={editTarget}
+          open={!!editTarget}
+          onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+          onSuccess={(updated) => {
+            if (selected?.id === updated.id) setSelected(updated);
+            setEditTarget(null);
+          }}
+        />
+      )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Perusahaan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deleteTarget?.nama}</strong> akan dihapus permanen dan tidak dapat dipulihkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={() => {
+                if (!deleteTarget) return;
+                deletePerusahaan(deleteTarget.id, {
+                  onSuccess: () => {
+                    if (selected?.id === deleteTarget.id) setSelected(null);
+                    setDeleteTarget(null);
+                  },
+                });
+              }}
+            >
+              {isDeleting ? "Menghapus…" : "Hapus"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : (
         <DataTable
           columns={columns}
-          data={data ?? []}
+          data={filteredData}
           loading={isLoading}
-          searchColumn="nama"
-          searchPlaceholder="Cari nama perusahaan…"
+          searchColumns={["id", "nama"]}
+          searchPlaceholder="Cari ID atau nama perusahaan…"
           emptyMessage="Belum ada perusahaan"
+          rowActions={false}
+          toolbarActions={
+            <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
+              <SlidersHorizontal className="size-3.5" />
+              Filter
+              {hasFilter && (
+                <Badge variant="secondary" className="px-1.5 py-0 text-xs">{filterCount}</Badge>
+              )}
+            </Button>
+          }
         />
       )}
+
+      {/* Filter dialog */}
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Filter Perusahaan</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 py-1">
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</p>
+              <MultiSelectFilter
+                options={STATUS_OPTIONS}
+                value={pendingStatus}
+                onChange={(v) => setPendingStatus(v as Perusahaan["status"][])}
+                placeholder="Pilih status…"
+                searchPlaceholder="Cari status…"
+                noun="status"
+              />
+            </div>
+
+            {allKota.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kota</p>
+                <MultiSelectFilter
+                  options={kotaOptions}
+                  value={pendingKota}
+                  onChange={setPendingKota}
+                  placeholder="Pilih kota…"
+                  searchPlaceholder="Cari kota…"
+                  noun="kota"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex-row items-center gap-2">
+            <Button variant={hasPending ? "ghost" : "outline"} size="sm" className="mr-auto" onClick={resetFilter}>
+              {hasPending ? "Reset" : "Tutup"}
+            </Button>
+            <Button size="sm" onClick={applyFilter}>Terapkan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         <SheetContent className="overflow-y-auto sm:max-w-md">

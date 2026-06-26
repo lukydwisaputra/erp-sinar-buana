@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  listBatch, getBatch, getSlip, createBatch, updateSlip, markSlipDibayar,
+  listBatch, getBatch, getSlip, createBatch, deleteBatch, updateSlip, markSlipDibayar,
   type CreateBatchInput, type SlipEditFields,
 } from "@/lib/data/penggajian";
 
@@ -27,6 +27,15 @@ export function useCreateBatch() {
     mutationFn: (input: CreateBatchInput) => createBatch(input),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["penggajian"] }); },
     onError: () => { toast.error("Gagal membuat penggajian. Coba lagi."); },
+  });
+}
+
+export function useDeleteBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteBatch(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["penggajian"] }); },
+    onError: () => { toast.error("Gagal menghapus penggajian. Coba lagi."); },
   });
 }
 
