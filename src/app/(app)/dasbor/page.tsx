@@ -64,10 +64,8 @@ export default function DasborPage() {
       <NeedsAttention alerts={alerts} isLoading={alertsLoading} />
 
       {/* P&L + Projected Cash */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <PlWaterfall labaRugi={profitabilitas?.labaRugi} isLoading={plLoading} />
-        <ProjectedCash forecastView={forecastView} isLoading={forecastLoading} />
-      </div>
+      <PlWaterfall labaRugi={profitabilitas?.labaRugi} isLoading={plLoading} />
+      <ProjectedCash forecastView={forecastView} isLoading={forecastLoading} />
 
       {/* Per-Project Profitability */}
       <ProyekProfitability
