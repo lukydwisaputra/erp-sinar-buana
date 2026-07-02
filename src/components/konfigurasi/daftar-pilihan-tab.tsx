@@ -4,7 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ChevronDown, ChevronUp, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onFormInvalid } from "@/lib/form-toast";
 import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
-  useOptionList, useCreateOption, useUpdateOption, useDeleteOption, useMoveOption,
+  useOptionList, useCreateOption, useUpdateOption, useDeleteOption,
 } from "@/lib/query/daftar-pilihan";
 import { calcMethod, daftarPilihanKategori, type CalcMethod, type DaftarPilihanKategori, type OptionItem } from "@/lib/schemas/daftar-pilihan";
 
@@ -47,26 +47,12 @@ const CALC_METHOD_LABEL: Record<CalcMethod, string> = {
 
 function makeColumns(
   meta: (typeof KATEGORI_META)[DaftarPilihanKategori],
-  onMove: (item: OptionItem, direction: "up" | "down") => void,
   onEdit: (item: OptionItem) => void,
   onDelete: (item: OptionItem) => void,
   onToggleAktif: (item: OptionItem, aktif: boolean) => void,
 ): ColumnDef<OptionItem>[] {
   const columns: ColumnDef<OptionItem>[] = [
     rowNumberColumn<OptionItem>(),
-    {
-      id: "urutan", header: "", enableSorting: false, meta: { className: "w-16" },
-      cell: ({ row }) => (
-        <div className="flex gap-0.5">
-          <Button variant="ghost" size="icon" className="size-6" onClick={() => onMove(row.original, "up")}>
-            <ChevronUp className="size-3.5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="size-6" onClick={() => onMove(row.original, "down")}>
-            <ChevronDown className="size-3.5" />
-          </Button>
-        </div>
-      ),
-    },
     { accessorKey: "nama", header: "Nama", enableSorting: false, meta: { className: "min-w-48" } },
   ];
 
@@ -300,7 +286,6 @@ function EditOptionForm({
 function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
   const meta = KATEGORI_META[kategori];
   const { data, isLoading } = useOptionList(kategori, { includeInactive: true });
-  const { mutate: moveOption } = useMoveOption();
   const { mutate: updateOption } = useUpdateOption();
   const { mutate: deleteOption, isPending: isDeleting } = useDeleteOption();
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -309,7 +294,6 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
 
   const columns = makeColumns(
     meta,
-    (item, direction) => moveOption({ id: item.id, kategori, direction }),
     setEditTarget,
     setDeleteTarget,
     (item, aktif) => updateOption({ id: item.id, kategori, patch: { aktif } }),
