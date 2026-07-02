@@ -663,7 +663,7 @@ export default function KaryawanPage() {
             <>
               <SheetHeader className="pr-10">
                 <Avatar className="mb-1 size-10"><AvatarFallback>{initials(selected.nama)}</AvatarFallback></Avatar>
-                <SheetTitle className="text-lg leading-tight font-semibold break-words">{selected.nama}</SheetTitle>
+                <SheetTitle className="text-lg leading-tight font-semibold wrap-break-word">{selected.nama}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id}</SheetDescription>
                   <KepegawaianBadge status={selected.statusKepegawaian} />

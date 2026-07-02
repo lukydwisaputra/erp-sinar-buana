@@ -85,7 +85,7 @@ function AttachmentPreview({
   return (
     <div className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs">
       <FileText className="size-3 shrink-0 text-muted-foreground" />
-      <a href={attachment.url} target="_blank" rel="noreferrer" className="max-w-[140px] truncate hover:underline">
+      <a href={attachment.url} target="_blank" rel="noreferrer" className="max-w-35 truncate hover:underline">
         {attachment.name}
       </a>
       {onRemove && (
@@ -214,7 +214,7 @@ function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId
                   <span className="text-[10px] text-muted-foreground">{relativeTime(item.timestamp)}</span>
                 </div>
                 {item.content && (
-                  <p className="text-xs leading-relaxed break-words whitespace-pre-wrap">{item.content}</p>
+                  <p className="text-xs leading-relaxed wrap-break-word whitespace-pre-wrap">{item.content}</p>
                 )}
                 {item.attachments.length > 0 && (
                   <div className="mt-1.5 space-y-1.5">
@@ -276,11 +276,11 @@ function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId
           />
           <div className="flex flex-col gap-1">
             <button type="button" onClick={() => fileRef.current?.click()}
-              className="flex-1 flex items-center justify-center rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/70 transition-colors min-w-[32px]" title="Lampirkan">
+              className="flex-1 flex items-center justify-center rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/70 transition-colors min-w-8" title="Lampirkan">
               <Paperclip className="size-3.5" />
             </button>
             <button type="button" onClick={handleSend}
-              className="flex-1 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors min-w-[32px]" title="Kirim">
+              className="flex-1 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors min-w-8" title="Kirim">
               <Send className="size-3.5" />
             </button>
           </div>

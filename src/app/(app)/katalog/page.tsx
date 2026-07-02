@@ -642,7 +642,7 @@ export default function KatalogPage() {
                 <div className="mb-1 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <BookOpen className="size-5" />
                 </div>
-                <SheetTitle className="text-lg leading-tight font-semibold break-words">{selected.nama}</SheetTitle>
+                <SheetTitle className="text-lg leading-tight font-semibold wrap-break-word">{selected.nama}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id}</SheetDescription>
                   <StatusBadge status={selected.status} />

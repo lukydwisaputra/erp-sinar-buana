@@ -53,7 +53,7 @@ export function DocumentBuilder({
       />
 
       <Dialog open={fs} onOpenChange={setFs}>
-        <DialogContent showCloseButton={false} className="flex h-[92vh] w-[92vw] flex-col overflow-hidden p-0 !max-w-[92vw]">
+        <DialogContent showCloseButton={false} className="flex h-[92vh] w-[92vw] flex-col overflow-hidden p-0 max-w-[92vw]!">
           <DialogTitle className="sr-only">{previewTitle}</DialogTitle>
           <div className="flex shrink-0 items-center justify-end gap-2 border-b border-border bg-background px-4 py-2">
             <Button variant="outline" size="sm" onClick={() => window.print()}>

@@ -37,7 +37,7 @@ export function InfoRow({ label, value }: { label: string; value: React.ReactNod
   return (
     <div className="grid grid-cols-3 gap-3 py-2.5">
       <dt className="text-sm text-muted-foreground">{label}</dt>
-      <dd className="col-span-2 break-words hyphens-none text-sm">{value}</dd>
+      <dd className="col-span-2 wrap-break-word hyphens-none text-sm">{value}</dd>
     </div>
   );
 }

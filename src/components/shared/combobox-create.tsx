@@ -74,7 +74,7 @@ export function ComboboxCreate({
           }}
         />
         <div
-          className="max-h-[180px] overflow-y-auto overscroll-contain space-y-0.5"
+          className="max-h-45 overflow-y-auto overscroll-contain space-y-0.5"
           onWheel={(e) => e.stopPropagation()}
         >
           {filtered.map((o) => (

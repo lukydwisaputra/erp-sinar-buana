@@ -108,7 +108,7 @@ export function SlipDocument({
         {/* Net pay */}
         <table className="w-full border-collapse border border-[var(--doc-rule)]">
           <tbody>
-            <tr className="bg-[var(--doc-blue)] text-white font-bold text-[12px]">
+            <tr className="bg-[var(--doc-blue)] text-white font-bold text-xs">
               <td className={cell}>PENGGAJIAN BERSIH (Take-Home)</td>
               <td className={cellR}>{formatRupiah(penggajianBersih)}</td>
             </tr>

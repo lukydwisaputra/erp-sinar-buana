@@ -620,7 +620,7 @@ export default function PerusahaanPage() {
                 <div className="mb-1 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Building2 className="size-5" />
                 </div>
-                <SheetTitle className="text-lg leading-tight font-semibold break-words">
+                <SheetTitle className="text-lg leading-tight font-semibold wrap-break-word">
                   {selected.nama}
                 </SheetTitle>
                 <div className="flex flex-wrap items-center gap-2">

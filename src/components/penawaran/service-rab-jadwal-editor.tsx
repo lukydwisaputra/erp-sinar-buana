@@ -74,7 +74,7 @@ export function ServiceRabJadwalEditor({
   return (
     <Dialog>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="w-[80vw] h-[80vh] !max-w-[80vw] p-0 flex flex-col overflow-hidden">
+      <DialogContent className="w-[80vw] h-[80vh] max-w-[80vw]! p-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-3 border-b">
           <DialogTitle>
             Kelola RAB &amp; Jadwal — {serviceName || "Layanan"}
@@ -174,7 +174,7 @@ function RabRowsEditor({
             key={i}
             className="flex flex-wrap items-end gap-3 rounded-md border border-border p-3"
           >
-            <div className="w-1/4 min-w-[200px]">
+            <div className="w-1/4 min-w-50">
               <label className="text-xs text-muted-foreground">Uraian</label>
               <Input
                 value={row.uraian}
@@ -365,7 +365,7 @@ function JadwalEditor({
                         value={nama}
                         onChange={(e) => updateKegiatan(rowIndex, e.target.value)}
                         placeholder="Nama kegiatan…"
-                        className="w-[280px]"
+                        className="w-70"
                       />
                     </div>
                   </td>

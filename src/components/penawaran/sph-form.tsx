@@ -288,7 +288,7 @@ function KelengkapanSection({
         onOpenChange={(o) => { if (!o) setEditingIdx(null); }}
       >
         <DialogContent
-          className="flex h-[80vh] w-[80vw] !max-w-[80vw] flex-col gap-0 p-0"
+          className="flex h-[80vh] w-[80vw] max-w-[80vw]! flex-col gap-0 p-0"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >

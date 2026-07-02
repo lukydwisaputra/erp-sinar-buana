@@ -78,7 +78,7 @@ export function MultiSelectFilter({
           autoFocus
         />
         <div
-          className="max-h-[160px] overflow-y-auto overscroll-contain space-y-0.5"
+          className="max-h-40 overflow-y-auto overscroll-contain space-y-0.5"
           onWheel={(e) => e.stopPropagation()}
         >
           {filtered.map((o) => (

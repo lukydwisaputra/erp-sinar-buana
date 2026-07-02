@@ -368,7 +368,7 @@ export function DataTable<TData, TValue>({
                           compact ? "py-2" : "py-3",
                           meta?.align === "right" && "text-right",
                           meta?.mono && "font-mono tabular-nums",
-                          meta?.collapse ? "w-0" : "max-w-[360px]",
+                          meta?.collapse ? "w-0" : "max-w-90",
                           meta?.className
                         )}
                       >
@@ -449,7 +449,7 @@ function TruncatingCell({
       <TooltipContent
         side="top"
         align={align === "right" ? "end" : "start"}
-        className="max-w-xs break-words"
+        className="max-w-xs wrap-break-word"
       >
         {text}
       </TooltipContent>
@@ -527,7 +527,7 @@ function DataTablePagination<TData>({
           value={String(table.getState().pagination.pageSize)}
           onValueChange={(v) => table.setPageSize(Number(v))}
         >
-          <SelectTrigger className="h-8 w-[72px]">
+          <SelectTrigger className="h-8 w-18">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
