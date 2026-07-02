@@ -5,6 +5,7 @@ import { listRealisasiRab } from "@/lib/data/realisasi-rab";
 import { listArusKas } from "@/lib/data/arus-kas";
 import { listExpenseNature } from "@/lib/data/expense-nature";
 import { getPajakConfig } from "@/lib/data/pajak-config";
+import { getDashboardParams } from "@/lib/data/dashboard-params";
 import { DEFAULT_SIFAT } from "@/lib/fixtures/expense-nature";
 import type { SifatBeban } from "@/lib/schemas/expense-nature";
 import type { Sph } from "@/lib/schemas/penawaran";
@@ -15,7 +16,7 @@ import { computeProjectProfitability } from "@/lib/dasbor/project-profit";
 export type ProfitabilitasView = { labaRugi: LabaRugi; proyek: ProyekProfit[] };
 
 export async function getProfitabilitas(periode: Periode): Promise<ProfitabilitasView> {
-  const [fakturs, proyeks, penawarans, realisasi, arusKas, natureRows, config] = await Promise.all([
+  const [fakturs, proyeks, penawarans, realisasi, arusKas, natureRows, config, params] = await Promise.all([
     listFaktur(),
     listProyek(),
     listPenawaran(),
@@ -23,6 +24,7 @@ export async function getProfitabilitas(periode: Periode): Promise<Profitabilita
     listArusKas(),
     listExpenseNature(),
     getPajakConfig(),
+    getDashboardParams(),
   ]);
 
   const natureMap = new Map<string, SifatBeban>(natureRows.map((n) => [n.kategori, n.sifat]));
@@ -30,7 +32,7 @@ export async function getProfitabilitas(periode: Periode): Promise<Profitabilita
   const sphById = new Map<string, Sph>(penawarans.map((s) => [s.id, s]));
 
   const labaRugi = computeLabaRugi({ fakturs, realisasi, arusKas, natureOf, config, periode });
-  const proyek = computeProjectProfitability({ proyeks, sphById, fakturs, realisasi });
+  const proyek = computeProjectProfitability({ proyeks, sphById, fakturs, realisasi, ambang: params.ambangMarginProyek });
 
   return { labaRugi, proyek };
 }

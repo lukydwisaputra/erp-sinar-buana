@@ -56,6 +56,7 @@ function StatusBadge({ status }: { status: SphStatus }) {
   return <Badge variant={s.variant}>{s.label}</Badge>;
 }
 import { useSph, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
+import { useTarifConfig } from "@/lib/query/tarif-config";
 
 const perusahaanOptions: PerusahaanOption[] = perusahaanFixtures.map((p) => ({
   id: p.id,
@@ -250,6 +251,7 @@ function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string })
 }
 
 function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
+  const { data: tarif } = useTarifConfig();
   const form = useForm<SphFormValues>({
     // sphFormSchema uses z.coerce.number(), so the resolver's inferred input
     // type differs from SphFormValues (the output). Cast keeps SphForm's
@@ -280,6 +282,18 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
         }
       : emptyValues,
   });
+
+  // New-SPH only: once Konfigurasi's tarif defaults load, refresh the still-untouched
+  // rate fields. Never applies to `existing` (editing) SPH — changing tarif defaults
+  // is not retroactive. Guarded to run once so it can't clobber user edits.
+  const appliedTarifDefaults = React.useRef(false);
+  React.useEffect(() => {
+    if (existing || !tarif || appliedTarifDefaults.current) return;
+    appliedTarifDefaults.current = true;
+    form.setValue("ppnPersen", tarif.ppnPersenDefault);
+    form.setValue("pph23Persen", tarif.pph23PersenDefault);
+    form.setValue("masaBerlakuHari", tarif.masaBerlakuPenawaranHariDefault);
+  }, [existing, tarif, form]);
 
   const values = form.watch();
 

@@ -20,6 +20,7 @@ const JENIS_LABEL: Record<string, string> = {
   bukti_potong_belum: "Pajak",
   proyek_over_budget: "Proyek",
   proyek_margin_slip: "Proyek",
+  proyek_mangkrak: "Proyek",
 };
 
 export function NeedsAttention({ alerts, isLoading }: NeedsAttentionProps) {

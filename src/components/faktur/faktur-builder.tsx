@@ -45,6 +45,7 @@ import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { usePending } from "@/lib/use-pending";
 import { onFormInvalid } from "@/lib/form-toast";
 import { useCancelFaktur, useFaktur, useUpdateFaktur } from "@/lib/query/faktur";
+import { useTarifConfig } from "@/lib/query/tarif-config";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function plusDaysISO(n: number) {
@@ -151,6 +152,7 @@ function FakturReadOnlyView({ existing }: { existing: Faktur }) {
 function FakturEditView({ existing }: { existing?: Faktur }) {
   const cancelFaktur = useCancelFaktur();
   const updateFaktur = useUpdateFaktur();
+  const { data: tarif } = useTarifConfig();
 
   const noFaktur = existing?.id ?? "INV/???/????";
   const picOptions = perusahaanFixtures.find((p) => p.id === (existing?.perusahaanId ?? ""))?.pic ?? [];
@@ -158,6 +160,22 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
     resolver: zodResolver(fakturFormSchema) as Resolver<FakturFormValues>,
     defaultValues: existing ? { ...existing } : emptyValues,
   });
+
+  // New-faktur only: once Konfigurasi's tarif defaults load, refresh the still-untouched
+  // rate/PKP/due-date fields. Never applies when editing an existing faktur — changing
+  // tarif defaults is not retroactive. Guarded to run once so it can't clobber user edits.
+  const appliedTarifDefaults = React.useRef(false);
+  React.useEffect(() => {
+    if (existing || !tarif || appliedTarifDefaults.current) return;
+    appliedTarifDefaults.current = true;
+    form.setValue("ppnPersen", tarif.ppnPersenDefault);
+    form.setValue("pph23Persen", tarif.pph23PersenDefault);
+    form.setValue("ppnAktif", tarif.statusPkp);
+    const d = new Date();
+    d.setDate(d.getDate() + tarif.jatuhTempoFakturHari);
+    form.setValue("jatuhTempo", d.toISOString().slice(0, 10));
+  }, [existing, tarif, form]);
+
   const values = form.watch();
   const [saving, runSave] = usePending();
   const [cancelOpen, setCancelOpen] = React.useState(false);

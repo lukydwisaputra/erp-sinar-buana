@@ -4,6 +4,7 @@ import { LayoutDashboard } from "lucide-react";
 import { useProfitabilitas, useForekast, useAlerts } from "@/lib/query/dasbor";
 import { useFakturList } from "@/lib/query/faktur";
 import { useKewajibanPajakList } from "@/lib/query/kewajiban-pajak";
+import { useDashboardParams } from "@/lib/query/dashboard-params";
 import { computeFaktur } from "@/lib/faktur";
 import { periodePreset } from "@/lib/dasbor/periode-utils";
 import { PeriodPicker } from "@/components/dasbor/period-picker";
@@ -17,7 +18,8 @@ export default function DasborPage() {
   const [periode, setPeriode] = useState<Periode>(() => periodePreset("mtd"));
 
   const { data: profitabilitas, isLoading: plLoading } = useProfitabilitas(periode);
-  const { data: forecastView } = useForekast(90);
+  const { data: dashboardParams } = useDashboardParams();
+  const { data: forecastView } = useForekast(dashboardParams?.horizonProyeksiHari ?? 90);
   const { data: alerts = [], isLoading: alertsLoading } = useAlerts();
   const { data: fakturs = [] } = useFakturList();
   const { data: kewajiban = [] } = useKewajibanPajakList();

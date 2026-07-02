@@ -2,7 +2,7 @@ import { delay } from "@/lib/data/_delay";
 import { proyekFixtures } from "@/lib/fixtures/proyek";
 import { proyekSchema, type Proyek, type ProyekStatus, type Milestone } from "@/lib/schemas/proyek";
 import { afterTaxAmount } from "@/lib/faktur";
-import { proyekHashids } from "@/lib/id-generator";
+import { nextNomor } from "@/lib/data/penomoran";
 import type { Sph } from "@/lib/schemas/penawaran";
 
 export type ListProyekParams = { q?: string };
@@ -33,7 +33,6 @@ const logStore: ProyekLogEntry[] = [];
 const commentStore: MilestoneComment[] = [];
 let _logId = 1;
 let _commentId = 1;
-let _proyekSeq = 4;
 
 function appendLog(proyekId: string, description: string, milestoneId: string | null = null) {
   logStore.push({
@@ -94,8 +93,7 @@ export async function getProyek(id: string): Promise<Proyek | null> {
 
 export async function createProyek(input: ProyekCreateInput): Promise<Proyek> {
   await delay(400);
-  const year = new Date().getFullYear();
-  const id = `PRJ/${proyekHashids.encode(_proyekSeq++)}/${year}`;
+  const id = await nextNomor("proyek");
   const proyek: Proyek = {
     ...input,
     id,

@@ -22,6 +22,13 @@ describe("kesehatanProyek", () => {
   it("merah takes priority over kuning when both conditions hold", () => {
     expect(kesehatanProyek({ rabRencana: 100, realisasi: 110, marginRencana: 50, marginAktual: 10 })).toBe("merah");
   });
+
+  it("respects a custom ambang threshold (Konfigurasi Sistem dashboard-params.ambangMarginProyek)", () => {
+    // plan 50, actual 44 -> slip 6, which is 12% of plan (>10% default, <20% custom)
+    const args = { rabRencana: 100, realisasi: 56, marginRencana: 50, marginAktual: 44 };
+    expect(kesehatanProyek(args)).toBe("kuning"); // default ambang 0.1
+    expect(kesehatanProyek({ ...args, ambang: 0.2 })).toBe("hijau"); // widened threshold tolerates the same slip
+  });
 });
 
 describe("computeProjectProfitability", () => {

@@ -73,7 +73,8 @@ export type AlertJenis =
   | "pajak_jatuh_tempo"
   | "bukti_potong_belum"
   | "proyek_over_budget"
-  | "proyek_margin_slip";
+  | "proyek_margin_slip"
+  | "proyek_mangkrak";
 
 export type AlertPrioritas = "tinggi" | "sedang";
 

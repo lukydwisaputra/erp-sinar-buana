@@ -1,6 +1,9 @@
 import type { Faktur } from "@/lib/schemas/faktur";
 import type { KewajibanPajak } from "@/lib/schemas/kewajiban-pajak";
+import type { Proyek } from "@/lib/schemas/proyek";
 import type { AlertItem, AlertJenis, AlertPrioritas, ProyekProfit } from "@/lib/dasbor/types";
+
+const ACTIVE_PROYEK_STATUSES = new Set<Proyek["status"]>(["belum_mulai", "on_track", "terlambat"]);
 
 export const FAKTUR_DUE_SOON_DAYS = 7;
 export const PAJAK_DUE_SOON_DAYS = 3;
@@ -102,16 +105,43 @@ export function alertsProyek(proyek: ProyekProfit[]): AlertItem[] {
   return items;
 }
 
+/** Last known activity on a project: most recent milestone actualDate, else createdAt. */
+export function lastActivityDate(p: Proyek): string {
+  const actuals = p.milestones.map((m) => m.actualDate).filter((d): d is string => !!d);
+  return actuals.length > 0 ? actuals.sort().at(-1)! : p.createdAt.slice(0, 10);
+}
+
+export function alertsProyekMangkrak(proyeks: Proyek[], today: string, ambangHari: number): AlertItem[] {
+  const items: AlertItem[] = [];
+  for (const p of proyeks) {
+    if (!ACTIVE_PROYEK_STATUSES.has(p.status)) continue; // selesai/dibatalkan can never be "stalled"
+    const last = lastActivityDate(p);
+    const diff = daysDiff(last, today);
+    if (diff >= ambangHari) {
+      items.push(makeItem(
+        "proyek-mangkrak-" + p.id, "proyek_mangkrak", "sedang",
+        "Proyek Mangkrak: " + p.nama,
+        "Tidak ada progres milestone sejak " + last + " (" + diff + " hari)",
+        p.id, "proyek", last,
+      ));
+    }
+  }
+  return items;
+}
+
 export function computeAlerts(args: {
   fakturs: Faktur[];
   kewajiban: KewajibanPajak[];
   proyek: ProyekProfit[];
+  proyeks: Proyek[];
   today: string;
+  ambangMangkrakHari: number;
 }): AlertItem[] {
   const all = [
     ...alertsFaktur(args.fakturs, args.today),
     ...alertsPajak(args.kewajiban, args.today),
     ...alertsProyek(args.proyek),
+    ...alertsProyekMangkrak(args.proyeks, args.today, args.ambangMangkrakHari),
   ];
   return all.sort((a, b) => {
     if (a.prioritas !== b.prioritas) {

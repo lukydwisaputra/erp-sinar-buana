@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
-  alertsFaktur, alertsPajak, alertsProyek, computeAlerts,
+  alertsFaktur, alertsPajak, alertsProyek, alertsProyekMangkrak, lastActivityDate, computeAlerts,
   FAKTUR_DUE_SOON_DAYS, PAJAK_DUE_SOON_DAYS,
 } from "@/lib/dasbor/alerts";
 import type { Faktur } from "@/lib/schemas/faktur";
 import type { KewajibanPajak } from "@/lib/schemas/kewajiban-pajak";
+import type { Proyek } from "@/lib/schemas/proyek";
 import type { ProyekProfit } from "@/lib/dasbor/types";
 
 const TODAY = "2026-06-22";
@@ -27,6 +28,13 @@ const mkKewajiban = (
   id, jenis: "ppn", periode: "2026-06", jumlah: 5_000_000,
   jatuhTempo, status: "belum_setor", buktiPotongDiterima: true, keterangan: "",
   ...opts,
+});
+
+const mkProyekEntity = (id: string, status: Proyek["status"], overrides: Partial<Proyek> = {}): Proyek => ({
+  id, nama: "Proyek " + id, perusahaanId: "C1", perusahaanNama: "PT Klien",
+  area: "", tahun: 2026, layananNama: [], status, nilaiKontrak: 100_000_000,
+  sphId: null, assignees: [], milestones: [], createdAt: "2026-01-01T00:00:00.000Z",
+  ...overrides,
 });
 
 const mkProyek = (id: string, kesehatan: ProyekProfit["kesehatan"]): ProyekProfit => ({
@@ -135,9 +143,48 @@ describe("computeAlerts", () => {
       fakturs: [mkFaktur("F1", "2026-06-10"), mkFaktur("F2", "2026-06-24")],
       kewajiban: [],
       proyek: [],
+      proyeks: [],
       today: TODAY,
+      ambangMangkrakHari: 30,
     });
     expect(alerts[0].prioritas).toBe("tinggi");
     expect(alerts[1].prioritas).toBe("sedang");
+  });
+});
+
+describe("lastActivityDate", () => {
+  it("uses the most recent milestone actualDate", () => {
+    const p = mkProyekEntity("P1", "on_track", {
+      milestones: [
+        { id: "M1", parentId: null, nama: "A", urutan: 1, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-05-01", status: "selesai", pemicuTermin: null },
+        { id: "M2", parentId: null, nama: "B", urutan: 2, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-06-10", status: "selesai", pemicuTermin: null },
+      ],
+    });
+    expect(lastActivityDate(p)).toBe("2026-06-10");
+  });
+
+  it("falls back to createdAt when no milestone has an actualDate", () => {
+    const p = mkProyekEntity("P2", "belum_mulai", { createdAt: "2026-03-15T10:00:00.000Z" });
+    expect(lastActivityDate(p)).toBe("2026-03-15");
+  });
+});
+
+describe("alertsProyekMangkrak", () => {
+  it("flags a project with no recent activity past the threshold", () => {
+    const p = mkProyekEntity("P1", "on_track", { createdAt: "2026-05-01T00:00:00.000Z" });
+    const alerts = alertsProyekMangkrak([p], TODAY, 30); // 2026-06-22 - 2026-05-01 = 52 days
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].jenis).toBe("proyek_mangkrak");
+  });
+
+  it("does not flag a project with recent activity", () => {
+    const p = mkProyekEntity("P2", "on_track", { createdAt: "2026-06-20T00:00:00.000Z" });
+    expect(alertsProyekMangkrak([p], TODAY, 30)).toHaveLength(0);
+  });
+
+  it("never flags selesai or dibatalkan projects regardless of staleness", () => {
+    const selesai = mkProyekEntity("P3", "selesai", { createdAt: "2026-01-01T00:00:00.000Z" });
+    const dibatalkan = mkProyekEntity("P4", "dibatalkan", { createdAt: "2026-01-01T00:00:00.000Z" });
+    expect(alertsProyekMangkrak([selesai, dibatalkan], TODAY, 30)).toHaveLength(0);
   });
 });
