@@ -18,5 +18,5 @@ export const expenseNatureFixtures: ExpenseNatureEntry[] = [
   { kategori: "bonus", sifat: "operasional" },
   { kategori: "Operasional", sifat: "operasional" },
   { kategori: "Sewa Kantor", sifat: "operasional" },
-  { kategori: "Biaya Proyek", sifat: "hpp" },
+  { kategori: "Biaya Proyek", sifat: "operasional" },
 ];
