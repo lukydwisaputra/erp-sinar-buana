@@ -26,12 +26,12 @@ function Row({ label, value, bold, indent }: { label: string; value: number | un
 }
 
 export function PlWaterfall({ labaRugi, isLoading }: PlWaterfallProps) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(true);
   const d = isLoading ? undefined : labaRugi;
   return (
     <Card size="sm">
       <CardHeader>
-        <CardTitle>Laba Rugi (Akrual)</CardTitle>
+        <CardTitle>Laba Rugi (Aktual)</CardTitle>
         <CardAction>
           <Button variant="ghost" size="icon" className="size-6" onClick={() => setOpen((o) => !o)}>
             <ChevronDownIcon className={`size-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />

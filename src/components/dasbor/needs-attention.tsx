@@ -23,7 +23,7 @@ const JENIS_LABEL: Record<string, string> = {
 };
 
 export function NeedsAttention({ alerts, isLoading }: NeedsAttentionProps) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(true);
   return (
     <Card size="sm">
       <CardHeader>

@@ -24,7 +24,7 @@ const HEALTH: Record<KesehatanProyek, { label: string; variant: "success" | "war
 };
 
 export function ProyekProfitability({ proyek, isLoading }: ProyekProfitabilityProps) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(true);
   const [page, setPage] = React.useState(0);
   const totalPages = Math.ceil(proyek.length / PAGE_SIZE);
   const paged = proyek.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);

@@ -1,9 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { LayoutDashboard } from "lucide-react";
-import { useProfitabilitas } from "@/lib/query/dasbor";
-import { useForekast } from "@/lib/query/dasbor";
-import { useAlerts } from "@/lib/query/dasbor";
+import { useProfitabilitas, useForekast, useAlerts } from "@/lib/query/dasbor";
 import { useFakturList } from "@/lib/query/faktur";
 import { useKewajibanPajakList } from "@/lib/query/kewajiban-pajak";
 import { computeFaktur } from "@/lib/faktur";
@@ -12,7 +10,6 @@ import { PeriodPicker } from "@/components/dasbor/period-picker";
 import { KpiStrip } from "@/components/dasbor/kpi-strip";
 import { NeedsAttention } from "@/components/dasbor/needs-attention";
 import { PlWaterfall } from "@/components/dasbor/pl-waterfall";
-import { ProjectedCash } from "@/components/dasbor/projected-cash";
 import { ProyekProfitability } from "@/components/dasbor/proyek-profitability";
 import type { Periode } from "@/lib/dasbor/types";
 
@@ -20,7 +17,7 @@ export default function DasborPage() {
   const [periode, setPeriode] = useState<Periode>(() => periodePreset("mtd"));
 
   const { data: profitabilitas, isLoading: plLoading } = useProfitabilitas(periode);
-  const { data: forecastView, isLoading: forecastLoading } = useForekast(90);
+  const { data: forecastView } = useForekast(90);
   const { data: alerts = [], isLoading: alertsLoading } = useAlerts();
   const { data: fakturs = [] } = useFakturList();
   const { data: kewajiban = [] } = useKewajibanPajakList();
@@ -63,9 +60,8 @@ export default function DasborPage() {
       {/* Needs Attention */}
       <NeedsAttention alerts={alerts} isLoading={alertsLoading} />
 
-      {/* P&L + Projected Cash */}
+      {/* P&L */}
       <PlWaterfall labaRugi={profitabilitas?.labaRugi} isLoading={plLoading} />
-      <ProjectedCash forecastView={forecastView} isLoading={forecastLoading} />
 
       {/* Per-Project Profitability */}
       <ProyekProfitability
