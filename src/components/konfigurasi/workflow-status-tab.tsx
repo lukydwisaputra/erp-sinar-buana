@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onFormInvalid } from "@/lib/form-toast";
+import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
   useStatusDefinisiList, useCreateStatusDefinisi, useUpdateStatusLabel,
   useSetStatusRole, useDeleteStatusDefinisi,
@@ -50,10 +51,11 @@ function makeColumns(
   onDelete: (row: StatusDefinisi) => void,
 ): ColumnDef<StatusDefinisi>[] {
   return [
-    { accessorKey: "label", header: "Label", meta: { className: "min-w-40" } },
-    { accessorKey: "id", header: "ID", meta: { mono: true, className: "text-muted-foreground" } },
+    rowNumberColumn<StatusDefinisi>(),
+    { accessorKey: "label", header: "Label", enableSorting: false, meta: { className: "min-w-40" } },
+    { accessorKey: "id", header: "ID", enableSorting: false, meta: { mono: true, className: "text-muted-foreground" } },
     {
-      id: "role", header: "Peran Sistem", meta: { className: "min-w-40" },
+      id: "role", header: "Peran Sistem", enableSorting: false, meta: { className: "min-w-40" },
       cell: ({ row }) => (
         <Select
           value={row.original.role ?? "none"}
@@ -70,13 +72,13 @@ function makeColumns(
       ),
     },
     {
-      accessorKey: "locked", header: "Terkunci", meta: { className: "text-center" },
+      accessorKey: "locked", header: "Terkunci", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => row.original.locked
         ? <Badge variant="secondary"><Lock className="size-3" /> Terkunci</Badge>
         : <span className="text-xs text-muted-foreground">—</span>,
     },
     {
-      id: "actions", header: "", meta: { className: "w-10" },
+      id: "actions", header: "", enableSorting: false, meta: { className: "w-10" },
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none">

@@ -21,6 +21,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onFormInvalid } from "@/lib/form-toast";
+import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
   useTemplateList, useCreateTemplate, useDeleteTemplate, useDuplicateTemplate, useMoveMilestoneStep,
 } from "@/lib/query/template";
@@ -83,8 +84,9 @@ function makeColumns(
   onDelete: (t: Template) => void,
 ): ColumnDef<Template>[] {
   return [
+    rowNumberColumn<Template>(),
     {
-      accessorKey: "nama", header: "Nama", meta: { className: "min-w-56" },
+      accessorKey: "nama", header: "Nama", enableSorting: false, meta: { className: "min-w-56" },
       cell: ({ row }) => (
         <button type="button" onClick={() => onOpen(row.original)}
           className="rounded-sm text-left font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
@@ -93,15 +95,15 @@ function makeColumns(
       ),
     },
     {
-      accessorKey: "jenisLayananTerkait", header: "Layanan Terkait", meta: { className: "text-center" },
+      accessorKey: "jenisLayananTerkait", header: "Layanan Terkait", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => row.original.jenisLayananTerkait ?? "—",
     },
     {
-      accessorKey: "aktif", header: "Status", meta: { className: "text-center" },
+      accessorKey: "aktif", header: "Status", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => row.original.aktif ? <Badge variant="success">Aktif</Badge> : <Badge variant="secondary">Nonaktif</Badge>,
     },
     {
-      id: "actions", header: "", meta: { className: "w-10" },
+      id: "actions", header: "", enableSorting: false, meta: { className: "w-10" },
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none">

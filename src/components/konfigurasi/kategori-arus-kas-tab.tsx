@@ -21,6 +21,7 @@ import { Field, FieldError, FieldLabel, FieldDescription } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { onFormInvalid } from "@/lib/form-toast";
+import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
   useKategoriArusKasList, useCreateKategoriArusKas, useDeleteKategoriArusKas, useSetSifatBeban,
 } from "@/lib/query/expense-nature";
@@ -46,19 +47,20 @@ function makeColumns(
   onDelete: (row: ExpenseNatureRow) => void,
 ): ColumnDef<ExpenseNatureRow>[] {
   return [
-    { accessorKey: "kategori", header: "Kategori", meta: { className: "min-w-40" } },
+    rowNumberColumn<ExpenseNatureRow>(),
+    { accessorKey: "kategori", header: "Kategori", enableSorting: false, meta: { className: "min-w-40" } },
     {
-      accessorKey: "sifat", header: "Sifat Beban", meta: { className: "text-center" },
+      accessorKey: "sifat", header: "Sifat Beban", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => <Badge variant="info">{SIFAT_LABEL[row.original.sifat]}</Badge>,
     },
     {
-      accessorKey: "locked", header: "Terkunci", meta: { className: "text-center" },
+      accessorKey: "locked", header: "Terkunci", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => row.original.locked
         ? <Badge variant="secondary"><Lock className="size-3" /> Terkunci</Badge>
         : <span className="text-xs text-muted-foreground">—</span>,
     },
     {
-      id: "actions", header: "", meta: { className: "w-10" },
+      id: "actions", header: "", enableSorting: false, meta: { className: "w-10" },
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none">
@@ -244,7 +246,6 @@ export function KategoriArusKasTab() {
         searchColumns={["kategori"]}
         searchPlaceholder="Cari kategori…"
         emptyMessage="Belum ada kategori"
-        defaultSorting={[{ id: "kategori", desc: false }]}
         rowActions={false}
       />
     </div>

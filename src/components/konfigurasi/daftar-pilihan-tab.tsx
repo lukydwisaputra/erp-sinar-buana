@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onFormInvalid } from "@/lib/form-toast";
+import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
   useOptionList, useCreateOption, useUpdateOption, useDeleteOption, useMoveOption,
 } from "@/lib/query/daftar-pilihan";
@@ -52,8 +53,9 @@ function makeColumns(
   onToggleAktif: (item: OptionItem, aktif: boolean) => void,
 ): ColumnDef<OptionItem>[] {
   const columns: ColumnDef<OptionItem>[] = [
+    rowNumberColumn<OptionItem>(),
     {
-      id: "urutan", header: "", meta: { className: "w-16" },
+      id: "urutan", header: "", enableSorting: false, meta: { className: "w-16" },
       cell: ({ row }) => (
         <div className="flex gap-0.5">
           <Button variant="ghost" size="icon" className="size-6" onClick={() => onMove(row.original, "up")}>
@@ -65,24 +67,24 @@ function makeColumns(
         </div>
       ),
     },
-    { accessorKey: "nama", header: "Nama", meta: { className: "min-w-48" } },
+    { accessorKey: "nama", header: "Nama", enableSorting: false, meta: { className: "min-w-48" } },
   ];
 
   if (meta.hasPengali) {
     columns.push({
-      id: "pengali", header: "Pengali", meta: { mono: true, className: "text-center" },
+      id: "pengali", header: "Pengali", enableSorting: false, meta: { mono: true, className: "text-center" },
       cell: ({ row }) => row.original.extra.pengali ?? "—",
     });
   }
   if (meta.hasCalcMethod) {
     columns.push({
-      id: "calcMethod", header: "Cara Hitung", meta: { className: "text-center" },
+      id: "calcMethod", header: "Cara Hitung", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => row.original.extra.calcMethod ? CALC_METHOD_LABEL[row.original.extra.calcMethod] : "—",
     });
   }
   if (meta.hasBank) {
     columns.push({
-      id: "bank", header: "Rekening", meta: { className: "min-w-48" },
+      id: "bank", header: "Rekening", enableSorting: false, meta: { className: "min-w-48" },
       cell: ({ row }) => {
         const bank = row.original.extra.bank;
         return bank ? `${bank.nama} — ${bank.nomor} a.n. ${bank.atasNama}` : "—";
@@ -92,7 +94,7 @@ function makeColumns(
 
   columns.push(
     {
-      id: "aktif", header: "Aktif", meta: { className: "text-center" },
+      id: "aktif", header: "Aktif", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => (
         <Switch
           size="sm"
@@ -102,7 +104,7 @@ function makeColumns(
       ),
     },
     {
-      id: "actions", header: "", meta: { className: "w-10" },
+      id: "actions", header: "", enableSorting: false, meta: { className: "w-10" },
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none">
@@ -368,26 +370,16 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
 }
 
 export function DaftarPilihanTab() {
-  const [active, setActive] = React.useState<DaftarPilihanKategori>("jenis_dokumen");
-
   return (
-    <Tabs orientation="vertical" value={active} onValueChange={(v) => setActive(v as DaftarPilihanKategori)}>
-      <div className="flex gap-6">
-        <TabsList className="h-fit flex-col">
-          {daftarPilihanKategori.options.map((k) => (
-            <TabsTrigger key={k} value={k} className="w-full justify-start">
-              {KATEGORI_META[k].label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <div className="flex-1">
-          {daftarPilihanKategori.options.map((k) => (
-            <TabsContent key={k} value={k}>
-              <KategoriList kategori={k} />
-            </TabsContent>
-          ))}
-        </div>
-      </div>
+    <Tabs defaultValue="jenis_dokumen">
+      <TabsList variant="line">
+        {daftarPilihanKategori.options.map((k) => (
+          <TabsTrigger key={k} value={k}>{KATEGORI_META[k].label}</TabsTrigger>
+        ))}
+      </TabsList>
+      {daftarPilihanKategori.options.map((k) => (
+        <TabsContent key={k} value={k}><KategoriList kategori={k} /></TabsContent>
+      ))}
     </Tabs>
   );
 }
