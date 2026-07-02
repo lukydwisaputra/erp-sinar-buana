@@ -220,6 +220,7 @@ export default function FakturPage() {
           searchColumns={["sphId", "perusahaanNama"]}
           searchPlaceholder="Cari No. Faktur atau perusahaan…"
           emptyMessage="Belum ada faktur"
+          defaultSorting={[{ id: "tanggal", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>

@@ -123,6 +123,8 @@ export type DataTableProps<TData, TValue> = {
   toolbarActions?: React.ReactNode;
   /** Reduce cell vertical padding from py-3 to py-2 for denser rows. */
   compact?: boolean;
+  /** Initial sort state. Defaults to [] (unsorted). */
+  defaultSorting?: SortingState;
 };
 
 /**
@@ -157,8 +159,9 @@ export function DataTable<TData, TValue>({
   onDelete,
   toolbarActions,
   compact = false,
+  defaultSorting = [],
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>(defaultSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = React.useState("");
 

@@ -218,6 +218,7 @@ export default function PenggajianPage() {
           searchPlaceholder="Cari ID penggajian…"
           toolbarActions={<MonthPicker value={filterMonth} onChange={setFilterMonth} />}
           emptyMessage="Belum ada penggajian"
+          defaultSorting={[{ id: "id", desc: true }]}
           rowActions={false}
         />
       )}

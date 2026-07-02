@@ -183,6 +183,7 @@ export default function ProyekPage() {
           searchColumns={["id", "perusahaanNama"]}
           searchPlaceholder="Cari No. Proyek atau perusahaan…"
           emptyMessage="Belum ada proyek"
+          defaultSorting={[{ id: "id", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>

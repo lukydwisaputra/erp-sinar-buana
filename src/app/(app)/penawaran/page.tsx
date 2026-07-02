@@ -269,6 +269,7 @@ export default function PenawaranPage() {
           searchColumns={["id", "perusahaanNama"]}
           searchPlaceholder="Cari No. SPH atau perusahaan…"
           emptyMessage="Belum ada penawaran"
+          defaultSorting={[{ id: "tanggal", desc: true }]}
           rowActions={false}
           compact
           toolbarActions={
