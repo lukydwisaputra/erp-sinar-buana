@@ -22,6 +22,7 @@ import {
 } from "@/components/penawaran/sph-form";
 import { SphCoverLetter } from "@/components/penawaran/sph-cover-letter";
 import { SphDocumentPackage } from "@/components/penawaran/sph-document-package";
+import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/document/kirim-dokumen-dialog";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { katalogFixtures } from "@/lib/fixtures/katalog";
 import { defaultItemRab, defaultItemJadwal } from "@/lib/sph-templates";
@@ -31,6 +32,15 @@ import {
   type Sph,
   type SphStatus,
 } from "@/lib/schemas/penawaran";
+
+function tujuanOptionsFor(perusahaanId: string): KirimTujuan[] {
+  const p = perusahaanFixtures.find((x) => x.id === perusahaanId);
+  if (!p) return [];
+  if (p.pic.length > 0) {
+    return p.pic.map((pic) => ({ nama: pic.nama, jabatan: pic.jabatan, telepon: pic.telepon, email: pic.email }));
+  }
+  return [{ nama: p.nama, telepon: p.telepon, email: p.email }];
+}
 
 const SPH_STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
   draft:      { label: "Draf",       variant: "info" },
@@ -44,7 +54,7 @@ function StatusBadge({ status }: { status: SphStatus }) {
   const s = SPH_STATUS[status];
   return <Badge variant={s.variant}>{s.label}</Badge>;
 }
-import { useSph } from "@/lib/query/penawaran";
+import { useSph, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
 
 const perusahaanOptions: PerusahaanOption[] = perusahaanFixtures.map((p) => ({
   id: p.id,
@@ -130,15 +140,10 @@ function SphHeaderBar({ noSph, status }: { noSph: string; status: SphStatus }) {
 
 function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
   const [mounted, setMounted] = React.useState(false);
-  const [sending, runSend] = usePending();
+  const [kirimOpen, setKirimOpen] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
   const values = sphToFormValues(existing);
-
-  const onKirim = async () => {
-    await delay();
-    toast.success("Demo: SPH tidak benar-benar dikirim");
-  };
 
   return (
     <>
@@ -157,7 +162,7 @@ function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
               <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Download className="size-4" /> Unduh
               </Button>
-              <Button size="sm" loading={sending} onClick={() => runSend(onKirim)}>
+              <Button size="sm" onClick={() => setKirimOpen(true)}>
                 <Send className="size-4" /> Kirim
               </Button>
             </div>
@@ -171,6 +176,15 @@ function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
           </div>
         </div>
       </div>
+
+      <KirimDokumenDialog
+        open={kirimOpen}
+        onOpenChange={setKirimOpen}
+        jenisDokumen="sph"
+        dokumenId={existing.id}
+        dokumenNomor={noSph}
+        tujuanOptions={tujuanOptionsFor(existing.perusahaanId)}
+      />
 
       {mounted && createPortal(
         <div className="doc-print hidden print:block">
@@ -269,6 +283,8 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
   const values = form.watch();
 
   const [saving, runSave] = usePending();
+  const [kirimOpen, setKirimOpen] = React.useState(false);
+  const updateStatus = useUpdatePenawaranStatus();
   const onSimpan = () =>
     runSave(
       form.handleSubmit(async () => {
@@ -277,32 +293,53 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
       }),
     );
   const onKirim = form.handleSubmit(async () => {
-    await delay();
-    toast.success("Demo: SPH tidak benar-benar dikirim");
+    if (!existing) {
+      toast.success("Demo: SPH tidak benar-benar dikirim");
+      return;
+    }
+    setKirimOpen(true);
   });
 
   return (
-    <DocumentBuilder
-      title={
-        existing ? (
-          <span className="flex items-center gap-2">
-            {existing.id}
-            <StatusBadge status={existing.status} />
-          </span>
-        ) : "Buat SPH"
-      }
-      subtitle="Susun Surat Penawaran Harga. Pratinjau diperbarui otomatis."
-      previewTitle="Pratinjau SPH"
-      actions={
-        <Button variant="secondary" loading={saving} onClick={onSimpan}>
-          <Save className="size-4" /> Simpan
-        </Button>
-      }
-      form={<SphForm form={form} perusahaanOptions={perusahaanOptions} layananOptions={layananOptions} />}
-      sidePreview={<ScaleToFit><SphCoverLetter values={values} noSph={noSph} /></ScaleToFit>}
-      doc={<SphDocumentPackage values={values} noSph={noSph} />}
-      onKirim={onKirim}
-    />
+    <>
+      <DocumentBuilder
+        title={
+          existing ? (
+            <span className="flex items-center gap-2">
+              {existing.id}
+              <StatusBadge status={existing.status} />
+            </span>
+          ) : "Buat SPH"
+        }
+        subtitle="Susun Surat Penawaran Harga. Pratinjau diperbarui otomatis."
+        previewTitle="Pratinjau SPH"
+        actions={
+          <Button variant="secondary" loading={saving} onClick={onSimpan}>
+            <Save className="size-4" /> Simpan
+          </Button>
+        }
+        form={<SphForm form={form} perusahaanOptions={perusahaanOptions} layananOptions={layananOptions} />}
+        sidePreview={<ScaleToFit><SphCoverLetter values={values} noSph={noSph} /></ScaleToFit>}
+        doc={<SphDocumentPackage values={values} noSph={noSph} />}
+        onKirim={onKirim}
+      />
+
+      {existing && (
+        <KirimDokumenDialog
+          open={kirimOpen}
+          onOpenChange={setKirimOpen}
+          jenisDokumen="sph"
+          dokumenId={existing.id}
+          dokumenNomor={noSph}
+          tujuanOptions={tujuanOptionsFor(values.perusahaanId)}
+          onSent={() => {
+            if (existing.status === "draft") {
+              updateStatus.mutate({ id: existing.id, status: "terkirim" });
+            }
+          }}
+        />
+      )}
+    </>
   );
 }
 

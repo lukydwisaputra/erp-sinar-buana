@@ -17,8 +17,18 @@ import { DocumentBuilder } from "@/components/shared/document/document-builder";
 import { DocumentFooter } from "@/components/shared/document/document-footer";
 import { FakturForm } from "@/components/faktur/faktur-form";
 import { FakturDocument } from "@/components/faktur/faktur-document";
+import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/document/kirim-dokumen-dialog";
 import { fakturFormSchema, type FakturFormValues, type Faktur } from "@/lib/schemas/faktur";
 import { isFakturOverdue } from "@/lib/faktur";
+
+function tujuanOptionsFor(perusahaanId: string): KirimTujuan[] {
+  const p = perusahaanFixtures.find((x) => x.id === perusahaanId);
+  if (!p) return [];
+  if (p.pic.length > 0) {
+    return p.pic.map((pic) => ({ nama: pic.nama, jabatan: pic.jabatan, telepon: pic.telepon, email: pic.email }));
+  }
+  return [{ nama: p.nama, telepon: p.telepon, email: p.email }];
+}
 
 type BadgeVariant = "info" | "warning" | "success" | "secondary" | "destructive";
 
@@ -33,7 +43,6 @@ function fakturBadge(f: Faktur): { label: string; variant: BadgeVariant } {
 import { companyProfile } from "@/lib/company-profile";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { usePending } from "@/lib/use-pending";
-import { delay } from "@/lib/data/_delay";
 import { useCancelFaktur, useFaktur, useUpdateFaktur } from "@/lib/query/faktur";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -63,17 +72,12 @@ const emptyValues: FakturFormValues = {
 
 function FakturReadOnlyView({ existing }: { existing: Faktur }) {
   const [mounted, setMounted] = React.useState(false);
-  const [sending, runSend] = usePending();
+  const [kirimOpen, setKirimOpen] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
   const noFaktur = existing.id;
   const values: FakturFormValues = { ...existing };
   const isLunas = existing.status === "lunas";
-
-  const onKirim = async () => {
-    await delay();
-    toast.success("Demo: faktur tidak benar-benar dikirim");
-  };
 
   return (
     <>
@@ -103,7 +107,7 @@ function FakturReadOnlyView({ existing }: { existing: Faktur }) {
                 <Download className="size-4" /> Unduh
               </Button>
               {isLunas && (
-                <Button size="sm" loading={sending} onClick={() => runSend(onKirim)}>
+                <Button size="sm" onClick={() => setKirimOpen(true)}>
                   <Send className="size-4" /> Kirim
                 </Button>
               )}
@@ -118,6 +122,15 @@ function FakturReadOnlyView({ existing }: { existing: Faktur }) {
           </div>
         </div>
       </div>
+
+      <KirimDokumenDialog
+        open={kirimOpen}
+        onOpenChange={setKirimOpen}
+        jenisDokumen="faktur"
+        dokumenId={existing.id}
+        dokumenNomor={noFaktur}
+        tujuanOptions={tujuanOptionsFor(existing.perusahaanId)}
+      />
 
       {mounted && createPortal(
         <div className="doc-print hidden print:block">
@@ -147,6 +160,7 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
   const values = form.watch();
   const [saving, runSave] = usePending();
   const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [kirimOpen, setKirimOpen] = React.useState(false);
 
   const onSimpan = () =>
     runSave(
@@ -159,15 +173,19 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
         toast.success("Faktur berhasil disimpan");
       }),
     );
-  const onKirim = form.handleSubmit(async (data) => {
+  const onKirim = form.handleSubmit(async () => {
     if (!existing) {
       toast.success("Demo: faktur tidak benar-benar dikirim");
       return;
     }
-    await updateFaktur.mutateAsync({ id: existing.id, patch: { ...data, status: "terkirim" } });
+    setKirimOpen(true);
+  });
+  const onSentKirim = async () => {
+    if (!existing) return;
+    await updateFaktur.mutateAsync({ id: existing.id, patch: { ...values, status: "terkirim" } });
     form.setValue("status", "terkirim");
     toast.success("Faktur berhasil dikirim");
-  });
+  };
 
   return (
     <>
@@ -199,6 +217,18 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
         doc={<FakturDocument values={values} noFaktur={noFaktur} />}
         onKirim={onKirim}
       />
+
+      {existing && (
+        <KirimDokumenDialog
+          open={kirimOpen}
+          onOpenChange={setKirimOpen}
+          jenisDokumen="faktur"
+          dokumenId={existing.id}
+          dokumenNomor={noFaktur}
+          tujuanOptions={tujuanOptionsFor(values.perusahaanId)}
+          onSent={onSentKirim}
+        />
+      )}
 
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <AlertDialogContent>

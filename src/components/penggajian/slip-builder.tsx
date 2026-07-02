@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Wallet } from "lucide-react";
+import { ArrowLeft, Download, Send, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,8 +12,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScaleToFit } from "@/components/shared/scale-to-fit";
 import { SlipDocument } from "@/components/penggajian/slip-document";
+import { KirimDokumenDialog } from "@/components/shared/document/kirim-dokumen-dialog";
 import { calcSlip } from "@/lib/schemas/penggajian";
 import { formatRupiah } from "@/lib/format";
+import { karyawanFixtures } from "@/lib/fixtures/karyawan";
 import { useSlip, useBatch, useMarkSlipDibayar } from "@/lib/query/penggajian";
 
 export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: string }) {
@@ -21,6 +23,7 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
   const { data: slip, isLoading } = useSlip(batchId, slipId);
   const markDibayar = useMarkSlipDibayar();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [kirimOpen, setKirimOpen] = React.useState(false);
 
   if (isLoading) {
     return (
@@ -42,6 +45,10 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
 
   const { penggajianBersih } = calcSlip(slip);
   const locked = slip.status === "sudah_dibayar";
+  const karyawan = karyawanFixtures.find((k) => k.id === slip.karyawanId);
+  const tujuanOptions = karyawan
+    ? [{ nama: slip.karyawanNama, telepon: karyawan.telepon, email: karyawan.email }]
+    : [];
 
   return (
     <>
@@ -69,6 +76,11 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
               <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Download className="size-4" /> Unduh
               </Button>
+              {locked && (
+                <Button size="sm" onClick={() => setKirimOpen(true)}>
+                  <Send className="size-4" /> Kirim
+                </Button>
+              )}
             </div>
           </div>
 
@@ -82,6 +94,15 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
           </div>
         </div>
       </div>
+
+      <KirimDokumenDialog
+        open={kirimOpen}
+        onOpenChange={setKirimOpen}
+        jenisDokumen="slip"
+        dokumenId={slip.id}
+        dokumenNomor={slip.id}
+        tujuanOptions={tujuanOptions}
+      />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
