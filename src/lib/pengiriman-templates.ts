@@ -1,3 +1,5 @@
+import type { EmailTemplate } from "@/lib/schemas/pengiriman-config";
+
 export type JenisDokumenKirim = "sph" | "faktur" | "slip";
 
 export function normalizePhone(raw: string): string {
@@ -21,4 +23,12 @@ export function buildPesanWa(jenis: JenisDokumenKirim, data: { perusahaan: strin
 
 export function buildWaLink(telepon: string, pesan: string): string {
   return `https://wa.me/${normalizePhone(telepon)}?text=${encodeURIComponent(pesan)}`;
+}
+
+export function buildEmailSubjek(template: EmailTemplate, data: { perusahaan: string; nomor: string }): string {
+  return template.subjek.replaceAll("{perusahaan}", data.perusahaan).replaceAll("{nomor}", data.nomor);
+}
+
+export function buildEmailBody(template: EmailTemplate, data: { perusahaan: string; nomor: string }): string {
+  return template.body.replaceAll("{perusahaan}", data.perusahaan).replaceAll("{nomor}", data.nomor);
 }

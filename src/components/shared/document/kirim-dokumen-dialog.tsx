@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePending } from "@/lib/use-pending";
-import { pengirimanConfig } from "@/lib/pengiriman-config";
-import { buildPesanWa, buildWaLink } from "@/lib/pengiriman-templates";
+import { usePengirimanConfig } from "@/lib/query/pengiriman-config";
+import { buildPesanWa, buildWaLink, buildEmailSubjek, buildEmailBody } from "@/lib/pengiriman-templates";
 import { useCreatePengirimanLog } from "@/lib/query/pengiriman";
 import type { ChannelPengiriman, JenisDokumenKirim } from "@/lib/schemas/pengiriman";
 
@@ -47,6 +47,8 @@ export function KirimDokumenDialog({
   const [index, setIndex] = React.useState(0);
   const [sendingWa, runSendWa] = usePending();
   const createLog = useCreatePengirimanLog();
+  const { data: pengirimanConfig } = usePengirimanConfig();
+  const emailTerkonfigurasi = pengirimanConfig?.emailAkun != null;
 
   React.useEffect(() => {
     if (open) setIndex(0);
@@ -55,6 +57,11 @@ export function KirimDokumenDialog({
   const tujuan = tujuanOptions[index];
   const pesan = tujuan ? buildPesanWa(jenisDokumen, { perusahaan: tujuan.nama, nomor: dokumenNomor }) : "";
   const teleponKosong = !tujuan?.telepon;
+
+  const emailTemplate = pengirimanConfig?.emailTemplates[jenisDokumen];
+  const emailData = tujuan ? { perusahaan: tujuan.nama, nomor: dokumenNomor } : null;
+  const emailSubjek = emailTemplate && emailData ? buildEmailSubjek(emailTemplate, emailData) : "";
+  const emailBody = emailTemplate && emailData ? buildEmailBody(emailTemplate, emailData) : "";
 
   function handleKirimWhatsApp() {
     if (!tujuan) return;
@@ -71,7 +78,7 @@ export function KirimDokumenDialog({
   }
 
   async function handleKirimEmail() {
-    if (!tujuan || !pengirimanConfig.emailTerkonfigurasi) return;
+    if (!tujuan || !pengirimanConfig?.emailAkun) return;
     await createLog.mutateAsync({
       jenisDokumen, dokumenId, dokumenNomor,
       tujuanNama: tujuan.nama, tujuanKontak: tujuan.email, channel: "email",
@@ -120,6 +127,16 @@ export function KirimDokumenDialog({
             <FieldLabel>Pesan WhatsApp</FieldLabel>
             <Textarea value={pesan} readOnly rows={5} className="resize-none text-sm" />
           </Field>
+
+          {emailTerkonfigurasi && (
+            <Field>
+              <FieldLabel>Pratinjau Email</FieldLabel>
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm font-medium">
+                {emailSubjek}
+              </div>
+              <Textarea value={emailBody} readOnly rows={4} className="resize-none text-sm" />
+            </Field>
+          )}
         </div>
 
         <DialogFooter>
@@ -135,13 +152,13 @@ export function KirimDokumenDialog({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <span tabIndex={pengirimanConfig.emailTerkonfigurasi ? undefined : 0}>
-                <Button disabled={!pengirimanConfig.emailTerkonfigurasi} onClick={handleKirimEmail}>
+              <span tabIndex={emailTerkonfigurasi ? undefined : 0}>
+                <Button disabled={!emailTerkonfigurasi} onClick={handleKirimEmail}>
                   <Mail className="size-4" /> Kirim Email
                 </Button>
               </span>
             </TooltipTrigger>
-            {!pengirimanConfig.emailTerkonfigurasi && (
+            {!emailTerkonfigurasi && (
               <TooltipContent>Atur akun email pengirim dulu.</TooltipContent>
             )}
           </Tooltip>

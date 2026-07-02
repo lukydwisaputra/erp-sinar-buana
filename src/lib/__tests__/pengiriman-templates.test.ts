@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizePhone, buildWaLink, buildPesanWa } from "@/lib/pengiriman-templates";
+import { normalizePhone, buildWaLink, buildPesanWa, buildEmailSubjek, buildEmailBody } from "@/lib/pengiriman-templates";
 
 describe("normalizePhone", () => {
   it("converts leading 0 to country code 62", () => {
@@ -31,5 +31,27 @@ describe("buildWaLink", () => {
   it("builds a wa.me URL with the message URI-encoded", () => {
     const link = buildWaLink("0812-1100-2201", "Halo Andi");
     expect(link).toBe("https://wa.me/6281211002201?text=Halo%20Andi");
+  });
+});
+
+describe("buildEmailSubjek", () => {
+  it("fills placeholders with no leftover braces", () => {
+    const subjek = buildEmailSubjek(
+      { subjek: "Invoice {nomor} — {perusahaan}", body: "x" },
+      { perusahaan: "PT Maju Bersama", nomor: "INV/002/05.2026" },
+    );
+    expect(subjek).toBe("Invoice INV/002/05.2026 — PT Maju Bersama");
+    expect(subjek).not.toContain("{");
+  });
+});
+
+describe("buildEmailBody", () => {
+  it("fills placeholders with no leftover braces", () => {
+    const body = buildEmailBody(
+      { subjek: "x", body: "Yth. {perusahaan}, terlampir No. {nomor}." },
+      { perusahaan: "PT Maju Bersama", nomor: "SPH/001/1.2026" },
+    );
+    expect(body).toBe("Yth. PT Maju Bersama, terlampir No. SPH/001/1.2026.");
+    expect(body).not.toContain("{");
   });
 });
