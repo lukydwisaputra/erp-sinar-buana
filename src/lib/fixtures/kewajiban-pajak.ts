@@ -21,11 +21,6 @@ export const kewajibanPajakFixtures: KewajibanPajak[] = [
     keterangan: "PPh 21 Masa Mei 2026",
   },
   {
-    id: nextId(), jenis: "bpjs", periode: "2026-06", jumlah: 3_800_000,
-    jatuhTempo: "2026-06-24", status: "belum_setor", buktiPotongDiterima: true,
-    keterangan: "BPJS Juni 2026 — jatuh tempo H-2",
-  },
-  {
     id: nextId(), jenis: "pph23", periode: "2026-05", jumlah: 2_000_000,
     jatuhTempo: "2026-06-20", status: "belum_setor", buktiPotongDiterima: false,
     keterangan: "PPh 23 dipotong klien — bukti potong belum diterima",

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const kewajibanJenis = z.enum(["ppn", "pph21", "pph23", "bpjs", "pph_badan"]);
+export const kewajibanJenis = z.enum(["ppn", "pph21", "pph23", "pph_badan"]);
 export type KewajibanJenis = z.infer<typeof kewajibanJenis>;
 
 export const kewajibanStatus = z.enum(["belum_setor", "disetor"]);
