@@ -43,6 +43,7 @@ function fakturBadge(f: Faktur): { label: string; variant: BadgeVariant } {
 import { companyProfile } from "@/lib/company-profile";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { usePending } from "@/lib/use-pending";
+import { onFormInvalid } from "@/lib/form-toast";
 import { useCancelFaktur, useFaktur, useUpdateFaktur } from "@/lib/query/faktur";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
@@ -171,7 +172,7 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
         }
         await updateFaktur.mutateAsync({ id: existing.id, patch: data });
         toast.success("Faktur berhasil disimpan");
-      }),
+      }, onFormInvalid),
     );
   const onKirim = form.handleSubmit(async () => {
     if (!existing) {
@@ -179,7 +180,7 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
       return;
     }
     setKirimOpen(true);
-  });
+  }, onFormInvalid);
   const onSentKirim = async () => {
     if (!existing) return;
     await updateFaktur.mutateAsync({ id: existing.id, patch: { ...values, status: "terkirim" } });

@@ -42,6 +42,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { StatTile, InfoRow, InfoList, SectionLabel, initials } from "@/components/shared/detail-drawer";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKaryawanList, useCreateKaryawan, useUpdateKaryawan, useDeleteKaryawan } from "@/lib/query/karyawan";
+import { onFormInvalid } from "@/lib/form-toast";
 import type { Karyawan } from "@/lib/schemas/karyawan";
 
 const KEPEGAWAIAN_OPTIONS = [
@@ -223,7 +224,7 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
     });
     onOpenChange(false);
     reset();
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -305,7 +306,7 @@ function KaryawanEditForm({
     });
     onSuccess(updated);
     onOpenChange(false);
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -582,6 +583,7 @@ export default function KaryawanPage() {
           searchColumns={["id", "nama"]}
           searchPlaceholder="Cari ID atau nama karyawan…"
           emptyMessage="Belum ada karyawan"
+          defaultSorting={[{ id: "id", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>

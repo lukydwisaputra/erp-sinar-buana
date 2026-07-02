@@ -26,6 +26,7 @@ import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/docume
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { katalogFixtures } from "@/lib/fixtures/katalog";
 import { defaultItemRab, defaultItemJadwal } from "@/lib/sph-templates";
+import { onFormInvalid } from "@/lib/form-toast";
 import {
   sphFormSchema,
   type SphFormValues,
@@ -290,7 +291,7 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
       form.handleSubmit(async () => {
         await delay();
         toast.success("Demo: draf tidak benar-benar disimpan");
-      }),
+      }, onFormInvalid),
     );
   const onKirim = form.handleSubmit(async () => {
     if (!existing) {
@@ -298,7 +299,7 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
       return;
     }
     setKirimOpen(true);
-  });
+  }, onFormInvalid);
 
   return (
     <>

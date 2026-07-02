@@ -14,6 +14,7 @@ import { formatRupiah } from "@/lib/format";
 import { afterTaxAmount } from "@/lib/faktur";
 import { useCreateProyek } from "@/lib/query/proyek";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
+import { onFormInvalid } from "@/lib/form-toast";
 import type { Sph } from "@/lib/schemas/penawaran";
 
 const schema = z.object({
@@ -64,7 +65,7 @@ export function ProyekCreate({ sph }: { sph: Sph }) {
       assignees,
     });
     router.push(`/proyek/${encodeURIComponent(proyek.id)}`);
-  });
+  }, onFormInvalid);
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-6">

@@ -37,6 +37,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { usePerusahaanList, useUpdatePerusahaan, useDeletePerusahaan } from "@/lib/query/perusahaan";
 import { delay } from "@/lib/data/_delay";
+import { onFormInvalid } from "@/lib/form-toast";
 import type { Perusahaan } from "@/lib/schemas/perusahaan";
 
 function StatusBadge({ status }: { status: Perusahaan["status"] }) {
@@ -226,7 +227,7 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
     toast.success("Demo: data tidak benar-benar disimpan");
     onOpenChange(false);
     reset();
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -307,7 +308,7 @@ function PerusahaanEditForm({
     });
     onSuccess(updated);
     onOpenChange(false);
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -553,6 +554,7 @@ export default function PerusahaanPage() {
           searchColumns={["id", "nama"]}
           searchPlaceholder="Cari ID atau nama perusahaan…"
           emptyMessage="Belum ada perusahaan"
+          defaultSorting={[{ id: "id", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>

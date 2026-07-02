@@ -36,6 +36,7 @@ import { StatTile, InfoRow, InfoList, SectionLabel } from "@/components/shared/d
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKatalogList, useUpdateLayanan, useDeleteLayanan } from "@/lib/query/katalog";
 import { delay } from "@/lib/data/_delay";
+import { onFormInvalid } from "@/lib/form-toast";
 import type { Layanan } from "@/lib/schemas/katalog";
 
 const JENIS_DOKUMEN = ["Pertek", "AMDAL", "UKL-UPL", "SPPL", "Laporan"] as const;
@@ -174,7 +175,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
     toast.success("Demo: data tidak benar-benar disimpan");
     onOpenChange(false);
     reset();
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -328,7 +329,7 @@ function LayananEditForm({
     });
     onSuccess(updated);
     onOpenChange(false);
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -500,6 +501,7 @@ export default function KatalogPage() {
           searchColumns={["id", "nama"]}
           searchPlaceholder="Cari ID atau nama layanan…"
           emptyMessage="Belum ada layanan"
+          defaultSorting={[{ id: "id", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>

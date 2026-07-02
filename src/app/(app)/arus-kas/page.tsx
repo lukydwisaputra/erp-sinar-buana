@@ -41,6 +41,7 @@ import {
 import { formatRupiah } from "@/lib/format";
 import { useArusKasList, useCreateArusKas, useRemoveArusKas } from "@/lib/query/arus-kas";
 import { useProyekList } from "@/lib/query/proyek";
+import { onFormInvalid } from "@/lib/form-toast";
 import type { Proyek } from "@/lib/schemas/proyek";
 import {
   arusKasFormSchema,
@@ -450,7 +451,7 @@ function ArusKasCreateSheet({
   const onSubmit = form.handleSubmit(async (values) => {
     await createMutation.mutateAsync(values);
     onOpenChange(false);
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -729,6 +730,7 @@ export default function ArusKasPage() {
           searchColumns={["keterangan"]}
           searchPlaceholder="Cari keterangan…"
           emptyMessage="Belum ada transaksi"
+          defaultSorting={[{ id: "tanggal", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>

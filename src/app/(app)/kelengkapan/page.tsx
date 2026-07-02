@@ -22,6 +22,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useKelengkapanList, useCreateKelengkapan, useUpdateKelengkapan, useDeleteKelengkapan } from "@/lib/query/kelengkapan";
+import { onFormInvalid } from "@/lib/form-toast";
 import type { KelengkapanTemplate } from "@/lib/schemas/kelengkapan";
 
 /* ---------- columns ---------- */
@@ -194,7 +195,7 @@ function TemplateCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
     await mutateAsync({ ...values, items: cleaned });
     onOpenChange(false);
     reset();
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -249,7 +250,7 @@ function TemplateEditForm({
     const cleaned = values.items.filter((it) => it.persyaratan.trim() !== "");
     await mutateAsync({ id: template.id, input: { ...values, items: cleaned } });
     onOpenChange(false);
-  });
+  }, onFormInvalid);
 
   return (
     <FormSheet
@@ -317,6 +318,7 @@ export default function KelengkapanPage() {
           searchColumns={["id", "nama"]}
           searchPlaceholder="Cari ID atau nama template…"
           emptyMessage="Belum ada template kelengkapan"
+          defaultSorting={[{ id: "id", desc: true }]}
           rowActions={false}
         />
       )}
