@@ -4,6 +4,8 @@ import {
   penggajianBatchSchema, slipGajiSchema, calcSlip,
   type PenggajianBatch, type SlipGaji,
 } from "@/lib/schemas/penggajian";
+import { getStatusRole } from "@/lib/data/status-definisi";
+import { postArusKasForSlipDibayar } from "@/lib/data/arus-kas-automation";
 
 export type SlipEditFields = {
   tunjangan?: number;
@@ -113,5 +115,8 @@ export async function markSlipDibayar(batchId: string, slipId: string): Promise<
   const slips = [...penggajianFixtures[bIdx].slips];
   slips[sIdx] = updated;
   penggajianFixtures[bIdx] = { ...penggajianFixtures[bIdx], slips };
-  return slipGajiSchema.parse(updated);
+  const parsed = slipGajiSchema.parse(updated);
+  const role = await getStatusRole("penggajian", parsed.status);
+  if (role === "DIBAYAR") postArusKasForSlipDibayar(batchId, parsed);
+  return parsed;
 }

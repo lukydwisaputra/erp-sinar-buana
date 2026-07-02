@@ -14,11 +14,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatRupiah } from "@/lib/format";
-import { groupFakturByDeal } from "@/lib/faktur";
-import type { DealRekap } from "@/lib/faktur";
+import { groupFakturByDeal, getDealStatus } from "@/lib/faktur";
+import type { DealRekap, DealStatus } from "@/lib/faktur";
 import { useFakturList } from "@/lib/query/faktur";
-
-type DealStatus = "draft" | "belum_lunas" | "jatuh_tempo" | "lunas" | "dibatalkan";
 
 const DEAL_STATUS: Record<DealStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
   draft:       { label: "Draf",        variant: "info" },
@@ -38,14 +36,6 @@ function tanggalID(iso: string) {
         day: "numeric", month: "long", year: "numeric",
       })
     : "—";
-}
-
-function getDealStatus(deal: DealRekap): DealStatus {
-  if (deal.termins.some((t) => t.status === "dibatalkan")) return "dibatalkan";
-  if (deal.termins.every((t) => t.status === "lunas"))     return "lunas";
-  if (deal.termins.some((t) => t.overdue))                 return "jatuh_tempo";
-  if (deal.termins.some((t) => t.status === "menunggu"))   return "belum_lunas";
-  return "draft";
 }
 
 function DateRangeInput({

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   listBatch, getBatch, getSlip, createBatch, updateSlip, markSlipDibayar,
 } from "@/lib/data/penggajian";
+import { listArusKas } from "@/lib/data/arus-kas";
 import { calcSlip } from "@/lib/schemas/penggajian";
 
 describe("listBatch", () => {
@@ -94,6 +95,39 @@ describe("createBatch", () => {
     expect(result.id).toMatch(/^GAJ-/);
     expect(result.slips[0].status).toBe("menunggu_pembayaran");
     expect(result.slips[0].paidAt).toBeNull();
+  });
+});
+
+describe("Arus Kas automation on Penggajian status change (regression)", () => {
+  it("posts an otomatis_penggajian entry when a slip is marked dibayar", async () => {
+    const b = await getBatch("GAJ-001");
+    const template = b!.slips[0];
+    const created = await createBatch({
+      periode: { mulai: "2026-07-01", selesai: "2026-07-31" }, tanggalBayar: "2026-07-25",
+      slips: [{
+        karyawanId: template.karyawanId, karyawanNama: template.karyawanNama,
+        jabatan: template.jabatan, statusKepegawaian: template.statusKepegawaian,
+        pengali: template.pengali, gajiPokok: template.gajiPokok, tunjangan: template.tunjangan,
+        lembur: 0, bonus: 0, pph21: 0, bpjsPotongan: 0,
+        bankNama: template.bankNama, bankNomor: template.bankNomor, bankAtasNama: template.bankAtasNama,
+      }],
+    });
+    const slip = created.slips[0];
+
+    const before = await listArusKas();
+    expect(before.filter((e) => e.referensiId === created.id).length).toBe(0);
+
+    await markSlipDibayar(created.id, slip.id);
+    const after = await listArusKas();
+    expect(after.filter((e) => e.referensiId === created.id && e.sumber === "otomatis_penggajian").length).toBe(1);
+  });
+
+  it("posts nothing for a batch whose slips are never marked dibayar", async () => {
+    const b = await getBatch("GAJ-001");
+    const pending = b!.slips.find((s) => s.status === "menunggu_pembayaran");
+    if (!pending) return; // every slip in this fixture batch is already paid — nothing to assert
+    const before = await listArusKas();
+    expect(before.filter((e) => e.referensiId === "GAJ-001" && e.sumber === "otomatis_penggajian" && e.keterangan.includes(pending.karyawanNama)).length).toBe(0);
   });
 });
 

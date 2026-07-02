@@ -3,7 +3,17 @@ import { fakturFixtures } from "@/lib/fixtures/faktur";
 import { fakturSchema, type Faktur, type FakturStatus } from "@/lib/schemas/faktur";
 import { sphIdToInvBase, terminFakturId } from "@/lib/faktur-id";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
+import { getStatusRole } from "@/lib/data/status-definisi";
+import { postArusKasForFakturLunas } from "@/lib/data/arus-kas-automation";
 import type { Sph } from "@/lib/schemas/penawaran";
+
+/** Faktur can only reach LUNAS from a status-change; posts to Arus Kas are
+ * gated through the peran-sistem lookup (not a literal "lunas" check) so a
+ * relabeled or newly role-mapped status still triggers correctly. */
+async function applyFakturStatusEffects(next: Faktur): Promise<void> {
+  const role = await getStatusRole("faktur", next.status);
+  if (role === "LUNAS") postArusKasForFakturLunas(next);
+}
 
 export type ListFakturParams = { q?: string };
 
@@ -83,6 +93,7 @@ export async function updateFakturStatus(id: string, newStatus: FakturStatus): P
   const idx = fakturFixtures.findIndex((f) => f.id === id);
   if (idx === -1) throw new Error(`Faktur ${id} not found`);
   fakturFixtures[idx] = { ...fakturFixtures[idx], status: newStatus };
+  await applyFakturStatusEffects(fakturFixtures[idx]);
 }
 
 export async function updateFaktur(
@@ -93,7 +104,9 @@ export async function updateFaktur(
   const idx = fakturFixtures.findIndex((f) => f.id === id);
   if (idx === -1) throw new Error(`Faktur ${id} not found`);
   fakturFixtures[idx] = { ...fakturFixtures[idx], ...patch };
-  return fakturSchema.parse(fakturFixtures[idx]);
+  const updated = fakturSchema.parse(fakturFixtures[idx]);
+  await applyFakturStatusEffects(updated);
+  return updated;
 }
 
 export async function cancelAllFakturBySph(sphId: string): Promise<void> {

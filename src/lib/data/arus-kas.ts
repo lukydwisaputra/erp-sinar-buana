@@ -1,6 +1,11 @@
 import { delay } from "@/lib/data/_delay";
 import { arusKasFixtures, bumpSeq } from "@/lib/fixtures/arus-kas";
 import { arusKasEntrySchema, type ArusKasEntry, type ArusKasFormValues } from "@/lib/schemas/arus-kas";
+// Side-effect import: seeds arusKasFixtures with rows for every already-lunas/
+// already-dibayar faktur and penggajian slip. Must be imported wherever
+// arusKasFixtures is read, since fixtures/arus-kas.ts itself no longer does
+// this seeding (kept automation-agnostic to avoid a require-cycle).
+import "@/lib/data/arus-kas-automation";
 
 export async function listArusKas(): Promise<ArusKasEntry[]> {
   await delay();
