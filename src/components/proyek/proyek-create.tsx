@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ComboboxCreate } from "@/components/shared/combobox-create";
 import { SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiah } from "@/lib/format";
 import { afterTaxAmount } from "@/lib/faktur";
 import { useCreateProyek } from "@/lib/query/proyek";
+import { useOptionList } from "@/lib/query/daftar-pilihan";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
 import { onFormInvalid } from "@/lib/form-toast";
 import type { Sph } from "@/lib/schemas/penawaran";
@@ -30,6 +32,7 @@ const activeKaryawan = karyawanFixtures.filter((k) => k.status === "aktif");
 export function ProyekCreate({ sph }: { sph: Sph }) {
   const router = useRouter();
   const createProyek = useCreateProyek();
+  const { data: areaOptions = [] } = useOptionList("area_kawasan");
 
   const defaultNama = `Proyek — ${sph.perusahaanNama}`;
   const layananNama = sph.items.map((i) => i.nama);
@@ -97,7 +100,18 @@ export function ProyekCreate({ sph }: { sph: Sph }) {
 
         <Field data-invalid={!!errors.area}>
           <FieldLabel htmlFor="p-area">Area / Kawasan</FieldLabel>
-          <Input id="p-area" placeholder="mis. Kawasan Industri SIER, Surabaya" aria-invalid={!!errors.area} {...register("area")} />
+          <Controller
+            control={control}
+            name="area"
+            render={({ field }) => (
+              <ComboboxCreate
+                options={areaOptions.map((v) => ({ value: v.nama, label: v.nama }))}
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Pilih atau ketik area/kawasan…"
+              />
+            )}
+          />
           <FieldError errors={errors.area ? [errors.area] : undefined} />
         </Field>
 

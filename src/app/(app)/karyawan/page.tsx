@@ -10,6 +10,7 @@ import { Users, Wallet, CalendarDays, CalendarIcon, MoreHorizontal, Pencil, Plus
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { ComboboxCreate } from "@/components/shared/combobox-create";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
@@ -42,6 +43,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { StatTile, InfoRow, InfoList, SectionLabel, initials } from "@/components/shared/detail-drawer";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKaryawanList, useCreateKaryawan, useUpdateKaryawan, useDeleteKaryawan } from "@/lib/query/karyawan";
+import { useOptionList } from "@/lib/query/daftar-pilihan";
 import { onFormInvalid } from "@/lib/form-toast";
 import type { Karyawan } from "@/lib/schemas/karyawan";
 
@@ -365,6 +367,7 @@ function KaryawanFormFields({
   errors: ReturnType<typeof useForm<KaryawanForm>>["formState"]["errors"];
   withStatus?: boolean;
 }) {
+  const { data: jabatanOptions = [] } = useOptionList("jabatan");
   return (
     <>
       <Field data-invalid={!!errors.nama}>
@@ -375,7 +378,18 @@ function KaryawanFormFields({
 
       <Field data-invalid={!!errors.jabatan}>
         <FieldLabel htmlFor="k-jabatan">Jabatan</FieldLabel>
-        <Input id="k-jabatan" placeholder="Ketua Tim Teknis" aria-invalid={!!errors.jabatan} {...register("jabatan")} />
+        <Controller
+          control={control}
+          name="jabatan"
+          render={({ field }) => (
+            <ComboboxCreate
+              options={jabatanOptions.map((v) => ({ value: v.nama, label: v.nama }))}
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Pilih atau ketik jabatan…"
+            />
+          )}
+        />
         <FieldError errors={errors.jabatan ? [errors.jabatan] : undefined} />
       </Field>
 

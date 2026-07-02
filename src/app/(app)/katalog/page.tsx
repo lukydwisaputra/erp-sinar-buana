@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { BookOpen, FileText, FolderKanban, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
+import { ComboboxCreate } from "@/components/shared/combobox-create";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
@@ -35,19 +36,15 @@ import {
 import { StatTile, InfoRow, InfoList, SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKatalogList, useUpdateLayanan, useDeleteLayanan } from "@/lib/query/katalog";
+import { useOptionList } from "@/lib/query/daftar-pilihan";
 import { delay } from "@/lib/data/_delay";
 import { onFormInvalid } from "@/lib/form-toast";
 import type { Layanan } from "@/lib/schemas/katalog";
-
-const JENIS_DOKUMEN = ["Pertek", "AMDAL", "UKL-UPL", "SPPL", "Laporan"] as const;
-const KEWENANGAN = ["Pusat (KLHK)", "Provinsi", "Kabupaten/Kota", "Kawasan Industri"] as const;
 
 const STATUS_OPTIONS: MultiSelectOption[] = [
   { value: "aktif", label: "Aktif", variant: "success" },
   { value: "terarsip", label: "Terarsip", variant: "secondary" },
 ];
-
-const KEWENANGAN_OPTIONS: MultiSelectOption[] = KEWENANGAN.map((k) => ({ value: k, label: k }));
 
 function StatusBadge({ status }: { status: Layanan["status"] }) {
   return status === "aktif" ? (
@@ -164,6 +161,9 @@ const layananCreateSchema = z.object({
 type LayananCreate = z.infer<typeof layananCreateSchema>;
 
 function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { data: jenisDokumenOptions = [] } = useOptionList("jenis_dokumen");
+  const { data: kewenanganOptions = [] } = useOptionList("kewenangan");
+  const { data: dasarHukumOptions = [] } = useOptionList("dasar_hukum");
   const form = useForm<LayananCreate>({
     resolver: zodResolver(layananCreateSchema),
     defaultValues: { nama: "", jenisDokumen: "", kewenangan: "", dasarHukum: "", hargaStandar: "", tags: "" },
@@ -202,7 +202,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
                 <SelectValue placeholder="Pilih jenis dokumen" />
               </SelectTrigger>
               <SelectContent>
-                {JENIS_DOKUMEN.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                {jenisDokumenOptions.map((v) => <SelectItem key={v.id} value={v.nama}>{v.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -221,7 +221,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
                 <SelectValue placeholder="Pilih kewenangan" />
               </SelectTrigger>
               <SelectContent>
-                {KEWENANGAN.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                {kewenanganOptions.map((v) => <SelectItem key={v.id} value={v.nama}>{v.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -231,7 +231,18 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
 
       <Field>
         <FieldLabel htmlFor="l-dasar">Dasar Hukum (opsional)</FieldLabel>
-        <Input id="l-dasar" placeholder="PP No. 22 Tahun 2021" {...register("dasarHukum")} />
+        <Controller
+          control={control}
+          name="dasarHukum"
+          render={({ field }) => (
+            <ComboboxCreate
+              options={dasarHukumOptions.map((v) => ({ value: v.nama, label: v.nama }))}
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Pilih atau ketik dasar hukum…"
+            />
+          )}
+        />
       </Field>
 
       <Field>
@@ -279,6 +290,9 @@ function LayananEditForm({
   onSuccess: (updated: Layanan) => void;
 }) {
   const { mutateAsync, isPending } = useUpdateLayanan();
+  const { data: jenisDokumenOptions = [] } = useOptionList("jenis_dokumen");
+  const { data: kewenanganOptions = [] } = useOptionList("kewenangan");
+  const { data: dasarHukumOptions = [] } = useOptionList("dasar_hukum");
   const form = useForm<LayananEdit>({
     resolver: zodResolver(layananEditSchema),
     defaultValues: {
@@ -357,7 +371,7 @@ function LayananEditForm({
                 <SelectValue placeholder="Pilih jenis dokumen" />
               </SelectTrigger>
               <SelectContent>
-                {JENIS_DOKUMEN.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                {jenisDokumenOptions.map((v) => <SelectItem key={v.id} value={v.nama}>{v.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -376,7 +390,7 @@ function LayananEditForm({
                 <SelectValue placeholder="Pilih kewenangan" />
               </SelectTrigger>
               <SelectContent>
-                {KEWENANGAN.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                {kewenanganOptions.map((v) => <SelectItem key={v.id} value={v.nama}>{v.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -386,7 +400,18 @@ function LayananEditForm({
 
       <Field>
         <FieldLabel htmlFor="e-dasar">Dasar Hukum (opsional)</FieldLabel>
-        <Input id="e-dasar" placeholder="PP No. 22 Tahun 2021" {...register("dasarHukum")} />
+        <Controller
+          control={control}
+          name="dasarHukum"
+          render={({ field }) => (
+            <ComboboxCreate
+              options={dasarHukumOptions.map((v) => ({ value: v.nama, label: v.nama }))}
+              value={field.value}
+              onChange={field.onChange}
+              placeholder="Pilih atau ketik dasar hukum…"
+            />
+          )}
+        />
       </Field>
 
       <Field>
@@ -429,11 +454,12 @@ function LayananEditForm({
 }
 
 type LayananStatus = Layanan["status"];
-type Kewenangan = (typeof KEWENANGAN)[number];
 
 export default function KatalogPage() {
   const { data, isLoading, isError, refetch } = useKatalogList();
   const { mutate: deleteLayanan, isPending: isDeleting } = useDeleteLayanan();
+  const { data: kewenanganOptionsData = [] } = useOptionList("kewenangan");
+  const kewenanganOptions: MultiSelectOption[] = kewenanganOptionsData.map((v) => ({ value: v.nama, label: v.nama }));
   const [selected, setSelected] = useState<Layanan | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Layanan | null>(null);
@@ -444,9 +470,9 @@ export default function KatalogPage() {
   // Filter state
   const [filterOpen, setFilterOpen]               = React.useState(false);
   const [pendingStatus, setPendingStatus]         = React.useState<LayananStatus[]>([]);
-  const [pendingKewenangan, setPendingKewenangan] = React.useState<Kewenangan[]>([]);
+  const [pendingKewenangan, setPendingKewenangan] = React.useState<string[]>([]);
   const [appliedStatus, setAppliedStatus]         = React.useState<LayananStatus[]>([]);
-  const [appliedKewenangan, setAppliedKewenangan] = React.useState<Kewenangan[]>([]);
+  const [appliedKewenangan, setAppliedKewenangan] = React.useState<string[]>([]);
 
   const hasFilter  = appliedStatus.length > 0 || appliedKewenangan.length > 0;
   const hasPending = pendingStatus.length > 0 || pendingKewenangan.length > 0;
@@ -473,7 +499,7 @@ export default function KatalogPage() {
     if (appliedStatus.length > 0)
       base = base.filter((l) => appliedStatus.includes(l.status));
     if (appliedKewenangan.length > 0)
-      base = base.filter((l) => appliedKewenangan.includes(l.kewenangan as Kewenangan));
+      base = base.filter((l) => appliedKewenangan.includes(l.kewenangan));
     return base;
   }, [data, appliedStatus, appliedKewenangan]);
 
@@ -540,9 +566,9 @@ export default function KatalogPage() {
             <div className="space-y-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Kewenangan</p>
               <MultiSelectFilter
-                options={KEWENANGAN_OPTIONS}
+                options={kewenanganOptions}
                 value={pendingKewenangan}
-                onChange={(v) => setPendingKewenangan(v as Kewenangan[])}
+                onChange={(v) => setPendingKewenangan(v)}
                 placeholder="Pilih kewenangan…"
                 searchPlaceholder="Cari kewenangan…"
                 noun="kewenangan"
