@@ -4,11 +4,14 @@ import { useRouter } from "next/navigation";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { NAV } from "@/lib/nav";
+import { navForRole } from "@/lib/nav";
+import { useSession } from "@/lib/query/session";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
+  const nav = navForRole(session?.role);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -28,7 +31,7 @@ export function CommandPalette() {
       <CommandInput placeholder="Cari halaman…" />
       <CommandList>
         <CommandEmpty>Tidak ada hasil.</CommandEmpty>
-        {NAV.map((group) => (
+        {nav.map((group) => (
           <CommandGroup key={group.label} heading={group.label}>
             {group.items.map((item) => (
               <CommandItem key={item.href} value={item.label} onSelect={() => go(item.href)}>

@@ -12,6 +12,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-sbmj_erp}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in infra/.env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set in infra/.env}
     command:
       - postgres
       - -c
@@ -22,7 +23,14 @@ services:
       - pg_data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro   # roles + auth stub (first boot)
     ports:
-      - "5432:5432"   # dev only; on Coolify keep internal (no public port)
+      # Host port is configurable — this machine already has other local
+      # Postgres installs squatting on 5432/5433, which silently intercepted
+      # connections meant for this container (found 2026-07-03: `docker exec`
+      # into the container worked since that's a separate network namespace,
+      # but host->published-port connections were actually landing on a
+      # different, unrelated Postgres). Default to 5434 to avoid that; still
+      # dev only — on Coolify keep internal (no public port).
+      - "${POSTGRES_HOST_PORT:-5434}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sbmj_erp}"]
       interval: 10s

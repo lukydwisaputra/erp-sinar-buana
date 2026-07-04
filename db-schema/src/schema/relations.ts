@@ -3,7 +3,7 @@
  * `with: {...}`). These mirror the foreign keys declared in the table files.
  */
 import { relations } from "drizzle-orm";
-import { userProfiles } from "./auth";
+import { authTokens, sessions, userProfiles } from "./auth";
 import {
   companies,
   companyContacts,
@@ -48,10 +48,26 @@ import { taxEntries } from "./tax";
 import { attachments } from "./attachments";
 
 // ── Identity ──────────────────────────────────────────────────────────────────
-export const userProfilesRelations = relations(userProfiles, ({ one }) => ({
+export const userProfilesRelations = relations(userProfiles, ({ one, many }) => ({
   employee: one(employees, {
     fields: [userProfiles.employeeId],
     references: [employees.id],
+  }),
+  sessions: many(sessions),
+  authTokens: many(authTokens),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(userProfiles, {
+    fields: [sessions.userId],
+    references: [userProfiles.id],
+  }),
+}));
+
+export const authTokensRelations = relations(authTokens, ({ one }) => ({
+  user: one(userProfiles, {
+    fields: [authTokens.userId],
+    references: [userProfiles.id],
   }),
 }));
 

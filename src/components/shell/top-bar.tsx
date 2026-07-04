@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Search, User } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/design-system/theme-toggle";
 import { NAV_LOOKUP } from "@/lib/nav";
+import { useSession, useLogout } from "@/lib/query/session";
+import { appRoleLabels } from "@/lib/schemas/pengguna";
+import { initials } from "@/components/shared/detail-drawer";
 
 type Crumb = { label: string; href: string };
 
@@ -51,6 +54,16 @@ function useBreadcrumbs(): Crumb[] {
 
 export function TopBar() {
   const crumbs = useBreadcrumbs();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const logout = useLogout();
+
+  const handleLogout = () => {
+    logout.mutate(undefined, {
+      onSuccess: () => router.push("/login"),
+    });
+  };
+
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur">
       <SidebarTrigger className="-ml-1" />
@@ -86,19 +99,25 @@ export function TopBar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full" aria-label="Menu pengguna">
-              <Avatar className="size-8"><AvatarFallback>BS</AvatarFallback></Avatar>
+              <Avatar className="size-8">
+                <AvatarFallback>{session ? initials(session.fullName) : "?"}</AvatarFallback>
+              </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel>
               <div className="grid">
-                <span className="text-sm font-medium">Budi Santoso</span>
-                <span className="text-xs text-muted-foreground">Admin / Owner</span>
+                <span className="text-sm font-medium">{session?.fullName ?? "..."}</span>
+                <span className="text-xs text-muted-foreground">
+                  {session ? appRoleLabels[session.role] : ""}
+                </span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem><User className="mr-2 size-4" /> Profil</DropdownMenuItem>
-            <DropdownMenuItem variant="destructive"><LogOut className="mr-2 size-4" /> Keluar</DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+              <LogOut className="mr-2 size-4" /> Keluar
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

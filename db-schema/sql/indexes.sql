@@ -8,6 +8,8 @@
 -- ============================================================================
 
 -- ── Foreign-key / hot-filter indexes ────────────────────────────────────────
+create index if not exists idx_sessions_user on sessions (user_id);
+create index if not exists idx_auth_tokens_user on auth_tokens (user_id);
 create index if not exists idx_company_contacts_company on company_contacts (company_id);
 create index if not exists idx_service_catalog_doc_type on service_catalog (document_type_id);
 create index if not exists idx_employees_position on employees (position_id);

@@ -15,6 +15,20 @@
       "when": 1780814957083,
       "tag": "0001_profitability_dashboard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783005588243,
+      "tag": "0002_confused_stellaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783006799280,
+      "tag": "0003_known_alex_wilder",
+      "breakpoints": true
     }
   ]
 }
