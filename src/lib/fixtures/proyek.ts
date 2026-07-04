@@ -1,7 +1,8 @@
 import type { Proyek } from "@/lib/schemas/proyek";
 import {
-  encodeProyekFromSph, encodePerusahaan, encodeKaryawan, encodeSph, encodeInvTermin,
+  encodeProyekFromSph, encodeKaryawan, encodeSph, encodeInvTermin,
 } from "@/lib/id-generator";
+import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
 
 const KRY3 = encodeKaryawan(3); // Agus Setiawan
 const KRY4 = encodeKaryawan(4); // Dewi Anggraini
@@ -24,7 +25,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(1, 2026),
     nama: "Pertek Air Limbah — PT Maju Bersama Industri",
-    perusahaanId: encodePerusahaan(1),
+    perusahaanId: seedPerusahaanId(1),
     perusahaanNama: "PT Maju Bersama Industri",
     area: "Jakarta Selatan",
     tahun: 2026,
@@ -48,7 +49,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(2, 2026),
     nama: "Dokumen AMDAL — PT Karya Logam",
-    perusahaanId: encodePerusahaan(3),
+    perusahaanId: seedPerusahaanId(3),
     perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     area: "Kawasan Industri SIER, Surabaya",
     tahun: 2026,
@@ -72,7 +73,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(4, 2026),
     nama: "Pertek Emisi Udara — PT Cahaya Teknik Mandiri",
-    perusahaanId: encodePerusahaan(6),
+    perusahaanId: seedPerusahaanId(6),
     perusahaanNama: "PT Cahaya Teknik Mandiri",
     area: "Medan Kota",
     tahun: 2026,
@@ -95,7 +96,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(6, 2026),
     nama: "UKL-UPL & Laporan RKL-RPL — PT Nusantara Energi Prima",
-    perusahaanId: encodePerusahaan(7),
+    perusahaanId: seedPerusahaanId(7),
     perusahaanNama: "PT Nusantara Energi Prima",
     area: "Jakarta Selatan",
     tahun: 2026,
@@ -117,7 +118,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(7, 2026),
     nama: "Dokumen AMDAL — CV Agro Subur Mandiri",
-    perusahaanId: encodePerusahaan(8),
+    perusahaanId: seedPerusahaanId(8),
     perusahaanNama: "CV Agro Subur Mandiri",
     area: "Mlati, Sleman, Yogyakarta",
     tahun: 2026,
@@ -140,7 +141,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(9, 2026),
     nama: "Pertek Emisi Udara — CV Pembangunan Baru Jaya",
-    perusahaanId: encodePerusahaan(10),
+    perusahaanId: seedPerusahaanId(10),
     perusahaanNama: "CV Pembangunan Baru Jaya",
     area: "Bukit Besar, Palembang",
     tahun: 2026,
@@ -162,7 +163,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(13, 2026),
     nama: "UKL-UPL — PT Karya Logam (Proyek 2)",
-    perusahaanId: encodePerusahaan(3),
+    perusahaanId: seedPerusahaanId(3),
     perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     area: "Kawasan Industri SIER, Surabaya",
     tahun: 2026,
@@ -182,7 +183,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(18, 2026),
     nama: "UKL-UPL & Laporan RKL-RPL — PT Delta Pratama",
-    perusahaanId: encodePerusahaan(15),
+    perusahaanId: seedPerusahaanId(15),
     perusahaanNama: "PT Delta Pratama Nusantara",
     area: "Nongsa, Batam",
     tahun: 2026,
@@ -204,7 +205,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(19, 2026),
     nama: "Pertek Emisi Udara — PT Nusantara Energi Prima",
-    perusahaanId: encodePerusahaan(7),
+    perusahaanId: seedPerusahaanId(7),
     perusahaanNama: "PT Nusantara Energi Prima",
     area: "Jakarta Selatan",
     tahun: 2026,
@@ -225,7 +226,7 @@ export const proyekFixtures: Proyek[] = [
   {
     id: encodeProyekFromSph(20, 2026),
     nama: "UKL-UPL — PT Rimba Lestari Kalimantan",
-    perusahaanId: encodePerusahaan(11),
+    perusahaanId: seedPerusahaanId(11),
     perusahaanNama: "PT Rimba Lestari Kalimantan",
     area: "Pontianak Kota",
     tahun: 2026,

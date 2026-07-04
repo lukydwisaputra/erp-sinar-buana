@@ -2,14 +2,12 @@ import Hashids from "hashids";
 
 const h = (salt: string) => new Hashids(`sb-erp-${salt}`, 5);
 
-const prsh = h("prsh");
 const kry  = h("kry");
 const lyn  = h("lyn");
 const sph  = h("sph");
 const prj  = h("prj");
 const klg  = h("klg");
 
-export const encodePerusahaan  = (n: number) => `PRSH-${prsh.encode(n)}`;
 export const encodeKaryawan    = (n: number) => `KRY-${kry.encode(n)}`;
 export const encodeLayanan     = (n: number) => `LYN-${lyn.encode(n)}`;
 export const encodeKelengkapan = (n: number) => `KLG-${klg.encode(n)}`;

@@ -1,8 +1,9 @@
 import { Globe, Mail, MapPin, Phone } from "lucide-react";
-import { companyProfile } from "@/lib/company-profile";
+import { companyProfileFixture } from "@/lib/fixtures/company-profile";
 
 /** SBMJ contact footer band — repeated at the bottom of every printed page. */
 export function DocumentFooter(): React.JSX.Element {
+  const companyProfile = companyProfileFixture.current;
   return (
     <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 bg-[var(--doc-blue-soft)] px-8 py-3 text-[11px] text-[var(--doc-blue)]">
       <span className="inline-flex items-center gap-1">

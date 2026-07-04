@@ -13,6 +13,7 @@ import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { MoneyInput } from "@/components/shared/money-input";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
+import { StatusBadge, type StatusBadgeConfig } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,20 +82,18 @@ const JENIS_OPTIONS: MultiSelectOption[] = kewajibanJenis.options.map((v) => ({
   variant: JENIS_META[v].variant,
 }));
 
-const STATUS_OPTIONS: MultiSelectOption[] = [
-  { value: "belum_setor", label: "Belum Setor", variant: "warning" },
-  { value: "disetor",     label: "Disetor",     variant: "success" },
-];
+const STATUS_META: Record<KewajibanPajak["status"], StatusBadgeConfig> = {
+  belum_setor: { label: "Belum Setor", variant: "warning" },
+  disetor:     { label: "Disetor",     variant: "success" },
+};
+
+const STATUS_OPTIONS: MultiSelectOption[] = Object.entries(STATUS_META).map(([value, m]) => ({
+  value, label: m.label, variant: m.variant,
+}));
 
 function JenisBadge({ jenis }: { jenis: KewajibanJenis }) {
   const m = JENIS_META[jenis];
   return <Badge variant={m.variant}>{m.label}</Badge>;
-}
-
-function StatusBadge({ status }: { status: KewajibanPajak["status"] }) {
-  return status === "disetor"
-    ? <Badge variant="success">Disetor</Badge>
-    : <Badge variant="warning">Belum Setor</Badge>;
 }
 
 function JatuhTempoBadge({ iso, status }: { iso: string; status: KewajibanPajak["status"] }) {
@@ -168,7 +167,7 @@ function makeColumns(
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      cell: ({ row }) => <StatusBadge status={row.original.status} map={STATUS_META} />,
     },
     {
       id: "actions",

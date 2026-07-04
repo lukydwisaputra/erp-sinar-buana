@@ -1,14 +1,9 @@
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, titleCase } from "@/lib/format";
 import { rabTotalOf } from "@/lib/sph";
 import { rabRowTotal, type RabRow } from "@/lib/sph-templates";
 import { terbilang } from "@/lib/terbilang";
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
-
-/** "satu juta" → "Satu Juta" */
-function titleCase(s: string): string {
-  return s.replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function rowsTotal(rows: RabRow[]): number {
   return rows.reduce((s, r) => s + rabRowTotal(r), 0);

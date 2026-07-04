@@ -5,7 +5,6 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
 import { Building2, FileText, FolderKanban, MoreHorizontal, Pencil, Plus, Receipt, SlidersHorizontal, Trash2, Wallet, X } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
@@ -13,10 +12,8 @@ import { FormSheet } from "@/components/shared/form-sheet";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
 import { NpwpField, PhoneField, EmailField } from "@/components/shared/form-fields";
 import { StatTile, InfoRow, InfoList, SectionLabel, ContactCard, initials } from "@/components/shared/detail-drawer";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { StatusBadge, type StatusBadgeConfig } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,23 +32,20 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
-import { usePerusahaanList, useUpdatePerusahaan, useDeletePerusahaan } from "@/lib/query/perusahaan";
-import { delay } from "@/lib/data/_delay";
+import {
+  usePerusahaanList, useCreatePerusahaan, useUpdatePerusahaan, useDeletePerusahaan,
+} from "@/lib/query/perusahaan";
 import { onFormInvalid } from "@/lib/form-toast";
 import type { Perusahaan } from "@/lib/schemas/perusahaan";
 
-function StatusBadge({ status }: { status: Perusahaan["status"] }) {
-  return status === "aktif" ? (
-    <Badge variant="success">Aktif</Badge>
-  ) : (
-    <Badge variant="secondary">Nonaktif</Badge>
-  );
-}
+const STATUS_BADGE: Record<Perusahaan["status"], StatusBadgeConfig> = {
+  aktif: { label: "Aktif", variant: "success" },
+  nonaktif: { label: "Nonaktif", variant: "secondary" },
+};
 
-const STATUS_OPTIONS: MultiSelectOption[] = [
-  { value: "aktif", label: "Aktif", variant: "success" },
-  { value: "nonaktif", label: "Nonaktif", variant: "secondary" },
-];
+const STATUS_OPTIONS: MultiSelectOption[] = Object.entries(STATUS_BADGE).map(([value, m]) => ({
+  value, label: m.label, variant: m.variant,
+}));
 
 function makeColumns(
   onOpen: (p: Perusahaan) => void,
@@ -67,7 +61,7 @@ function makeColumns(
         <button
           type="button"
           onClick={() => onOpen(row.original)}
-          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {row.original.id}
         </button>
@@ -123,7 +117,7 @@ function makeColumns(
       accessorKey: "status",
       header: "Status",
       meta: { className: "text-center" },
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      cell: ({ row }) => <StatusBadge status={row.original.status} map={STATUS_BADGE} />,
     },
     {
       id: "actions", header: "", meta: { className: "w-10" },
@@ -181,8 +175,10 @@ function PerusahaanDetail({ p }: { p: Perusahaan }) {
           <InfoRow label="NPWP" value={<span className="font-mono">{p.npwp}</span>} />
           <InfoRow label="Alamat" value={p.alamat} />
           <InfoRow label="Kota" value={p.kota} />
-          <InfoRow label="Telepon" value={<span className="font-mono">{p.telepon}</span>} />
-          <InfoRow label="Email" value={<a href={`mailto:${p.email}`} className="text-[var(--link)] hover:underline">{p.email}</a>} />
+          <InfoRow label="Kabupaten" value={p.kabupaten} />
+          {p.email && (
+            <InfoRow label="Email" value={<a href={`mailto:${p.email}`} className="text-(--link) hover:underline">{p.email}</a>} />
+          )}
         </InfoList>
       </section>
     </div>
@@ -202,9 +198,9 @@ const perusahaanFormSchema = z.object({
   nama: z.string().min(1, "Nama perusahaan wajib diisi."),
   alamat: z.string().min(1, "Alamat wajib diisi."),
   kota: z.string().min(1, "Kota wajib diisi."),
-  npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]),
+  kabupaten: z.string().min(1, "Kabupaten wajib diisi."),
+  npwp: z.string().regex(/^\d{1,16}$/, "NPWP wajib diisi, maksimal 16 digit angka."),
   email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
-  telepon: z.string(),
   status: z.enum(["aktif", "nonaktif"]).optional(),
   pic: z.array(picSchema).min(1, "Minimal satu PIC."),
 });
@@ -215,16 +211,24 @@ const emptyPic = { nama: "", jabatan: "", telepon: "", email: "" };
 /* ---------- create form ---------- */
 
 function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { mutateAsync, isPending } = useCreatePerusahaan();
   const form = useForm<PerusahaanForm>({
     resolver: zodResolver(perusahaanFormSchema),
-    defaultValues: { nama: "", alamat: "", kota: "", npwp: "", email: "", telepon: "", pic: [{ ...emptyPic }] },
+    defaultValues: { nama: "", alamat: "", kota: "", kabupaten: "", npwp: "", email: "", pic: [{ ...emptyPic }] },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "pic" });
 
-  const onSubmit = handleSubmit(async () => {
-    await delay();
-    toast.success("Demo: data tidak benar-benar disimpan");
+  const onSubmit = handleSubmit(async (values) => {
+    await mutateAsync({
+      nama: values.nama,
+      alamat: values.alamat,
+      kota: values.kota,
+      kabupaten: values.kabupaten,
+      npwp: values.npwp,
+      email: values.email,
+      pic: values.pic,
+    });
     onOpenChange(false);
     reset();
   }, onFormInvalid);
@@ -236,6 +240,7 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
       title="Tambah Perusahaan"
       description="Lengkapi data perusahaan dan minimal satu kontak PIC."
       onSubmit={onSubmit}
+      submitLabel={isPending ? "Menyimpan…" : "Simpan"}
     >
       <PerusahaanFormFields register={register} control={control} errors={errors} fields={fields} append={append} remove={remove} />
     </FormSheet>
@@ -262,9 +267,9 @@ function PerusahaanEditForm({
       nama: perusahaan.nama,
       alamat: perusahaan.alamat,
       kota: perusahaan.kota,
+      kabupaten: perusahaan.kabupaten,
       npwp: perusahaan.npwp,
-      email: perusahaan.email,
-      telepon: perusahaan.telepon,
+      email: perusahaan.email ?? "",
       status: perusahaan.status,
       pic: perusahaan.pic,
     },
@@ -278,9 +283,9 @@ function PerusahaanEditForm({
         nama: perusahaan.nama,
         alamat: perusahaan.alamat,
         kota: perusahaan.kota,
+        kabupaten: perusahaan.kabupaten,
         npwp: perusahaan.npwp,
-        email: perusahaan.email,
-        telepon: perusahaan.telepon,
+        email: perusahaan.email ?? "",
         status: perusahaan.status,
         pic: perusahaan.pic,
       });
@@ -294,9 +299,9 @@ function PerusahaanEditForm({
         nama: values.nama,
         alamat: values.alamat,
         kota: values.kota,
+        kabupaten: values.kabupaten,
         npwp: values.npwp,
-        email: values.email || perusahaan.email,
-        telepon: values.telepon,
+        email: values.email,
         status: values.status ?? perusahaan.status,
         pic: values.pic.map((p) => ({
           nama: p.nama,
@@ -363,9 +368,14 @@ function PerusahaanFormFields({
         <FieldError errors={errors.kota ? [errors.kota] : undefined} />
       </Field>
 
+      <Field data-invalid={!!errors.kabupaten}>
+        <FieldLabel htmlFor="p-kabupaten">Kabupaten</FieldLabel>
+        <Input id="p-kabupaten" placeholder="Kota Jakarta Selatan" aria-invalid={!!errors.kabupaten} {...register("kabupaten")} />
+        <FieldError errors={errors.kabupaten ? [errors.kabupaten] : undefined} />
+      </Field>
+
       <NpwpField id="p-npwp" error={errors.npwp} {...register("npwp")} />
-      <EmailField id="p-email" error={errors.email} {...register("email")} />
-      <PhoneField id="p-telepon" error={errors.telepon} {...register("telepon")} />
+      <EmailField id="p-email" label="Email (opsional)" error={errors.email} {...register("email")} />
 
       {withStatus && (
         <Field>
@@ -515,34 +525,22 @@ export default function PerusahaanPage() {
         />
       )}
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Perusahaan?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{deleteTarget?.nama}</strong> akan dihapus permanen dan tidak dapat dipulihkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-              onClick={() => {
-                if (!deleteTarget) return;
-                deletePerusahaan(deleteTarget.id, {
-                  onSuccess: () => {
-                    if (selected?.id === deleteTarget.id) setSelected(null);
-                    setDeleteTarget(null);
-                  },
-                });
-              }}
-            >
-              {isDeleting ? "Menghapus…" : "Hapus"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        entityLabel="Perusahaan"
+        target={deleteTarget?.nama}
+        loading={isDeleting}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deletePerusahaan(deleteTarget.id, {
+            onSuccess: () => {
+              if (selected?.id === deleteTarget.id) setSelected(null);
+              setDeleteTarget(null);
+            },
+          });
+        }}
+      />
 
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
@@ -627,7 +625,7 @@ export default function PerusahaanPage() {
                   <SheetDescription className="font-mono text-sm text-muted-foreground">
                     {selected.id}
                   </SheetDescription>
-                  <StatusBadge status={selected.status} />
+                  <StatusBadge status={selected.status} map={STATUS_BADGE} />
                 </div>
               </SheetHeader>
               <PerusahaanDetail p={selected} />

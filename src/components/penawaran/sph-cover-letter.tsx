@@ -1,22 +1,11 @@
-import { companyProfile } from "@/lib/company-profile";
-import { formatRupiah } from "@/lib/format";
+import { companyProfileFixture } from "@/lib/fixtures/company-profile";
+import { formatRupiah, formatTanggalPanjang as tglPanjang, titleCase } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { totalPenawaran } from "@/lib/sph";
 import { afterTaxAmount } from "@/lib/faktur";
 import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
-
-/** Title-case a (space-separated) string — used on the terbilang amount. */
-function titleCase(s: string): string {
-  return s.replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
-}
-
-function tglPanjang(iso: string): string {
-  return iso
-    ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
-    : "—";
-}
 
 export function SphCoverLetter({
   values,
@@ -25,6 +14,7 @@ export function SphCoverLetter({
   values: SphFormValues;
   noSph: string;
 }): React.JSX.Element {
+  const companyProfile = companyProfileFixture.current;
   const total = totalPenawaran(values.items);
 
   // Lampiran line: the typed "Dokumen pendukung" plus the RAB & Estimasi Waktu

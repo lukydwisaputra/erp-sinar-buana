@@ -29,6 +29,13 @@
       "when": 1783006799280,
       "tag": "0003_known_alex_wilder",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783092546300,
+      "tag": "0004_add-companies-is-active-and-contact-position",
+      "breakpoints": true
     }
   ]
 }

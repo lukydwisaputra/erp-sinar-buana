@@ -3,6 +3,17 @@ export function formatIntIDR(n: number): string {
   return Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+/** "2026-07-03" → "3 Juli 2026". Empty/falsy input returns "—". */
+export function formatTanggalPanjang(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+
+/** Title-case a space-separated string — e.g. for capitalizing `terbilang()` output. */
+export function titleCase(s: string): string {
+  return s.replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
+}
+
 export function formatRupiah(value: number): string {
   const rounded = Math.round(value);
   return `${rounded < 0 ? "-" : ""}Rp ${formatIntIDR(rounded)}`;

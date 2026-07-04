@@ -9,10 +9,10 @@ import { usePending } from "@/lib/use-pending";
 import { createPortal } from "react-dom";
 import { Download, Lock, Save, Send, XCircle } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { DocumentBuilder } from "@/components/shared/document/document-builder";
+import { StatusBadge, type StatusBadgeConfig } from "@/components/shared/status-badge";
 import { DocumentFooter } from "@/components/shared/document/document-footer";
 import { ScaleToFit } from "@/components/shared/scale-to-fit";
 import {
@@ -23,10 +23,10 @@ import {
 import { SphCoverLetter } from "@/components/penawaran/sph-cover-letter";
 import { SphDocumentPackage } from "@/components/penawaran/sph-document-package";
 import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/document/kirim-dokumen-dialog";
-import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { katalogFixtures } from "@/lib/fixtures/katalog";
 import { defaultItemRab, defaultItemJadwal } from "@/lib/sph-templates";
 import { onFormInvalid } from "@/lib/form-toast";
+import { usePerusahaanList } from "@/lib/query/perusahaan";
 import {
   sphFormSchema,
   type SphFormValues,
@@ -34,36 +34,21 @@ import {
   type SphStatus,
 } from "@/lib/schemas/penawaran";
 
-function tujuanOptionsFor(perusahaanId: string): KirimTujuan[] {
-  const p = perusahaanFixtures.find((x) => x.id === perusahaanId);
+function tujuanOptionsFor(perusahaanOptions: PerusahaanOption[], perusahaanId: string): KirimTujuan[] {
+  const p = perusahaanOptions.find((x) => x.id === perusahaanId);
   if (!p) return [];
-  if (p.pic.length > 0) {
-    return p.pic.map((pic) => ({ nama: pic.nama, jabatan: pic.jabatan, telepon: pic.telepon, email: pic.email }));
-  }
-  return [{ nama: p.nama, telepon: p.telepon, email: p.email }];
+  return p.pic.map((pic) => ({ nama: pic.nama, jabatan: pic.jabatan, telepon: pic.telepon, email: pic.email }));
 }
 
-const SPH_STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
+const SPH_STATUS: Record<SphStatus, StatusBadgeConfig> = {
   draft:      { label: "Draf",       variant: "info" },
   terkirim:   { label: "Terkirim",   variant: "warning" },
   deal:       { label: "Disetujui",  variant: "success" },
   ditolak:    { label: "Ditolak",    variant: "destructive" },
   dibatalkan: { label: "Dibatalkan", variant: "secondary" },
 };
-
-function StatusBadge({ status }: { status: SphStatus }) {
-  const s = SPH_STATUS[status];
-  return <Badge variant={s.variant}>{s.label}</Badge>;
-}
 import { useSph, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
 import { useTarifConfig } from "@/lib/query/tarif-config";
-
-const perusahaanOptions: PerusahaanOption[] = perusahaanFixtures.map((p) => ({
-  id: p.id,
-  nama: p.nama,
-  alamat: p.alamat,
-  pic: p.pic,
-}));
 
 const layananOptions: LayananOption[] = katalogFixtures.map((l) => ({
   id: l.id,
@@ -135,7 +120,7 @@ function SphHeaderBar({ noSph, status }: { noSph: string; status: SphStatus }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm font-semibold">{noSph}</span>
-      <StatusBadge status={status} />
+      <StatusBadge status={status} map={SPH_STATUS} />
     </div>
   );
 }
@@ -144,6 +129,7 @@ function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
   const [mounted, setMounted] = React.useState(false);
   const [kirimOpen, setKirimOpen] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+  const { data: perusahaanOptions = [] } = usePerusahaanList();
 
   const values = sphToFormValues(existing);
 
@@ -185,7 +171,7 @@ function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
         jenisDokumen="sph"
         dokumenId={existing.id}
         dokumenNomor={noSph}
-        tujuanOptions={tujuanOptionsFor(existing.perusahaanId)}
+        tujuanOptions={tujuanOptionsFor(perusahaanOptions, existing.perusahaanId)}
       />
 
       {mounted && createPortal(
@@ -252,6 +238,7 @@ function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string })
 
 function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
   const { data: tarif } = useTarifConfig();
+  const { data: perusahaanOptions = [] } = usePerusahaanList();
   const form = useForm<SphFormValues>({
     // sphFormSchema uses z.coerce.number(), so the resolver's inferred input
     // type differs from SphFormValues (the output). Cast keeps SphForm's
@@ -322,7 +309,7 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
           existing ? (
             <span className="flex items-center gap-2">
               {existing.id}
-              <StatusBadge status={existing.status} />
+              <StatusBadge status={existing.status} map={SPH_STATUS} />
             </span>
           ) : "Buat SPH"
         }
@@ -346,7 +333,7 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
           jenisDokumen="sph"
           dokumenId={existing.id}
           dokumenNomor={noSph}
-          tujuanOptions={tujuanOptionsFor(values.perusahaanId)}
+          tujuanOptions={tujuanOptionsFor(perusahaanOptions, values.perusahaanId)}
           onSent={() => {
             if (existing.status === "draft") {
               updateStatus.mutate({ id: existing.id, status: "terkirim" });

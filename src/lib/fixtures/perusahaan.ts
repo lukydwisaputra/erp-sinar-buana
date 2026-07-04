@@ -1,14 +1,14 @@
 import type { Perusahaan } from "@/lib/schemas/perusahaan";
-import { encodePerusahaan } from "@/lib/id-generator";
+import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
 
 export const perusahaanFixtures: Perusahaan[] = [
   {
-    id: encodePerusahaan(1),
+    id: seedPerusahaanId(1),
     nama: "PT Maju Bersama Industri",
     npwp: "0123456789010000",
     alamat: "Gedung Menara Sentosa Lantai 12, Jl. Jenderal Gatot Subroto Kav. 21-22, Kuningan Timur, Setiabudi, Jakarta Selatan 12950",
     kota: "Jakarta",
-    telepon: "021-5550101",
+    kabupaten: "Kota Jakarta Selatan",
     email: "info@majubersama.co.id",
     status: "aktif",
     pic: [
@@ -19,12 +19,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 8, proyekAktif: 3, nilaiKontrak: 1_250_000_000, piutang: 145_000_000 },
   },
   {
-    id: encodePerusahaan(2),
+    id: seedPerusahaanId(2),
     nama: "CV Sumber Rejeki Pangan",
     npwp: "0234567890120000",
     alamat: "Jl. Soekarno Hatta No. 88, Kiaracondong",
     kota: "Bandung",
-    telepon: "022-5550202",
+    kabupaten: "Kota Bandung",
     email: "admin@sumberrejeki.co.id",
     status: "aktif",
     pic: [
@@ -34,12 +34,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 4, proyekAktif: 1, nilaiKontrak: 320_000_000, piutang: 0 },
   },
   {
-    id: encodePerusahaan(3),
+    id: seedPerusahaanId(3),
     nama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     npwp: "0345678901230000",
     alamat: "Kawasan Industri SIER Blok C-4",
     kota: "Surabaya",
-    telepon: "031-5550303",
+    kabupaten: "Kota Surabaya",
     email: "contact@karyalogam.co.id",
     status: "aktif",
     pic: [
@@ -48,12 +48,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 11, proyekAktif: 4, nilaiKontrak: 2_400_000_000, piutang: 280_000_000 },
   },
   {
-    id: encodePerusahaan(4),
+    id: seedPerusahaanId(4),
     nama: "PT Hijau Lestari Permai",
     npwp: "0456789012340000",
     alamat: "Jl. Pemuda No. 45, Semarang Tengah",
     kota: "Semarang",
-    telepon: "024-5550404",
+    kabupaten: "Kota Semarang",
     email: "info@hijaulestari.co.id",
     status: "nonaktif",
     pic: [
@@ -63,12 +63,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 2, proyekAktif: 0, nilaiKontrak: 90_000_000, piutang: 0 },
   },
   {
-    id: encodePerusahaan(5),
+    id: seedPerusahaanId(5),
     nama: "CV Bahari Sentosa",
     npwp: "0567890123450000",
     alamat: "Jl. Bypass Ngurah Rai No. 200, Sanur",
     kota: "Denpasar",
-    telepon: "0361-5550505",
+    kabupaten: "Kota Denpasar",
     email: "admin@baharisentosa.co.id",
     status: "aktif",
     pic: [
@@ -78,12 +78,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 6, proyekAktif: 2, nilaiKontrak: 680_000_000, piutang: 52_000_000 },
   },
   {
-    id: encodePerusahaan(6),
+    id: seedPerusahaanId(6),
     nama: "PT Cahaya Teknik Mandiri",
     npwp: "0678901234560000",
     alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
     kota: "Medan",
-    telepon: "061-5550606",
+    kabupaten: "Kota Medan",
     email: "info@cahayateknik.co.id",
     status: "aktif",
     pic: [
@@ -93,12 +93,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 9, proyekAktif: 3, nilaiKontrak: 1_540_000_000, piutang: 96_000_000 },
   },
   {
-    id: encodePerusahaan(7),
+    id: seedPerusahaanId(7),
     nama: "PT Nusantara Energi Prima",
     npwp: "0789012345670000",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta",
-    telepon: "021-5550707",
+    kabupaten: "Kota Jakarta Selatan",
     email: "info@nusantaraenergi.co.id",
     status: "aktif",
     pic: [
@@ -108,12 +108,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 5, proyekAktif: 2, nilaiKontrak: 890_000_000, piutang: 70_000_000 },
   },
   {
-    id: encodePerusahaan(8),
+    id: seedPerusahaanId(8),
     nama: "CV Agro Subur Mandiri",
     npwp: "0890123456780000",
     alamat: "Jl. Magelang KM 7, Mlati, Sleman",
     kota: "Yogyakarta",
-    telepon: "0274-5550808",
+    kabupaten: "Kabupaten Sleman",
     email: "admin@agrosubur.co.id",
     status: "aktif",
     pic: [
@@ -123,12 +123,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 3, proyekAktif: 1, nilaiKontrak: 350_000_000, piutang: 0 },
   },
   {
-    id: encodePerusahaan(9),
+    id: seedPerusahaanId(9),
     nama: "PT Bintang Maritim Indonesia",
     npwp: "0901234567890000",
     alamat: "Jl. Penghibur No. 58, Ujung Pandang, Makassar",
     kota: "Makassar",
-    telepon: "0411-5550909",
+    kabupaten: "Kota Makassar",
     email: "info@bintangmaritim.co.id",
     status: "aktif",
     pic: [
@@ -138,12 +138,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 6, proyekAktif: 2, nilaiKontrak: 740_000_000, piutang: 120_000_000 },
   },
   {
-    id: encodePerusahaan(10),
+    id: seedPerusahaanId(10),
     nama: "CV Pembangunan Baru Jaya",
     npwp: "0012345678900000",
     alamat: "Jl. Jenderal Sudirman KM 3.5, Bukit Besar",
     kota: "Palembang",
-    telepon: "0711-5501010",
+    kabupaten: "Kota Palembang",
     email: "admin@pembangunanbarujaya.co.id",
     status: "aktif",
     pic: [
@@ -152,12 +152,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 4, proyekAktif: 1, nilaiKontrak: 450_000_000, piutang: 68_000_000 },
   },
   {
-    id: encodePerusahaan(11),
+    id: seedPerusahaanId(11),
     nama: "PT Rimba Lestari Kalimantan",
     npwp: "0112233445560000",
     alamat: "Jl. Ahmad Yani No. 99, Pontianak Kota",
     kota: "Pontianak",
-    telepon: "0561-5501111",
+    kabupaten: "Kota Pontianak",
     email: "info@rimbalestari.co.id",
     status: "aktif",
     pic: [
@@ -167,12 +167,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 7, proyekAktif: 3, nilaiKontrak: 1_100_000_000, piutang: 210_000_000 },
   },
   {
-    id: encodePerusahaan(12),
+    id: seedPerusahaanId(12),
     nama: "CV Techno Solusi Utama",
     npwp: "0223344556670000",
     alamat: "Jl. Soekarno Hatta No. 41, Lowokwaru",
     kota: "Malang",
-    telepon: "0341-5501212",
+    kabupaten: "Kota Malang",
     email: "hello@technosolusi.co.id",
     status: "nonaktif",
     pic: [
@@ -181,12 +181,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 1, proyekAktif: 0, nilaiKontrak: 45_000_000, piutang: 0 },
   },
   {
-    id: encodePerusahaan(13),
+    id: seedPerusahaanId(13),
     nama: "PT Alam Hijau Balikpapan",
     npwp: "0334455667780000",
     alamat: "Jl. Letjen Suprapto No. 12, Balikpapan Kota",
     kota: "Balikpapan",
-    telepon: "0542-5501313",
+    kabupaten: "Kota Balikpapan",
     email: "info@alamhijau.co.id",
     status: "aktif",
     pic: [
@@ -196,12 +196,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 8, proyekAktif: 3, nilaiKontrak: 1_320_000_000, piutang: 185_000_000 },
   },
   {
-    id: encodePerusahaan(14),
+    id: seedPerusahaanId(14),
     nama: "CV Karya Cipta Maju",
     npwp: "0445566778890000",
     alamat: "Kawasan Industri MM2100 Blok KK-5, Cikarang Barat",
     kota: "Bekasi",
-    telepon: "021-5501414",
+    kabupaten: "Kabupaten Bekasi",
     email: "admin@karyaciptamaju.co.id",
     status: "aktif",
     pic: [
@@ -210,12 +210,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 5, proyekAktif: 2, nilaiKontrak: 480_000_000, piutang: 75_000_000 },
   },
   {
-    id: encodePerusahaan(15),
+    id: seedPerusahaanId(15),
     nama: "PT Delta Pratama Nusantara",
     npwp: "0556677889900000",
     alamat: "Jl. Hang Kesturi KM 4, Nongsa",
     kota: "Batam",
-    telepon: "0778-5501515",
+    kabupaten: "Kota Batam",
     email: "contact@deltapratama.co.id",
     status: "aktif",
     pic: [
@@ -225,12 +225,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 4, proyekAktif: 1, nilaiKontrak: 560_000_000, piutang: 76_000_000 },
   },
   {
-    id: encodePerusahaan(16),
+    id: seedPerusahaanId(16),
     nama: "CV Mitra Selaras Lingkungan",
     npwp: "0667788990010000",
     alamat: "Jl. MT Haryono No. 42, Samarinda Ulu",
     kota: "Samarinda",
-    telepon: "0541-5501616",
+    kabupaten: "Kota Samarinda",
     email: "info@mitraselaras.co.id",
     status: "aktif",
     pic: [
@@ -239,12 +239,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 3, proyekAktif: 1, nilaiKontrak: 210_000_000, piutang: 0 },
   },
   {
-    id: encodePerusahaan(17),
+    id: seedPerusahaanId(17),
     nama: "PT Berkah Jaya Abadi",
     npwp: "0778899001120000",
     alamat: "Jl. Siliwangi No. 77, Kesambi",
     kota: "Cirebon",
-    telepon: "0231-5501717",
+    kabupaten: "Kota Cirebon",
     email: "berkah@berkahjayadai.co.id",
     status: "aktif",
     pic: [
@@ -254,12 +254,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 6, proyekAktif: 2, nilaiKontrak: 730_000_000, piutang: 55_000_000 },
   },
   {
-    id: encodePerusahaan(18),
+    id: seedPerusahaanId(18),
     nama: "CV Gemilang Persada",
     npwp: "0889900112230000",
     alamat: "Jl. A. Yani KM 33, Landasan Ulin",
     kota: "Banjarmasin",
-    telepon: "0511-5501818",
+    kabupaten: "Kota Banjarmasin",
     email: "admin@gemilangpersada.co.id",
     status: "aktif",
     pic: [
@@ -268,12 +268,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 2, proyekAktif: 0, nilaiKontrak: 90_000_000, piutang: 0 },
   },
   {
-    id: encodePerusahaan(19),
+    id: seedPerusahaanId(19),
     nama: "PT Surya Pratama Mandiri",
     npwp: "0990011223340000",
     alamat: "Jl. Sudirman No. 128, Pekanbaru Kota",
     kota: "Pekanbaru",
-    telepon: "0761-5501919",
+    kabupaten: "Kota Pekanbaru",
     email: "surya@suryapratama.co.id",
     status: "aktif",
     pic: [
@@ -283,12 +283,12 @@ export const perusahaanFixtures: Perusahaan[] = [
     metrik: { jumlahPenawaran: 9, proyekAktif: 4, nilaiKontrak: 1_650_000_000, piutang: 240_000_000 },
   },
   {
-    id: encodePerusahaan(20),
+    id: seedPerusahaanId(20),
     nama: "CV Indo Niaga Lestari",
     npwp: "0001122334450000",
     alamat: "Jl. Pajajaran No. 15, Bogor Tengah",
     kota: "Bogor",
-    telepon: "0251-5502020",
+    kabupaten: "Kota Bogor",
     email: "info@indonialestari.co.id",
     status: "nonaktif",
     pic: [

@@ -20,14 +20,12 @@ import { FakturDocument } from "@/components/faktur/faktur-document";
 import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/document/kirim-dokumen-dialog";
 import { fakturFormSchema, type FakturFormValues, type Faktur } from "@/lib/schemas/faktur";
 import { isFakturOverdue } from "@/lib/faktur";
+import type { Perusahaan } from "@/lib/schemas/perusahaan";
 
-function tujuanOptionsFor(perusahaanId: string): KirimTujuan[] {
-  const p = perusahaanFixtures.find((x) => x.id === perusahaanId);
+function tujuanOptionsFor(perusahaanOptions: Perusahaan[], perusahaanId: string): KirimTujuan[] {
+  const p = perusahaanOptions.find((x) => x.id === perusahaanId);
   if (!p) return [];
-  if (p.pic.length > 0) {
-    return p.pic.map((pic) => ({ nama: pic.nama, jabatan: pic.jabatan, telepon: pic.telepon, email: pic.email }));
-  }
-  return [{ nama: p.nama, telepon: p.telepon, email: p.email }];
+  return p.pic.map((pic) => ({ nama: pic.nama, jabatan: pic.jabatan, telepon: pic.telepon, email: pic.email }));
 }
 
 type BadgeVariant = "info" | "warning" | "success" | "secondary" | "destructive";
@@ -40,12 +38,12 @@ function fakturBadge(f: Faktur): { label: string; variant: BadgeVariant } {
   if (isFakturOverdue(f))        return { label: "Jatuh Tempo", variant: "destructive" };
   return { label: "Belum Lunas", variant: "warning" };
 }
-import { companyProfile } from "@/lib/company-profile";
-import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
+import { companyProfileFixture } from "@/lib/fixtures/company-profile";
 import { usePending } from "@/lib/use-pending";
 import { onFormInvalid } from "@/lib/form-toast";
 import { useCancelFaktur, useFaktur, useUpdateFaktur } from "@/lib/query/faktur";
 import { useTarifConfig } from "@/lib/query/tarif-config";
+import { usePerusahaanList } from "@/lib/query/perusahaan";
 
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function plusDaysISO(n: number) {
@@ -54,21 +52,27 @@ function plusDaysISO(n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-const emptyValues: FakturFormValues = {
-  sphId: "", perusahaanId: "", perusahaanNama: "", alamat: "", kota: "", npwp: "",
-  tanggal: todayISO(), jatuhTempo: plusDaysISO(14),
-  items: [{ uraian: "", volume: 1, harga: 0, satuan: "Paket" }],
-  terminList: [{ label: "Termin I", persen: 100, pemicu: "Pelunasan" }],
-  terminIndex: 0, ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
-  catatan: [], status: "draft", tanggalBayar: "",
-  bankNama: companyProfile.bank.nama,
-  bankAtasNama: companyProfile.bank.atasNama,
-  bankNoRekening: companyProfile.bank.noRekening,
-  jabatanPenerima: "Direktur",
-  picAktif: false,
-  picNama: "",
-  picJabatan: "",
-};
+// Function, not a static object — bank defaults must read the current
+// company profile at the moment a new faktur form opens, not whatever was
+// live when this module first loaded (`.current` is reassigned wholesale on
+// save, see src/lib/data/company-profile.ts).
+function buildEmptyValues(): FakturFormValues {
+  return {
+    sphId: "", perusahaanId: "", perusahaanNama: "", alamat: "", kota: "", npwp: "",
+    tanggal: todayISO(), jatuhTempo: plusDaysISO(14),
+    items: [{ uraian: "", volume: 1, harga: 0, satuan: "Paket" }],
+    terminList: [{ label: "Termin I", persen: 100, pemicu: "Pelunasan" }],
+    terminIndex: 0, ppnAktif: true, ppnPersen: 12, pph23Aktif: true, pph23Persen: 2,
+    catatan: [], status: "draft", tanggalBayar: "",
+    bankNama: companyProfileFixture.current.bank.nama,
+    bankAtasNama: companyProfileFixture.current.bank.atasNama,
+    bankNoRekening: companyProfileFixture.current.bank.noRekening,
+    jabatanPenerima: "Direktur",
+    picAktif: false,
+    picNama: "",
+    picJabatan: "",
+  };
+}
 
 // ─── Read-only view (lunas or dibatalkan) ────────────────────────────────────
 
@@ -76,6 +80,7 @@ function FakturReadOnlyView({ existing }: { existing: Faktur }) {
   const [mounted, setMounted] = React.useState(false);
   const [kirimOpen, setKirimOpen] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+  const { data: perusahaanOptions = [] } = usePerusahaanList();
 
   const noFaktur = existing.id;
   const values: FakturFormValues = { ...existing };
@@ -131,7 +136,7 @@ function FakturReadOnlyView({ existing }: { existing: Faktur }) {
         jenisDokumen="faktur"
         dokumenId={existing.id}
         dokumenNomor={noFaktur}
-        tujuanOptions={tujuanOptionsFor(existing.perusahaanId)}
+        tujuanOptions={tujuanOptionsFor(perusahaanOptions, existing.perusahaanId)}
       />
 
       {mounted && createPortal(
@@ -153,12 +158,13 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
   const cancelFaktur = useCancelFaktur();
   const updateFaktur = useUpdateFaktur();
   const { data: tarif } = useTarifConfig();
+  const { data: perusahaanOptions = [] } = usePerusahaanList();
 
   const noFaktur = existing?.id ?? "INV/???/????";
-  const picOptions = perusahaanFixtures.find((p) => p.id === (existing?.perusahaanId ?? ""))?.pic ?? [];
+  const picOptions = perusahaanOptions.find((p) => p.id === (existing?.perusahaanId ?? ""))?.pic ?? [];
   const form = useForm<FakturFormValues>({
     resolver: zodResolver(fakturFormSchema) as Resolver<FakturFormValues>,
-    defaultValues: existing ? { ...existing } : emptyValues,
+    defaultValues: existing ? { ...existing } : buildEmptyValues(),
   });
 
   // New-faktur only: once Konfigurasi's tarif defaults load, refresh the still-untouched
@@ -244,7 +250,7 @@ function FakturEditView({ existing }: { existing?: Faktur }) {
           jenisDokumen="faktur"
           dokumenId={existing.id}
           dokumenNomor={noFaktur}
-          tujuanOptions={tujuanOptionsFor(values.perusahaanId)}
+          tujuanOptions={tujuanOptionsFor(perusahaanOptions, values.perusahaanId)}
           onSent={onSentKirim}
         />
       )}

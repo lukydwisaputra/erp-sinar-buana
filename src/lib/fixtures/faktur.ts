@@ -1,9 +1,10 @@
 import type { Faktur } from "@/lib/schemas/faktur";
-import { encodeSph, encodePerusahaan, encodeInvTermin } from "@/lib/id-generator";
+import { encodeSph, encodeInvTermin } from "@/lib/id-generator";
+import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
 
 const dealA = {
   sphId: encodeSph(1, 5, 2026),
-  perusahaanId: encodePerusahaan(1), perusahaanNama: "PT Maju Bersama Industri",
+  perusahaanId: seedPerusahaanId(1), perusahaanNama: "PT Maju Bersama Industri",
   alamat: "Gedung Menara Sentosa Lantai 12, Jl. Jenderal Gatot Subroto Kav. 21-22, Jakarta Selatan",
   kota: "Jakarta", npwp: "0123456789010000",
   items: [
@@ -18,7 +19,7 @@ const dealA = {
 };
 const dealB = {
   sphId: encodeSph(2, 5, 2026),
-  perusahaanId: encodePerusahaan(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
+  perusahaanId: seedPerusahaanId(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
   alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
   kota: "Surabaya", npwp: "0345678901230000",
   items: [{ uraian: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket" }],
@@ -29,7 +30,7 @@ const dealB = {
 };
 const dealC = {
   sphId: encodeSph(4, 6, 2026),
-  perusahaanId: encodePerusahaan(6), perusahaanNama: "PT Cahaya Teknik Mandiri",
+  perusahaanId: seedPerusahaanId(6), perusahaanNama: "PT Cahaya Teknik Mandiri",
   alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
   kota: "Medan", npwp: "0678901234560000",
   items: [{ uraian: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket" }],
@@ -88,7 +89,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(6, 2026, 0),
     sphId: encodeSph(6, 1, 2026),
-    perusahaanId: encodePerusahaan(7), perusahaanNama: "PT Nusantara Energi Prima",
+    perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta", npwp: "0789012345670000",
     items: [
@@ -106,7 +107,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(6, 2026, 1),
     sphId: encodeSph(6, 1, 2026),
-    perusahaanId: encodePerusahaan(7), perusahaanNama: "PT Nusantara Energi Prima",
+    perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta", npwp: "0789012345670000",
     items: [
@@ -125,7 +126,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(7, 2026, 0),
     sphId: encodeSph(7, 2, 2026),
-    perusahaanId: encodePerusahaan(8), perusahaanNama: "CV Agro Subur Mandiri",
+    perusahaanId: seedPerusahaanId(8), perusahaanNama: "CV Agro Subur Mandiri",
     alamat: "Jl. Magelang KM 7, Mlati, Sleman, Yogyakarta",
     kota: "Yogyakarta", npwp: "0890123456780000",
     items: [{ uraian: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket" }],
@@ -138,7 +139,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(9, 2026, 0),
     sphId: encodeSph(9, 3, 2026),
-    perusahaanId: encodePerusahaan(10), perusahaanNama: "CV Pembangunan Baru Jaya",
+    perusahaanId: seedPerusahaanId(10), perusahaanNama: "CV Pembangunan Baru Jaya",
     alamat: "Jl. Jenderal Sudirman KM 3.5, Bukit Besar, Palembang",
     kota: "Palembang", npwp: "0012345678900000",
     items: [{ uraian: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket" }],
@@ -153,7 +154,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(9, 2026, 1),
     sphId: encodeSph(9, 3, 2026),
-    perusahaanId: encodePerusahaan(10), perusahaanNama: "CV Pembangunan Baru Jaya",
+    perusahaanId: seedPerusahaanId(10), perusahaanNama: "CV Pembangunan Baru Jaya",
     alamat: "Jl. Jenderal Sudirman KM 3.5, Bukit Besar, Palembang",
     kota: "Palembang", npwp: "0012345678900000",
     items: [{ uraian: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket" }],
@@ -169,7 +170,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(13, 2026, 0),
     sphId: encodeSph(13, 5, 2026),
-    perusahaanId: encodePerusahaan(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
+    perusahaanId: seedPerusahaanId(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
     kota: "Surabaya", npwp: "0345678901230000",
     items: [{ uraian: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket" }],
@@ -182,7 +183,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(18, 2026, 0),
     sphId: encodeSph(18, 6, 2026),
-    perusahaanId: encodePerusahaan(15), perusahaanNama: "PT Delta Pratama Nusantara",
+    perusahaanId: seedPerusahaanId(15), perusahaanNama: "PT Delta Pratama Nusantara",
     alamat: "Jl. Hang Kesturi KM 4, Nongsa, Batam",
     kota: "Batam", npwp: "0556677889900000",
     items: [
@@ -200,7 +201,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(18, 2026, 1),
     sphId: encodeSph(18, 6, 2026),
-    perusahaanId: encodePerusahaan(15), perusahaanNama: "PT Delta Pratama Nusantara",
+    perusahaanId: seedPerusahaanId(15), perusahaanNama: "PT Delta Pratama Nusantara",
     alamat: "Jl. Hang Kesturi KM 4, Nongsa, Batam",
     kota: "Batam", npwp: "0556677889900000",
     items: [
@@ -219,7 +220,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(19, 2026, 0),
     sphId: encodeSph(19, 5, 2026),
-    perusahaanId: encodePerusahaan(7), perusahaanNama: "PT Nusantara Energi Prima",
+    perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta", npwp: "0789012345670000",
     items: [{ uraian: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket" }],
@@ -234,7 +235,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(19, 2026, 1),
     sphId: encodeSph(19, 5, 2026),
-    perusahaanId: encodePerusahaan(7), perusahaanNama: "PT Nusantara Energi Prima",
+    perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta", npwp: "0789012345670000",
     items: [{ uraian: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket" }],
@@ -250,7 +251,7 @@ export const fakturFixtures: Faktur[] = [
   {
     id: encodeInvTermin(20, 2026, 0),
     sphId: encodeSph(20, 4, 2026),
-    perusahaanId: encodePerusahaan(11), perusahaanNama: "PT Rimba Lestari Kalimantan",
+    perusahaanId: seedPerusahaanId(11), perusahaanNama: "PT Rimba Lestari Kalimantan",
     alamat: "Jl. Ahmad Yani No. 99, Pontianak Kota",
     kota: "Pontianak", npwp: "0112233445560000",
     items: [{ uraian: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket" }],

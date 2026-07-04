@@ -1,12 +1,8 @@
-import { companyProfile } from "@/lib/company-profile";
-import { formatRupiah } from "@/lib/format";
+import { companyProfileFixture } from "@/lib/fixtures/company-profile";
+import { formatRupiah, formatTanggalPanjang as tglPanjang } from "@/lib/format";
 import { calcSlip, type SlipGaji } from "@/lib/schemas/penggajian";
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
-
-function tglPanjang(iso: string) {
-  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-}
 
 function periodStr(mulai: string, selesai: string) {
   return `${tglPanjang(mulai)} – ${tglPanjang(selesai)}`;
@@ -31,6 +27,7 @@ export function SlipDocument({
   slip: SlipGaji;
   periode: { mulai: string; selesai: string };
 }) {
+  const companyProfile = companyProfileFixture.current;
   const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip(slip);
   const totalPotongan = slip.pph21 + slip.bpjsPotongan;
   const tglPaid = slip.paidAt ? tglPanjang(slip.paidAt) : tglPanjang(new Date().toISOString());

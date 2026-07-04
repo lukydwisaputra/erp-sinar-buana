@@ -37,6 +37,7 @@ export const companies = pgTable("companies", {
   country: text("country").notNull().default("Indonesia"),
   npwp: text("npwp").notNull(), // ≤16 digits, validated app/CHECK side
   email: text("email"),
+  isActive: boolean("is_active").notNull().default(true),
   ...bookkeeping,
 });
 
@@ -49,6 +50,7 @@ export const companyContacts = pgTable("company_contacts", {
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   email: text("email"),
+  position: text("position"), // Jabatan (PRD Bab 3.1)
   isPrimary: boolean("is_primary").notNull().default(false),
   ...bookkeeping,
 });

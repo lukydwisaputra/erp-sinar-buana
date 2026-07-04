@@ -2,7 +2,8 @@ import type { Sph, SphKelengkapan } from "@/lib/schemas/penawaran";
 
 const noKelengkapan: SphKelengkapan[] = [];
 import { sampleItemRab, sampleItemJadwal, type RabRow } from "@/lib/sph-templates";
-import { encodeSph, encodePerusahaan, encodeLayanan } from "@/lib/id-generator";
+import { encodeSph, encodeLayanan } from "@/lib/id-generator";
+import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
 
 function itemRab(tweak?: (r: { personil: RabRow[]; langsung: RabRow[] }) => void) {
   const rab = sampleItemRab();
@@ -21,7 +22,7 @@ const recipientDefaults = {
 export const penawaranFixtures: Sph[] = [
   {
     id: encodeSph(1, 5, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(1), perusahaanNama: "PT Maju Bersama Industri",
+    perusahaanId: seedPerusahaanId(1), perusahaanNama: "PT Maju Bersama Industri",
     alamat: "Gedung Menara Sentosa Lantai 12, Jl. Jenderal Gatot Subroto Kav. 21-22, Jakarta Selatan",
     tanggal: "2026-05-04",
     masaBerlakuAktif: true, masaBerlakuHari: 30,
@@ -55,7 +56,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(2, 5, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
+    perusahaanId: seedPerusahaanId(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
     tanggal: "2026-05-12",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -84,7 +85,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(3, 5, 2026), status: "draft", rincianAktif: true,
-    perusahaanId: encodePerusahaan(5), perusahaanNama: "CV Bahari Sentosa",
+    perusahaanId: seedPerusahaanId(5), perusahaanNama: "CV Bahari Sentosa",
     alamat: "Jl. Bypass Ngurah Rai No. 200, Sanur, Denpasar",
     tanggal: "2026-05-20",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -109,7 +110,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(4, 6, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(6), perusahaanNama: "PT Cahaya Teknik Mandiri",
+    perusahaanId: seedPerusahaanId(6), perusahaanNama: "PT Cahaya Teknik Mandiri",
     alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
     tanggal: "2026-06-02",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -137,7 +138,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(5, 6, 2026), status: "terkirim", rincianAktif: true,
-    perusahaanId: encodePerusahaan(2), perusahaanNama: "CV Sumber Rejeki Pangan",
+    perusahaanId: seedPerusahaanId(2), perusahaanNama: "CV Sumber Rejeki Pangan",
     alamat: "Jl. Soekarno Hatta No. 88, Kiaracondong, Bandung",
     tanggal: "2026-06-05",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -171,7 +172,7 @@ export const penawaranFixtures: Sph[] = [
   // ── Tambahan 10 penawaran ──────────────────────────────────────────────────
   {
     id: encodeSph(6, 1, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(7), perusahaanNama: "PT Nusantara Energi Prima",
+    perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     tanggal: "2026-01-08",
     masaBerlakuAktif: true, masaBerlakuHari: 30,
@@ -204,7 +205,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(7, 2, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(8), perusahaanNama: "CV Agro Subur Mandiri",
+    perusahaanId: seedPerusahaanId(8), perusahaanNama: "CV Agro Subur Mandiri",
     alamat: "Jl. Magelang KM 7, Mlati, Sleman, Yogyakarta",
     tanggal: "2026-02-14",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -232,7 +233,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(8, 3, 2026), status: "terkirim", rincianAktif: false,
-    perusahaanId: encodePerusahaan(9), perusahaanNama: "PT Bintang Maritim Indonesia",
+    perusahaanId: seedPerusahaanId(9), perusahaanNama: "PT Bintang Maritim Indonesia",
     alamat: "Jl. Penghibur No. 58, Ujung Pandang, Makassar",
     tanggal: "2026-03-05",
     masaBerlakuAktif: true, masaBerlakuHari: 14,
@@ -260,7 +261,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(9, 3, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(10), perusahaanNama: "CV Pembangunan Baru Jaya",
+    perusahaanId: seedPerusahaanId(10), perusahaanNama: "CV Pembangunan Baru Jaya",
     alamat: "Jl. Jenderal Sudirman KM 3.5, Bukit Besar, Palembang",
     tanggal: "2026-03-18",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -288,7 +289,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(10, 4, 2026), status: "draft", rincianAktif: false,
-    perusahaanId: encodePerusahaan(11), perusahaanNama: "PT Rimba Lestari Kalimantan",
+    perusahaanId: seedPerusahaanId(11), perusahaanNama: "PT Rimba Lestari Kalimantan",
     alamat: "Jl. Ahmad Yani No. 99, Pontianak Kota",
     tanggal: "2026-04-02",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -316,7 +317,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(11, 4, 2026), status: "ditolak", rincianAktif: false,
-    perusahaanId: encodePerusahaan(12), perusahaanNama: "CV Techno Solusi Utama",
+    perusahaanId: seedPerusahaanId(12), perusahaanNama: "CV Techno Solusi Utama",
     alamat: "Jl. Soekarno Hatta No. 41, Lowokwaru, Malang",
     tanggal: "2026-04-10",
     masaBerlakuAktif: true, masaBerlakuHari: 30,
@@ -342,7 +343,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(12, 4, 2026), status: "dibatalkan", rincianAktif: false,
-    perusahaanId: encodePerusahaan(2), perusahaanNama: "CV Sumber Rejeki Pangan",
+    perusahaanId: seedPerusahaanId(2), perusahaanNama: "CV Sumber Rejeki Pangan",
     alamat: "Jl. Soekarno Hatta No. 88, Kiaracondong, Bandung",
     tanggal: "2026-04-22",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -368,7 +369,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(13, 5, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
+    perusahaanId: seedPerusahaanId(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
     tanggal: "2026-05-07",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -395,7 +396,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(14, 5, 2026), status: "terkirim", rincianAktif: true,
-    perusahaanId: encodePerusahaan(6), perusahaanNama: "PT Cahaya Teknik Mandiri",
+    perusahaanId: seedPerusahaanId(6), perusahaanNama: "PT Cahaya Teknik Mandiri",
     alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
     tanggal: "2026-05-19",
     masaBerlakuAktif: true, masaBerlakuHari: 30,
@@ -428,7 +429,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(15, 6, 2026), status: "draft", rincianAktif: false,
-    perusahaanId: encodePerusahaan(4), perusahaanNama: "PT Hijau Lestari Permai",
+    perusahaanId: seedPerusahaanId(4), perusahaanNama: "PT Hijau Lestari Permai",
     alamat: "Jl. Pemuda No. 45, Semarang Tengah",
     tanggal: "2026-06-10",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -455,7 +456,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(16, 6, 2026), status: "draft", rincianAktif: false,
-    perusahaanId: encodePerusahaan(13), perusahaanNama: "PT Alam Hijau Balikpapan",
+    perusahaanId: seedPerusahaanId(13), perusahaanNama: "PT Alam Hijau Balikpapan",
     alamat: "Jl. Letjen Suprapto No. 12, Balikpapan Kota",
     tanggal: "2026-06-12",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -483,7 +484,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(17, 6, 2026), status: "terkirim", rincianAktif: false,
-    perusahaanId: encodePerusahaan(14), perusahaanNama: "CV Karya Cipta Maju",
+    perusahaanId: seedPerusahaanId(14), perusahaanNama: "CV Karya Cipta Maju",
     alamat: "Kawasan Industri MM2100 Blok KK-5, Cikarang Barat, Bekasi",
     tanggal: "2026-06-14",
     masaBerlakuAktif: true, masaBerlakuHari: 14,
@@ -511,7 +512,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(18, 6, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(15), perusahaanNama: "PT Delta Pratama Nusantara",
+    perusahaanId: seedPerusahaanId(15), perusahaanNama: "PT Delta Pratama Nusantara",
     alamat: "Jl. Hang Kesturi KM 4, Nongsa, Batam",
     tanggal: "2026-06-16",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -544,7 +545,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(19, 5, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(7), perusahaanNama: "PT Nusantara Energi Prima",
+    perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     tanggal: "2026-05-08",
     masaBerlakuAktif: false, masaBerlakuHari: 30,
@@ -572,7 +573,7 @@ export const penawaranFixtures: Sph[] = [
   },
   {
     id: encodeSph(20, 4, 2026), status: "deal", rincianAktif: true,
-    perusahaanId: encodePerusahaan(11), perusahaanNama: "PT Rimba Lestari Kalimantan",
+    perusahaanId: seedPerusahaanId(11), perusahaanNama: "PT Rimba Lestari Kalimantan",
     alamat: "Jl. Ahmad Yani No. 99, Pontianak Kota",
     tanggal: "2026-04-25",
     masaBerlakuAktif: false, masaBerlakuHari: 30,

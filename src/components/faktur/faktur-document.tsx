@@ -1,14 +1,10 @@
-import { companyProfile } from "@/lib/company-profile";
-import { formatRupiah } from "@/lib/format";
+import { companyProfileFixture } from "@/lib/fixtures/company-profile";
+import { formatRupiah, formatTanggalPanjang as tglPanjang, titleCase } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { computeFaktur, toRoman, afterTaxAmount } from "@/lib/faktur";
 import type { FakturFormValues } from "@/lib/schemas/faktur";
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
-
-const titleCase = (s: string) => s.replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1));
-const tglPanjang = (iso: string) =>
-  iso ? new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "—";
 
 export function FakturDocument({
   values,
@@ -17,6 +13,7 @@ export function FakturDocument({
   values: FakturFormValues;
   noFaktur: string;
 }): React.JSX.Element {
+  const companyProfile = companyProfileFixture.current;
   const t = computeFaktur(values);
   const cell = "border border-[var(--doc-rule)] px-2 py-1";
   const sumLabel = `${cell} text-right font-bold`;

@@ -13,14 +13,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { formatRupiah, formatIntIDR, parseRupiah } from "@/lib/format";
+import { formatRupiah, formatIntIDR, formatTanggalPanjang, parseRupiah } from "@/lib/format";
 import { calcSlip, type PenggajianBatch, type SlipGaji } from "@/lib/schemas/penggajian";
 import { useBatch, useUpdateSlip, useMarkSlipDibayar } from "@/lib/query/penggajian";
 
 function periodStr(p: PenggajianBatch["periode"]) {
-  const fmt = (d: string) =>
-    new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-  return `${fmt(p.mulai)} – ${fmt(p.selesai)}`;
+  return `${formatTanggalPanjang(p.mulai)} – ${formatTanggalPanjang(p.selesai)}`;
 }
 
 const inputCls =

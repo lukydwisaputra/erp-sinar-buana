@@ -16,11 +16,19 @@
 | Negara | Statis: Indonesia | Wajib |
 | NPWP | Teks (maks. 16 digit) | Wajib |
 | Email Perusahaan | Email | Opsional |
+| Status | Aktif / Nonaktif | Wajib (default Aktif) |
 
-**Narahubung / PIC** — mendukung **lebih dari satu** PIC per perusahaan.
+> Area Administrasi / Kawasan Industri adalah salah satu daftar "Master Data
+> Terkelola" (Bab 9.1) — dropdown-nya baru berisi pilihan setelah modul
+> Konfigurasi tersambung ke database sungguhan; sampai saat itu field ini
+> tetap opsional/kosong.
+
+**Narahubung / PIC** — mendukung **lebih dari satu** PIC per perusahaan. PIC
+pertama pada daftar otomatis menjadi kontak utama.
 | Bidang | Tipe | Status |
 | --- | --- | --- |
 | Nama Narahubung | Teks | Wajib |
+| Jabatan Narahubung | Teks | Opsional |
 | Nomor HP | Telepon | Wajib |
 | Email Narahubung | Email | Opsional |
 

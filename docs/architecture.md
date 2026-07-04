@@ -133,7 +133,7 @@ This keeps RBAC defined once (in SQL) and avoids re-deriving it in TypeScript.
 Server-side enforcement satisfies
 [FR-01.8 / GC-12](../planning/user-stories/01-autentikasi-akun.md).
 
-## 5. Authentication (the one new build)
+## 5. Authentication (the first module wired to real Postgres)
 
 No public signup — accounts are **admin-created and invite-activated**
 ([EP-01](../planning/user-stories/01-autentikasi-akun.md)). Session-based, not
@@ -203,7 +203,15 @@ Postgres" path:
 - The app sets `app.user_id` per transaction → `auth.uid()` resolves → RLS
   behaves identically to a Supabase deployment.
 
-No schema, RLS, trigger, or numbering changes are required.
+Auth itself needed no schema/RLS/trigger changes. Wiring a module beyond auth
+does sometimes need small additive migrations, though — Perusahaan (the
+second module wired, see [PRD Bab 3.1](../planning/prd/03-master-data.md))
+needed `companies.is_active` and `company_contacts.position` added, since the
+~10-month-old `db-schema` design had drifted from the frontend prototype in
+every module by the time any of them got wired for real (see
+`planning/prd/03-master-data.md` for the reconciled Perusahaan shape). Each
+module's wiring pass is expected to re-check its own tables against the
+current mock/PRD shape rather than assume `db-schema` is still accurate.
 
 ## 10. Open / deferred
 

@@ -12,6 +12,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
+import { StatusBadge, type StatusBadgeConfig } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,18 +42,14 @@ import { delay } from "@/lib/data/_delay";
 import { onFormInvalid } from "@/lib/form-toast";
 import type { Layanan } from "@/lib/schemas/katalog";
 
-const STATUS_OPTIONS: MultiSelectOption[] = [
-  { value: "aktif", label: "Aktif", variant: "success" },
-  { value: "terarsip", label: "Terarsip", variant: "secondary" },
-];
+const STATUS_BADGE: Record<Layanan["status"], StatusBadgeConfig> = {
+  aktif: { label: "Aktif", variant: "success" },
+  terarsip: { label: "Terarsip", variant: "secondary" },
+};
 
-function StatusBadge({ status }: { status: Layanan["status"] }) {
-  return status === "aktif" ? (
-    <Badge variant="success">Aktif</Badge>
-  ) : (
-    <Badge variant="secondary">Terarsip</Badge>
-  );
-}
+const STATUS_OPTIONS: MultiSelectOption[] = Object.entries(STATUS_BADGE).map(([value, m]) => ({
+  value, label: m.label, variant: m.variant,
+}));
 
 function harga(value: number | null) {
   return value === null ? "—" : formatRupiahCompact(value);
@@ -94,7 +91,7 @@ function makeColumns(
     },
     {
       accessorKey: "status", header: "Status", meta: { className: "text-center" },
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      cell: ({ row }) => <StatusBadge status={row.original.status} map={STATUS_BADGE} />,
     },
     {
       id: "actions", header: "", meta: { className: "w-10" },
@@ -645,7 +642,7 @@ export default function KatalogPage() {
                 <SheetTitle className="text-lg leading-tight font-semibold wrap-break-word">{selected.nama}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id}</SheetDescription>
-                  <StatusBadge status={selected.status} />
+                  <StatusBadge status={selected.status} map={STATUS_BADGE} />
                 </div>
               </SheetHeader>
               <LayananDetail l={selected} />
