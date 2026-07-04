@@ -28,6 +28,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { formatRupiah } from "@/lib/format";
 import { totalPenawaran } from "@/lib/sph";
 import { afterTaxAmount } from "@/lib/faktur";
@@ -126,14 +127,14 @@ export default function PenawaranPage() {
 
   const columns: ColumnDef<Sph>[] = [
     {
-      accessorKey: "id", header: "No. SPH", meta: { mono: true },
+      accessorKey: "number", header: "No. SPH", meta: { mono: true },
       cell: ({ row }) => (
         <button
           type="button"
           onClick={() => router.push(`/penawaran/${encodeURIComponent(row.original.id)}`)}
-          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          {row.original.id}
+          {row.original.number ?? row.original.id.slice(0, 8)}
         </button>
       ),
     },
@@ -266,7 +267,7 @@ export default function PenawaranPage() {
           columns={columns}
           data={filteredData}
           loading={isLoading}
-          searchColumns={["id", "perusahaanNama"]}
+          searchColumns={["number", "perusahaanNama"]}
           searchPlaceholder="Cari No. SPH atau perusahaan…"
           emptyMessage="Belum ada penawaran"
           defaultSorting={[{ id: "tanggal", desc: true }]}
@@ -385,42 +386,34 @@ export default function PenawaranPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirm: Hapus */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus {deleteTarget?.id}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Faktur dan proyek terkait juga akan dihapus. Tindakan ini tidak dapat dibatalkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deletePenawaran.isPending || deleteFakturBySph.isPending || deleteProyekBySph.isPending}
-              onClick={() => {
-                if (!deleteTarget) return;
-                const sphId = deleteTarget.id;
-                const doDelete = () => {
-                  deletePenawaran.mutate(sphId, {
-                    onSuccess: () => {
-                      toast.success(`${sphId} dihapus.`);
-                      setDeleteTarget(null);
-                    },
-                  });
-                };
-                const deleteProyekThenSph = () => {
-                  deleteProyekBySph.mutate(sphId, { onSuccess: doDelete });
-                };
-                deleteFakturBySph.mutate(sphId, { onSuccess: deleteProyekThenSph });
-              }}
-            >
-              Hapus
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Confirm: Hapus. Faktur/Proyek stay mock — this only cleans up their
+          still-mock fixture entries referencing this SPH id; it's not a real
+          cascade against the deleted quotation, which is real. */}
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        entityLabel="Penawaran"
+        target={deleteTarget?.number ?? deleteTarget?.id}
+        description="Faktur dan proyek contoh terkait juga akan dibersihkan. Tindakan ini tidak dapat dibatalkan."
+        loading={deletePenawaran.isPending || deleteFakturBySph.isPending || deleteProyekBySph.isPending}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          const sphId = deleteTarget.id;
+          const label = deleteTarget.number ?? sphId;
+          const doDelete = () => {
+            deletePenawaran.mutate(sphId, {
+              onSuccess: () => {
+                toast.success(`${label} dihapus.`);
+                setDeleteTarget(null);
+              },
+            });
+          };
+          const deleteProyekThenSph = () => {
+            deleteProyekBySph.mutate(sphId, { onSuccess: doDelete });
+          };
+          deleteFakturBySph.mutate(sphId, { onSuccess: deleteProyekThenSph });
+        }}
+      />
     </div>
   );
 }

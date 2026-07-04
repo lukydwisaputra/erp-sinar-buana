@@ -28,6 +28,7 @@ export const sphItemSchema = z.object({
   rab: itemRabSchema,
   jadwal: itemJadwalSchema,
 });
+export type SphItem = z.infer<typeof sphItemSchema>;
 export const sphKelengkapanItemSchema = z.object({
   persyaratan: z.string(),
   status: z.enum(["ada", "tidak", ""]).default(""),
@@ -74,6 +75,50 @@ export const sphFormSchema = z.object({
 });
 export type SphFormValues = z.infer<typeof sphFormSchema>;
 
-/** Persisted/list shape. */
-export const sphSchema = sphFormSchema.extend({ id: z.string(), status: sphStatus });
+/** Persisted/list shape. `number` is the official document number (e.g.
+ * SPH/00001/5.2026), DB-assigned by the numbering trigger — null until the
+ * first insert completes. `id` (uuid) is the internal reference key; `number`
+ * is what gets shown on the actual document/UI. */
+export const sphSchema = sphFormSchema.extend({ id: z.string(), number: z.string().nullable(), status: sphStatus });
 export type Sph = z.infer<typeof sphSchema>;
+
+/** API input schemas for POST/PATCH /api/penawaran — same shape the builder
+ * form already produces; `status` is create-time optional (server defaults to
+ * "draft") and update-time used for pure status transitions. */
+export const createPenawaranSchema = sphFormSchema.extend({
+  status: sphStatus.optional(),
+});
+export type CreatePenawaranInput = z.infer<typeof createPenawaranSchema>;
+
+/** Deliberately NOT `sphFormSchema.partial()` — Zod still resolves `.default()`
+ * for keys missing from the input even under `.partial()`, so an update that
+ * only sends `{ status }` would otherwise come back with every defaulted
+ * field (ppnAktif, rincianAktif, ...) silently filled in and treated as
+ * "provided", overwriting the real stored values. Every field here is a bare
+ * `.optional()` with no default, so `quotationColumnsFromInput`'s `!==
+ * undefined` checks only see fields the caller actually sent. */
+export const updatePenawaranSchema = z.object({
+  perusahaanId: z.string().min(1).optional(),
+  perusahaanNama: z.string().optional(),
+  alamat: z.string().optional(),
+  tanggal: z.string().min(1).optional(),
+  masaBerlakuAktif: z.boolean().optional(),
+  masaBerlakuHari: z.coerce.number().optional(),
+  kalimatPembuka: z.string().optional(),
+  lampiran: z.string().optional(),
+  rincianAktif: z.boolean().optional(),
+  items: z.array(sphItemSchema).min(1).optional(),
+  termin: z.array(sphTerminSchema).optional(),
+  catatan: z.array(z.string()).optional(),
+  ppnAktif: z.boolean().optional(),
+  ppnPersen: z.coerce.number().optional(),
+  pph23Aktif: z.boolean().optional(),
+  pph23Persen: z.coerce.number().optional(),
+  jabatanPenerima: z.string().optional(),
+  picAktif: z.boolean().optional(),
+  picNama: z.string().optional(),
+  picJabatan: z.string().optional(),
+  kelengkapan: z.array(sphKelengkapanSchema).optional(),
+  status: sphStatus.optional(),
+});
+export type UpdatePenawaranInput = z.infer<typeof updatePenawaranSchema>;

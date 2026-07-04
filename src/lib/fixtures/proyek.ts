@@ -1,9 +1,10 @@
 import type { Proyek } from "@/lib/schemas/proyek";
 import {
-  encodeProyekFromSph, encodeSph, encodeInvTermin,
+  encodeProyekFromSph, encodeInvTermin,
 } from "@/lib/id-generator";
 import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
 import { seedKaryawanId } from "@/lib/karyawan-seed-ids";
+import { seedSphId } from "@/lib/penawaran-seed-ids";
 
 const KRY3 = seedKaryawanId(3); // Agus Setiawan
 const KRY4 = seedKaryawanId(4); // Dewi Anggraini
@@ -33,7 +34,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Penyusunan Pertek Air Limbah", "Laporan Pelaksanaan RKL-RPL Semester"],
     status: "on_track",
     nilaiKontrak: 136_250_000,
-    sphId: encodeSph(1, 5, 2026),
+    sphId: seedSphId(1),
     assignees: [
       { karyawanId: KRY3, nama: "Agus Setiawan" },
       { karyawanId: KRY4, nama: "Dewi Anggraini" },
@@ -57,7 +58,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Dokumen AMDAL"],
     status: "on_track",
     nilaiKontrak: 381_500_000,
-    sphId: encodeSph(2, 5, 2026),
+    sphId: seedSphId(2),
     assignees: [
       { karyawanId: KRY3, nama: "Agus Setiawan" },
     ],
@@ -81,7 +82,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Persetujuan Teknis Emisi Udara"],
     status: "on_track",
     nilaiKontrak: 74_120_000,
-    sphId: encodeSph(4, 6, 2026),
+    sphId: seedSphId(4),
     assignees: [
       { karyawanId: KRY3, nama: "Agus Setiawan" },
       { karyawanId: KRY5, nama: "Fajar Ramadhan" },
@@ -104,7 +105,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Dokumen UKL-UPL", "Laporan Pelaksanaan RKL-RPL Semester"],
     status: "selesai",
     nilaiKontrak: 76_300_000,
-    sphId: encodeSph(6, 1, 2026),
+    sphId: seedSphId(6),
     assignees: [
       { karyawanId: KRY3, nama: "Agus Setiawan" },
       { karyawanId: KRY8, nama: "Nadia Kusumawati" },
@@ -126,7 +127,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Dokumen AMDAL"],
     status: "selesai",
     nilaiKontrak: 381_500_000,
-    sphId: encodeSph(7, 2, 2026),
+    sphId: seedSphId(7),
     assignees: [
       { karyawanId: KRY7, nama: "Hendra Permana" },
       { karyawanId: KRY3, nama: "Agus Setiawan" },
@@ -149,7 +150,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Persetujuan Teknis Emisi Udara"],
     status: "terlambat",
     nilaiKontrak: 74_120_000,
-    sphId: encodeSph(9, 3, 2026),
+    sphId: seedSphId(9),
     assignees: [
       { karyawanId: KRY9, nama: "Rizky Firmansyah" },
       { karyawanId: KRY5, nama: "Fajar Ramadhan" },
@@ -171,7 +172,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Dokumen UKL-UPL"],
     status: "on_track",
     nilaiKontrak: 49_050_000,
-    sphId: encodeSph(13, 5, 2026),
+    sphId: seedSphId(13),
     assignees: [
       { karyawanId: KRY4, nama: "Dewi Anggraini" },
     ],
@@ -191,7 +192,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Dokumen UKL-UPL", "Laporan Pelaksanaan RKL-RPL Semester"],
     status: "on_track",
     nilaiKontrak: 76_300_000,
-    sphId: encodeSph(18, 6, 2026),
+    sphId: seedSphId(18),
     assignees: [
       { karyawanId: KRY8, nama: "Nadia Kusumawati" },
       { karyawanId: KRY3, nama: "Agus Setiawan" },
@@ -213,7 +214,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Persetujuan Teknis Emisi Udara"],
     status: "on_track",
     nilaiKontrak: 74_120_000,
-    sphId: encodeSph(19, 5, 2026),
+    sphId: seedSphId(19),
     assignees: [
       { karyawanId: KRY9, nama: "Rizky Firmansyah" },
     ],
@@ -234,7 +235,7 @@ export const proyekFixtures: Proyek[] = [
     layananNama: ["Dokumen UKL-UPL"],
     status: "selesai",
     nilaiKontrak: 49_050_000,
-    sphId: encodeSph(20, 4, 2026),
+    sphId: seedSphId(20),
     assignees: [
       { karyawanId: KRY3, nama: "Agus Setiawan" },
       { karyawanId: KRY4, nama: "Dewi Anggraini" },

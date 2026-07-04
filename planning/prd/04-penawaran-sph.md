@@ -84,6 +84,15 @@ Saat status menjadi **Convert–Deal**, sistem menawarkan:
 - **Buat Faktur Induk** — membuat penagihan di bawah proyek; membawa layanan, Total Biaya,
   & skema termin usulan untuk dikonfigurasi (lihat [Bab 5.1](05-dokumen-bisnis.md#51-faktur-induk--invoice-termin)).
 
+> **Status implementasi:** Penawaran sudah tersambung ke database sungguhan
+> (header, baris layanan, RAB internal per baris, Estimasi Jadwal per baris,
+> skema termin, status). Perubahan status ke **Convert–Deal** sudah
+> memperbarui status penawaran yang sebenarnya, tetapi **Buat Proyek** dan
+> **Buat Faktur Induk** di atas masih simulasi (data contoh) — menunggu Proyek
+> dan Faktur Induk mendapat giliran tersambung ke database masing-masing.
+> Kelengkapan Administrasi (Bab 4 lampiran) juga masih simulasi, menunggu
+> modulnya sendiri.
+
 ### 4.7 Userflow — Penawaran
 
 ```mermaid

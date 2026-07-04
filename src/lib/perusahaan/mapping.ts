@@ -4,7 +4,6 @@
  * so these functions stay unit-testable without a live Postgres — see
  * `src/lib/perusahaan/service.ts` for the actual queries.
  */
-import { penawaranFixtures } from "@/lib/fixtures/penawaran";
 import { proyekFixtures } from "@/lib/fixtures/proyek";
 import { fakturFixtures } from "@/lib/fixtures/faktur";
 import { companies, companyContacts } from "@/lib/db/schema";
@@ -16,15 +15,14 @@ import type {
 export type CompanyRow = typeof companies.$inferSelect;
 export type ContactRow = typeof companyContacts.$inferSelect;
 
-// Proyek/Faktur aren't wired to the real backend yet, so `metrik` keeps
-// cross-referencing their mock fixtures by company id — see
-// src/lib/perusahaan-seed-ids.ts for how those fixtures stay in sync with
-// the real seeded company rows.
+// Proyek/Faktur aren't wired to the real backend yet, so proyekAktif/
+// nilaiKontrak/piutang keep cross-referencing their mock fixtures by company
+// id — see src/lib/perusahaan-seed-ids.ts. `jumlahPenawaran` is now a real
+// count (Penawaran is wired) — see src/lib/perusahaan/service.ts, which
+// queries it and passes it in here rather than reading a frozen mock array.
 const ACTIVE_PROYEK_STATUSES = new Set(["on_track", "terlambat", "belum_mulai"]);
 
-export function computeMetrik(companyId: string): Perusahaan["metrik"] {
-  const jumlahPenawaran = penawaranFixtures.filter((s) => s.perusahaanId === companyId).length;
-
+export function computeMetrik(companyId: string, jumlahPenawaran: number): Perusahaan["metrik"] {
   const proyekPerusahaan = proyekFixtures.filter((p) => p.perusahaanId === companyId);
   const proyekAktif = proyekPerusahaan.filter((p) => ACTIVE_PROYEK_STATUSES.has(p.status)).length;
   const nilaiKontrak = proyekPerusahaan.reduce((s, p) => s + p.nilaiKontrak, 0);
@@ -51,7 +49,7 @@ function sortContacts(contacts: ContactRow[]): ContactRow[] {
   return [...contacts].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
 }
 
-export function toPerusahaan(company: CompanyRow, contacts: ContactRow[]): Perusahaan {
+export function toPerusahaan(company: CompanyRow, contacts: ContactRow[], jumlahPenawaran: number): Perusahaan {
   return {
     id: company.id,
     nama: company.name,
@@ -67,7 +65,7 @@ export function toPerusahaan(company: CompanyRow, contacts: ContactRow[]): Perus
       telepon: c.phone,
       email: c.email ?? "",
     })),
-    metrik: computeMetrik(company.id),
+    metrik: computeMetrik(company.id, jumlahPenawaran),
   };
 }
 

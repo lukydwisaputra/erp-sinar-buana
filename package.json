@@ -14,6 +14,7 @@
     "seed:daftar-pilihan": "node --env-file=.env.local scripts/seed-daftar-pilihan.ts",
     "seed:karyawan": "node --env-file=.env.local scripts/seed-karyawan.ts",
     "seed:katalog": "node --env-file=.env.local scripts/seed-katalog.ts",
+    "seed:penawaran": "node --env-file=.env.local scripts/seed-penawaran.ts",
     "screenshot:docs": "node --env-file=.env.local scripts/screenshot-docs.ts"
   },
   "dependencies": {

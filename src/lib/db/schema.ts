@@ -20,6 +20,7 @@ import {
   pgEnum,
   pgSchema,
   pgTable,
+  smallint,
   text,
   timestamp,
   unique,
@@ -179,6 +180,32 @@ export const bankAccounts = pgTable("bank_accounts", {
   isDefault: boolean("is_default").notNull().default(false),
 });
 
+// ── Workflow Status (db-schema/src/schema/config.ts) — Konfigurasi's own
+// "Workflow Status" tab isn't wired (still fully mock); this table is only
+// mirrored here because quotations.status_id is a real FK into it.
+
+export const workflowEntity = pgEnum("workflow_entity", [
+  "penawaran",
+  "proyek",
+  "faktur",
+  "penggajian",
+  "milestone",
+]);
+export const statusSystemRole = pgEnum("status_system_role", [
+  "SELESAI",
+  "LUNAS",
+  "DIBAYAR",
+  "BATAL",
+]);
+
+export const workflowStatuses = pgTable("workflow_statuses", {
+  ...lookup,
+  entity: workflowEntity("entity").notNull(),
+  systemRole: statusSystemRole("system_role"),
+  color: text("color"),
+  isDefault: boolean("is_default").notNull().default(false),
+});
+
 // ── Katalog Layanan (db-schema/src/schema/master-data.ts) ────────────────────
 // `milestone_template_id` is deliberately omitted here — this pass doesn't
 // query/write it (see docs/architecture.md's Katalog note); Drizzle simply
@@ -234,4 +261,108 @@ export const employeeSalaryComponents = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [unique("employee_salary_components_emp_component_uq").on(t.employeeId, t.salaryComponentId)],
+);
+
+// ── Penawaran / SPH (db-schema/src/schema/quotations.ts) ─────────────────────
+
+export const quotations = pgTable("quotations", {
+  id: pk(),
+  number: text("number"), // assigned by trg_quotations_number — never set from the app
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
+  date: date("date").notNull(),
+  companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "restrict" }),
+  contactId: uuid("contact_id").references(() => companyContacts.id, { onDelete: "set null" }),
+  statusId: uuid("status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
+  subject: text("subject"),
+  validityDays: integer("validity_days"),
+  notes: text("notes"),
+  totalAmount: money("total_amount").notNull().default("0"),
+  openingSentence: text("opening_sentence"),
+  attachmentNote: text("attachment_note"),
+  recipientTitle: text("recipient_title"),
+  rincianActive: boolean("rincian_active").notNull().default(true),
+  ppnActive: boolean("ppn_active").notNull().default(false),
+  ppnPercent: rate("ppn_percent"),
+  pph23Active: boolean("pph23_active").notNull().default(false),
+  pph23Percent: rate("pph23_percent"),
+  picOverrideActive: boolean("pic_override_active").notNull().default(false),
+  picOverrideName: text("pic_override_name"),
+  picOverridePosition: text("pic_override_position"),
+  ...bookkeeping,
+});
+
+export const quotationItems = pgTable("quotation_items", {
+  id: pk(),
+  quotationId: uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
+  serviceId: uuid("service_id").references(() => serviceCatalog.id, { onDelete: "set null" }),
+  description: text("description").notNull(),
+  unitPrice: money("unit_price").notNull().default("0"),
+  quantity: rate("quantity").notNull().default("1"),
+  unit: text("unit"),
+  lineTotal: money("line_total").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const quotationTermScheme = pgTable("quotation_term_scheme", {
+  id: pk(),
+  quotationId: uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  percentage: rate("percentage").notNull(),
+  milestoneTriggerLabel: text("milestone_trigger_label"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const quotationRabPersonnel = pgTable("quotation_rab_personnel", {
+  id: pk(),
+  quotationId: uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
+  quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "cascade" }),
+  role: text("role").notNull(),
+  volumeMonths: rate("volume_months").notNull().default("1"),
+  unitPrice: money("unit_price").notNull().default("0"),
+  amount: money("amount").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const quotationRabDirectCosts = pgTable("quotation_rab_direct_costs", {
+  id: pk(),
+  quotationId: uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
+  quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  amount: money("amount").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// ── Estimasi Jadwal (db-schema/src/schema/schedules.ts) ──────────────────────
+// `project_id` is deliberately omitted — this pass never attaches a schedule
+// to a project (Proyek stays mock), only to a quotation/quotation item.
+
+export const activitySchedules = pgTable("activity_schedules", {
+  id: pk(),
+  quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "cascade" }),
+  quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "cascade" }),
+  numMonths: smallint("num_months").notNull().default(4),
+  weeksPerMonth: smallint("weeks_per_month").notNull().default(4),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const activityScheduleRows = pgTable("activity_schedule_rows", {
+  id: pk(),
+  scheduleId: uuid("schedule_id").notNull().references(() => activitySchedules.id, { onDelete: "cascade" }),
+  activityName: text("activity_name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const activityScheduleMarkedWeeks = pgTable(
+  "activity_schedule_marked_weeks",
+  {
+    id: pk(),
+    rowId: uuid("row_id").notNull().references(() => activityScheduleRows.id, { onDelete: "cascade" }),
+    weekNumber: smallint("week_number").notNull(),
+    isActual: integer("is_actual").notNull().default(0),
+  },
+  (t) => [unique("activity_schedule_marked_weeks_uq").on(t.rowId, t.weekNumber, t.isActual)],
 );

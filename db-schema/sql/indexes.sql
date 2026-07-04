@@ -21,9 +21,12 @@ create index if not exists idx_quotations_status on quotations (status_id);
 create index if not exists idx_quotation_items_quotation on quotation_items (quotation_id);
 create index if not exists idx_quotation_terms_quotation on quotation_term_scheme (quotation_id);
 create index if not exists idx_quotation_rab_pers_quotation on quotation_rab_personnel (quotation_id);
+create index if not exists idx_quotation_rab_pers_item on quotation_rab_personnel (quotation_item_id);
 create index if not exists idx_quotation_rab_direct_quotation on quotation_rab_direct_costs (quotation_id);
+create index if not exists idx_quotation_rab_direct_item on quotation_rab_direct_costs (quotation_item_id);
 
 create index if not exists idx_schedules_quotation on activity_schedules (quotation_id);
+create index if not exists idx_schedules_item on activity_schedules (quotation_item_id);
 create index if not exists idx_schedules_project on activity_schedules (project_id);
 create index if not exists idx_schedule_rows_schedule on activity_schedule_rows (schedule_id);
 create index if not exists idx_schedule_marks_row on activity_schedule_marked_weeks (row_id);

@@ -2,10 +2,11 @@ import { describe, it, expect } from "vitest";
 import { listFaktur, getFaktur, updateFaktur, updateFakturStatus, deleteAllFakturBySph } from "@/lib/data/faktur";
 import { listArusKas } from "@/lib/data/arus-kas";
 import { updateStatusLabel } from "@/lib/data/status-definisi";
-import { encodeInvTermin, encodeSph } from "@/lib/id-generator";
+import { encodeInvTermin } from "@/lib/id-generator";
+import { seedSphId } from "@/lib/penawaran-seed-ids";
 
 const INV1T2 = encodeInvTermin(1, 2026, 1);
-const SPH2 = encodeSph(2, 5, 2026);
+const SPH2 = seedSphId(2);
 
 describe("faktur data", () => {
   it("parses all fixtures", async () => {

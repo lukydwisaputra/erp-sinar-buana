@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { groupFakturByDeal } from "@/lib/faktur";
 import { fakturFixtures } from "@/lib/fixtures/faktur";
-import { encodeSph, encodeInvTermin } from "@/lib/id-generator";
+import { encodeInvTermin } from "@/lib/id-generator";
+import { seedSphId } from "@/lib/penawaran-seed-ids";
 
-const SPH1 = encodeSph(1, 5, 2026);
-const SPH2 = encodeSph(2, 5, 2026);
-const SPH4 = encodeSph(4, 6, 2026);
+const SPH1 = seedSphId(1);
+const SPH2 = seedSphId(2);
+const SPH4 = seedSphId(4);
 const INV1T3 = encodeInvTermin(1, 2026, 2);
 const INV2T1 = encodeInvTermin(2, 2026, 0);
 

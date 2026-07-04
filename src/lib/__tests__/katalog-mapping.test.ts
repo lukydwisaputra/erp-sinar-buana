@@ -27,42 +27,46 @@ const legalBasis = { id: "legal-1", label: "PermenLHK No. 5 Tahun 2021", isActiv
 
 describe("toLayanan", () => {
   it("resolves document type/authority/legal basis labels", () => {
-    const result = toLayanan(service(), documentType, authority, legalBasis);
+    const result = toLayanan(service(), documentType, authority, legalBasis, 0);
     expect(result.jenisDokumen).toBe("Pertek");
     expect(result.kewenangan).toBe("Provinsi");
     expect(result.dasarHukum).toBe("PermenLHK No. 5 Tahun 2021");
   });
 
   it("falls back to '—' for jenisDokumen/kewenangan and null for dasarHukum when unresolved", () => {
-    const result = toLayanan(service({ documentTypeId: null, authorityId: null, legalBasisId: null }), undefined, undefined, undefined);
+    const result = toLayanan(service({ documentTypeId: null, authorityId: null, legalBasisId: null }), undefined, undefined, undefined, 0);
     expect(result.jenisDokumen).toBe("—");
     expect(result.kewenangan).toBe("—");
     expect(result.dasarHukum).toBeNull();
   });
 
   it("maps is_active true/false to status aktif/terarsip", () => {
-    expect(toLayanan(service({ isActive: true }), documentType, authority, legalBasis).status).toBe("aktif");
-    expect(toLayanan(service({ isActive: false }), documentType, authority, legalBasis).status).toBe("terarsip");
+    expect(toLayanan(service({ isActive: true }), documentType, authority, legalBasis, 0).status).toBe("aktif");
+    expect(toLayanan(service({ isActive: false }), documentType, authority, legalBasis, 0).status).toBe("terarsip");
   });
 
   it("converts standardPrice to a number, or null when unset", () => {
-    expect(toLayanan(service({ standardPrice: "50000" }), documentType, authority, legalBasis).hargaStandar).toBe(50000);
-    expect(toLayanan(service({ standardPrice: null }), documentType, authority, legalBasis).hargaStandar).toBeNull();
+    expect(toLayanan(service({ standardPrice: "50000" }), documentType, authority, legalBasis, 0).hargaStandar).toBe(50000);
+    expect(toLayanan(service({ standardPrice: null }), documentType, authority, legalBasis, 0).hargaStandar).toBeNull();
   });
 
   it("passes through isRecurring", () => {
-    expect(toLayanan(service({ isRecurring: true }), documentType, authority, legalBasis).isRecurring).toBe(true);
+    expect(toLayanan(service({ isRecurring: true }), documentType, authority, legalBasis, 0).isRecurring).toBe(true);
+  });
+
+  it("passes through the real dipakaiSPH count", () => {
+    expect(toLayanan(service(), documentType, authority, legalBasis, 7).metrik.dipakaiSPH).toBe(7);
   });
 });
 
 describe("computeMetrik", () => {
-  it("returns zeroed metrik for a service name with no cross-referenced records", () => {
-    expect(computeMetrik("Layanan yang tidak pernah dipakai")).toEqual({ dipakaiSPH: 0, dipakaiProyek: 0 });
+  it("returns the given dipakaiSPH count and 0 dipakaiProyek for a name with no mock Proyek cross-reference", () => {
+    expect(computeMetrik("Layanan yang tidak pernah dipakai", 3)).toEqual({ dipakaiSPH: 3, dipakaiProyek: 0 });
   });
 
-  it("counts SPH usage for a seeded demo service name", () => {
-    // "Penyusunan Pertek Air Limbah" is used by fixtures/penawaran.ts's SPH items.
-    const metrik = computeMetrik("Penyusunan Pertek Air Limbah");
-    expect(metrik.dipakaiSPH).toBeGreaterThan(0);
+  it("counts Proyek usage for a seeded demo service name (Proyek stays mock)", () => {
+    // "Penyusunan Pertek Air Limbah" is used by fixtures/proyek.ts's layananNama.
+    const metrik = computeMetrik("Penyusunan Pertek Air Limbah", 0);
+    expect(metrik.dipakaiProyek).toBeGreaterThan(0);
   });
 });

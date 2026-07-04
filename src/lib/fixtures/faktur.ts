@@ -1,9 +1,10 @@
 import type { Faktur } from "@/lib/schemas/faktur";
-import { encodeSph, encodeInvTermin } from "@/lib/id-generator";
+import { encodeInvTermin } from "@/lib/id-generator";
 import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
+import { seedSphId } from "@/lib/penawaran-seed-ids";
 
 const dealA = {
-  sphId: encodeSph(1, 5, 2026),
+  sphId: seedSphId(1),
   perusahaanId: seedPerusahaanId(1), perusahaanNama: "PT Maju Bersama Industri",
   alamat: "Gedung Menara Sentosa Lantai 12, Jl. Jenderal Gatot Subroto Kav. 21-22, Jakarta Selatan",
   kota: "Jakarta", npwp: "0123456789010000",
@@ -18,7 +19,7 @@ const dealA = {
   ],
 };
 const dealB = {
-  sphId: encodeSph(2, 5, 2026),
+  sphId: seedSphId(2),
   perusahaanId: seedPerusahaanId(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
   alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
   kota: "Surabaya", npwp: "0345678901230000",
@@ -29,7 +30,7 @@ const dealB = {
   ],
 };
 const dealC = {
-  sphId: encodeSph(4, 6, 2026),
+  sphId: seedSphId(4),
   perusahaanId: seedPerusahaanId(6), perusahaanNama: "PT Cahaya Teknik Mandiri",
   alamat: "Jl. Sisingamangaraja No. 17, Medan Kota",
   kota: "Medan", npwp: "0678901234560000",
@@ -88,7 +89,7 @@ export const fakturFixtures: Faktur[] = [
   // Deal D (SPH seq 6, Jan 2026) — T1 & T2 lunas
   {
     id: encodeInvTermin(6, 2026, 0),
-    sphId: encodeSph(6, 1, 2026),
+    sphId: seedSphId(6),
     perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta", npwp: "0789012345670000",
@@ -106,7 +107,7 @@ export const fakturFixtures: Faktur[] = [
   },
   {
     id: encodeInvTermin(6, 2026, 1),
-    sphId: encodeSph(6, 1, 2026),
+    sphId: seedSphId(6),
     perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta", npwp: "0789012345670000",
@@ -125,7 +126,7 @@ export const fakturFixtures: Faktur[] = [
   // Deal E (SPH seq 7, Feb 2026) — T1 lunas (all done)
   {
     id: encodeInvTermin(7, 2026, 0),
-    sphId: encodeSph(7, 2, 2026),
+    sphId: seedSphId(7),
     perusahaanId: seedPerusahaanId(8), perusahaanNama: "CV Agro Subur Mandiri",
     alamat: "Jl. Magelang KM 7, Mlati, Sleman, Yogyakarta",
     kota: "Yogyakarta", npwp: "0890123456780000",
@@ -138,7 +139,7 @@ export const fakturFixtures: Faktur[] = [
   // Deal F (SPH seq 9, Mar 2026) — T1 terkirim & overdue; T2 draft
   {
     id: encodeInvTermin(9, 2026, 0),
-    sphId: encodeSph(9, 3, 2026),
+    sphId: seedSphId(9),
     perusahaanId: seedPerusahaanId(10), perusahaanNama: "CV Pembangunan Baru Jaya",
     alamat: "Jl. Jenderal Sudirman KM 3.5, Bukit Besar, Palembang",
     kota: "Palembang", npwp: "0012345678900000",
@@ -153,7 +154,7 @@ export const fakturFixtures: Faktur[] = [
   },
   {
     id: encodeInvTermin(9, 2026, 1),
-    sphId: encodeSph(9, 3, 2026),
+    sphId: seedSphId(9),
     perusahaanId: seedPerusahaanId(10), perusahaanNama: "CV Pembangunan Baru Jaya",
     alamat: "Jl. Jenderal Sudirman KM 3.5, Bukit Besar, Palembang",
     kota: "Palembang", npwp: "0012345678900000",
@@ -169,7 +170,7 @@ export const fakturFixtures: Faktur[] = [
   // Deal G (SPH seq 13, May 2026) — T1 terkirim (belum lunas)
   {
     id: encodeInvTermin(13, 2026, 0),
-    sphId: encodeSph(13, 5, 2026),
+    sphId: seedSphId(13),
     perusahaanId: seedPerusahaanId(3), perusahaanNama: "PT Karya Logam Nusantara Sejahtera Abadi Makmur",
     alamat: "Kawasan Industri SIER Blok C-4, Surabaya",
     kota: "Surabaya", npwp: "0345678901230000",
@@ -182,7 +183,7 @@ export const fakturFixtures: Faktur[] = [
   // Deal H (SPH seq 18, Jun 2026) — T1 terkirim; T2 draft
   {
     id: encodeInvTermin(18, 2026, 0),
-    sphId: encodeSph(18, 6, 2026),
+    sphId: seedSphId(18),
     perusahaanId: seedPerusahaanId(15), perusahaanNama: "PT Delta Pratama Nusantara",
     alamat: "Jl. Hang Kesturi KM 4, Nongsa, Batam",
     kota: "Batam", npwp: "0556677889900000",
@@ -200,7 +201,7 @@ export const fakturFixtures: Faktur[] = [
   },
   {
     id: encodeInvTermin(18, 2026, 1),
-    sphId: encodeSph(18, 6, 2026),
+    sphId: seedSphId(18),
     perusahaanId: seedPerusahaanId(15), perusahaanNama: "PT Delta Pratama Nusantara",
     alamat: "Jl. Hang Kesturi KM 4, Nongsa, Batam",
     kota: "Batam", npwp: "0556677889900000",
@@ -219,7 +220,7 @@ export const fakturFixtures: Faktur[] = [
   // Deal I (SPH seq 19, May 2026) — T1 lunas; T2 terkirim
   {
     id: encodeInvTermin(19, 2026, 0),
-    sphId: encodeSph(19, 5, 2026),
+    sphId: seedSphId(19),
     perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta", npwp: "0789012345670000",
@@ -234,7 +235,7 @@ export const fakturFixtures: Faktur[] = [
   },
   {
     id: encodeInvTermin(19, 2026, 1),
-    sphId: encodeSph(19, 5, 2026),
+    sphId: seedSphId(19),
     perusahaanId: seedPerusahaanId(7), perusahaanNama: "PT Nusantara Energi Prima",
     alamat: "Jl. TB Simatupang No. 1, Kebagusan, Pasar Minggu, Jakarta Selatan",
     kota: "Jakarta", npwp: "0789012345670000",
@@ -250,7 +251,7 @@ export const fakturFixtures: Faktur[] = [
   // Deal J (SPH seq 20, Apr 2026) — T1 lunas (selesai)
   {
     id: encodeInvTermin(20, 2026, 0),
-    sphId: encodeSph(20, 4, 2026),
+    sphId: seedSphId(20),
     perusahaanId: seedPerusahaanId(11), perusahaanNama: "PT Rimba Lestari Kalimantan",
     alamat: "Jl. Ahmad Yani No. 99, Pontianak Kota",
     kota: "Pontianak", npwp: "0112233445560000",
