@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // docs-client/ is a separate standalone Next.js app with its own
+    // package.json/tsconfig/lint setup — not part of this app.
+    "docs-client/**",
   ]),
 ]);
 

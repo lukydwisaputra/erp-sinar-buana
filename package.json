@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed:admin": "node --env-file=.env.local scripts/seed-admin.ts",
-    "seed:perusahaan": "node --env-file=.env.local scripts/seed-perusahaan.ts"
+    "seed:perusahaan": "node --env-file=.env.local scripts/seed-perusahaan.ts",
+    "screenshot:docs": "node --env-file=.env.local scripts/screenshot-docs.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -41,6 +42,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
