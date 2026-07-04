@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { withUserTransaction, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/api-error";
@@ -18,6 +18,18 @@ async function loadContacts(tx: Tx, companyId: string): Promise<ContactRow[]> {
     .where(eq(schema.companyContacts.companyId, companyId));
 }
 
+/** Real count of (non-deleted) quotations per company — Penawaran is wired,
+ * so `jumlahPenawaran` no longer reads the frozen mock fixture array. */
+async function countPenawaranByCompany(tx: Tx, companyIds: string[]): Promise<Map<string, number>> {
+  if (!companyIds.length) return new Map();
+  const rows = await tx
+    .select({ companyId: schema.quotations.companyId, count: sql<number>`count(*)::int` })
+    .from(schema.quotations)
+    .where(and(inArray(schema.quotations.companyId, companyIds), isNull(schema.quotations.deletedAt)))
+    .groupBy(schema.quotations.companyId);
+  return new Map(rows.map((r) => [r.companyId, r.count]));
+}
+
 export async function listCompanies(userId: string): Promise<Perusahaan[]> {
   return withUserTransaction(userId, async (tx) => {
     const companies = await tx
@@ -35,7 +47,10 @@ export async function listCompanies(userId: string): Promise<Perusahaan[]> {
       list.push(c);
       contactsByCompany.set(c.companyId, list);
     }
-    return companies.map((c) => toPerusahaan(c, contactsByCompany.get(c.id) ?? []));
+    const penawaranCounts = await countPenawaranByCompany(tx, companies.map((c) => c.id));
+    return companies.map((c) =>
+      toPerusahaan(c, contactsByCompany.get(c.id) ?? [], penawaranCounts.get(c.id) ?? 0),
+    );
   });
 }
 
@@ -48,7 +63,8 @@ export async function getCompany(userId: string, id: string): Promise<Perusahaan
       .limit(1);
     if (!company) throw new NotFoundError("Perusahaan tidak ditemukan.");
     const contacts = await loadContacts(tx, id);
-    return toPerusahaan(company, contacts);
+    const penawaranCounts = await countPenawaranByCompany(tx, [id]);
+    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0);
   });
 }
 
@@ -76,7 +92,7 @@ export async function createCompany(
           .values(toContactRows(input.pic, company.id))
           .returning()
       : [];
-    return toPerusahaan(company, contacts);
+    return toPerusahaan(company, contacts, 0);
   });
 }
 
@@ -116,7 +132,8 @@ export async function updateCompany(
     }
 
     const contacts = await loadContacts(tx, id);
-    return toPerusahaan(company, contacts);
+    const penawaranCounts = await countPenawaranByCompany(tx, [id]);
+    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0);
   });
 }
 

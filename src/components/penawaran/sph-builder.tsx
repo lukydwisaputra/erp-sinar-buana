@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { delay } from "@/lib/data/_delay";
 import { usePending } from "@/lib/use-pending";
 import { createPortal } from "react-dom";
 import { Download, Lock, Save, Send, XCircle } from "lucide-react";
@@ -47,7 +47,7 @@ const SPH_STATUS: Record<SphStatus, StatusBadgeConfig> = {
   ditolak:    { label: "Ditolak",    variant: "destructive" },
   dibatalkan: { label: "Dibatalkan", variant: "secondary" },
 };
-import { useSph, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
+import { useSph, useCreatePenawaran, useUpdatePenawaran, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
 import { useTarifConfig } from "@/lib/query/tarif-config";
 
 const emptyValues: SphFormValues = {
@@ -284,19 +284,28 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
 
   const values = form.watch();
 
+  const router = useRouter();
   const [saving, runSave] = usePending();
   const [kirimOpen, setKirimOpen] = React.useState(false);
   const updateStatus = useUpdatePenawaranStatus();
+  const createSph = useCreatePenawaran();
+  const updateSph = useUpdatePenawaran();
   const onSimpan = () =>
     runSave(
-      form.handleSubmit(async () => {
-        await delay();
-        toast.success("Demo: draf tidak benar-benar disimpan");
+      form.handleSubmit(async (formValues) => {
+        if (existing) {
+          await updateSph.mutateAsync({ id: existing.id, input: formValues });
+          return;
+        }
+        const created = await createSph.mutateAsync({ ...formValues, status: "draft" });
+        router.push(`/penawaran/${created.id}`);
       }, onFormInvalid),
     );
-  const onKirim = form.handleSubmit(async () => {
+  const onKirim = form.handleSubmit(async (formValues) => {
     if (!existing) {
-      toast.success("Demo: SPH tidak benar-benar dikirim");
+      const created = await createSph.mutateAsync({ ...formValues, status: "terkirim" });
+      toast.success("Penawaran dibuat dan ditandai terkirim.");
+      router.push(`/penawaran/${created.id}`);
       return;
     }
     setKirimOpen(true);
@@ -308,7 +317,7 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
         title={
           existing ? (
             <span className="flex items-center gap-2">
-              {existing.id}
+              {noSph}
               <StatusBadge status={existing.status} map={SPH_STATUS} />
             </span>
           ) : "Buat SPH"
@@ -348,7 +357,7 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
 export function SphBuilder({ existing }: { existing?: Sph }) {
   const { data: live } = useSph(existing?.id ?? "", existing);
   const sph = live ?? existing;
-  const noSph = sph?.id ?? "SPH/006/6.2026";
+  const noSph = sph?.number ?? "Draf Baru";
   const status = sph?.status;
 
   if (sph && status === "deal") {

@@ -1,5 +1,6 @@
 import type { PengirimanLog } from "@/lib/schemas/pengiriman";
 import { encodeSph, encodeInvTermin } from "@/lib/id-generator";
+import { seedSphId } from "@/lib/penawaran-seed-ids";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
 import { penggajianFixtures } from "@/lib/fixtures/penggajian";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
@@ -19,7 +20,7 @@ export const pengirimanFixtures: PengirimanLog[] = [
   {
     id: nextPengirimanId(),
     jenisDokumen: "sph",
-    dokumenId: encodeSph(1, 5, 2026),
+    dokumenId: seedSphId(1),
     dokumenNomor: encodeSph(1, 5, 2026),
     tujuanNama: picMaju.nama,
     tujuanKontak: picMaju.telepon,
@@ -59,7 +60,7 @@ export const pengirimanFixtures: PengirimanLog[] = [
   {
     id: nextPengirimanId(),
     jenisDokumen: "sph",
-    dokumenId: encodeSph(2, 5, 2026),
+    dokumenId: seedSphId(2),
     dokumenNomor: encodeSph(2, 5, 2026),
     tujuanNama: picKaryaLogam.nama,
     tujuanKontak: picKaryaLogam.telepon,

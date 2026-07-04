@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { withUserTransaction, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/api-error";
@@ -40,6 +40,19 @@ function refFor(
   };
 }
 
+/** Real count of (non-deleted) quotation_items per service — Penawaran is
+ * wired, so `dipakaiSPH` no longer name-matches a frozen mock fixture array. */
+async function countUsageByService(tx: Tx, serviceIds: string[]): Promise<Map<string, number>> {
+  if (!serviceIds.length) return new Map();
+  const rows = await tx
+    .select({ serviceId: schema.quotationItems.serviceId, count: sql<number>`count(*)::int` })
+    .from(schema.quotationItems)
+    .innerJoin(schema.quotations, eq(schema.quotationItems.quotationId, schema.quotations.id))
+    .where(and(inArray(schema.quotationItems.serviceId, serviceIds), isNull(schema.quotations.deletedAt)))
+    .groupBy(schema.quotationItems.serviceId);
+  return new Map(rows.filter((r) => r.serviceId !== null).map((r) => [r.serviceId as string, r.count]));
+}
+
 export async function listServices(userId: string): Promise<Layanan[]> {
   return withUserTransaction(userId, async (tx) => {
     const rows = await tx
@@ -48,9 +61,10 @@ export async function listServices(userId: string): Promise<Layanan[]> {
       .where(isNull(schema.serviceCatalog.deletedAt))
       .orderBy(desc(schema.serviceCatalog.createdAt));
     const { documentTypesById, authoritiesById, legalBasesById } = await loadRefs(tx, rows);
+    const usageCounts = await countUsageByService(tx, rows.map((r) => r.id));
     return rows.map((row) => {
       const { documentType, authority, legalBasis } = refFor(row, documentTypesById, authoritiesById, legalBasesById);
-      return toLayanan(row, documentType, authority, legalBasis);
+      return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(row.id) ?? 0);
     });
   });
 }
@@ -65,7 +79,8 @@ export async function getService(userId: string, id: string): Promise<Layanan> {
     if (!row) throw new NotFoundError("Layanan tidak ditemukan.");
     const { documentTypesById, authoritiesById, legalBasesById } = await loadRefs(tx, [row]);
     const { documentType, authority, legalBasis } = refFor(row, documentTypesById, authoritiesById, legalBasesById);
-    return toLayanan(row, documentType, authority, legalBasis);
+    const usageCounts = await countUsageByService(tx, [id]);
+    return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(id) ?? 0);
   });
 }
 
@@ -86,7 +101,7 @@ export async function createService(userId: string, input: CreateLayananInput): 
       .returning();
     const { documentTypesById, authoritiesById, legalBasesById } = await loadRefs(tx, [row]);
     const { documentType, authority, legalBasis } = refFor(row, documentTypesById, authoritiesById, legalBasesById);
-    return toLayanan(row, documentType, authority, legalBasis);
+    return toLayanan(row, documentType, authority, legalBasis, 0);
   });
 }
 
@@ -120,7 +135,8 @@ export async function updateService(
 
     const { documentTypesById, authoritiesById, legalBasesById } = await loadRefs(tx, [row]);
     const { documentType, authority, legalBasis } = refFor(row, documentTypesById, authoritiesById, legalBasesById);
-    return toLayanan(row, documentType, authority, legalBasis);
+    const usageCounts = await countUsageByService(tx, [id]);
+    return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(id) ?? 0);
   });
 }
 

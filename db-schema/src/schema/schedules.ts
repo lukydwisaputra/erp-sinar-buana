@@ -16,13 +16,21 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { pk, timestamps } from "./_shared";
-import { quotations } from "./quotations";
+import { quotations, quotationItems } from "./quotations";
 import { projects, milestones } from "./projects";
 
-/** A schedule grid. Attached to a quotation, a project, or both (after Deal). */
+/**
+ * A schedule grid. Attached to a quotation, a project, or both (after Deal).
+ * Each SPH line item carries its own Jadwal, so a quotation can have several
+ * `activity_schedules` rows sharing the same `quotation_id`, distinguished by
+ * `quotation_item_id` (PRD Bab 4.5 — Jadwal is per service item on the SPH).
+ */
 export const activitySchedules = pgTable("activity_schedules", {
   id: pk(),
   quotationId: uuid("quotation_id").references(() => quotations.id, {
+    onDelete: "cascade",
+  }),
+  quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, {
     onDelete: "cascade",
   }),
   projectId: uuid("project_id").references(() => projects.id, {

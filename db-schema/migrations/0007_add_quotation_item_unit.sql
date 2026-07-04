@@ -1,0 +1,1 @@
+ALTER TABLE "quotation_items" ADD COLUMN "unit" text;

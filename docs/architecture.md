@@ -228,6 +228,38 @@ wiring pass turns out to be schema-clean but has a hard dependency on
 another still-mock module's backend, which should be pulled forward too
 rather than built against a shared mock.
 
+Penawaran (the fifth module wired, after Katalog Layanan) needed the largest
+reconciliation so far — three genuine schema gaps, not just missing columns:
+
+- **RAB/Jadwal granularity.** The app tracks RAB (`quotation_rab_personnel`/
+  `quotation_rab_direct_costs`) and Jadwal (`activity_schedules` + its two
+  child tables) **per SPH line item**, but those tables only keyed off
+  `quotation_id`. Added a nullable `quotation_item_id` FK to all three parent
+  tables (migration `0005`) rather than flattening the app's per-item UI down
+  to the DB's per-quotation granularity.
+- **Missing document fields.** `quotations` was missing 8 columns the SPH
+  document/cover-letter actually needs: `opening_sentence`, `attachment_note`,
+  `recipient_title`, `rincian_active`, `ppn_active`/`ppn_percent`,
+  `pph23_active`/`pph23_percent`, and the PIC override triplet (migration
+  `0006`), plus `quotation_items.unit` (migration `0007`) found while wiring
+  the mapping layer. All added as nullable/defaulted columns, not a jsonb
+  catch-all, so they stay queryable and typed like every other column.
+- **Status reconciliation.** `quotations.status_id` is a real FK into
+  `workflow_statuses` (entity='penawaran'), which only had 4 seed rows
+  (Draft/Leads-Terkirim/Convert-Deal/Batal). The app's 5-value status enum
+  needed a 5th, distinct "Ditolak" — topped up idempotently by
+  `scripts/seed-penawaran.ts` rather than touching Konfigurasi's own
+  (still-mock) Workflow Status tab. `src/lib/penawaran/mapping.ts` translates
+  the app enum ↔ real `workflow_statuses.label` at the boundary, so the UI's
+  enum-based business logic (`sph.ts`, `StatusBadge`) didn't need a rewrite.
+
+Converting an SPH to "Deal" only updates the real `quotations.status_id` —
+it does **not** cascade into real `projects`/`master_invoices` rows, since
+Proyek and Faktur aren't wired yet. That cascade stays mocked
+(`src/lib/data/penawaran.ts`, kept for the still-mock Proyek/Faktur/Dasbor
+consumers) until those modules get their own wiring pass. See
+`planning/prd/04-penawaran-sph.md` for the reconciled Penawaran shape.
+
 ## 10. Open / deferred
 
 - **Realtime:** deferred. TanStack Query refetch-on-focus + polling covers
