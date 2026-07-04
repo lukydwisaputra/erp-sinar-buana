@@ -173,10 +173,14 @@ export function PenggajianCreate() {
       const k = findKaryawan(row.karyawanId);
       return {
         karyawanId: k.id, karyawanNama: k.nama, jabatan: k.jabatan,
-        statusKepegawaian: k.statusKepegawaian, pengali: k.pengali, gajiPokok: k.gajiPokok,
+        // Penggajian's slip schema still uses the historical tetap/kontrak/
+        // probation literal union; Karyawan's statusKepegawaian widened to
+        // `string` once status_kepegawaian became a Daftar Pilihan list.
+        statusKepegawaian: k.statusKepegawaian as "tetap" | "kontrak" | "probation",
+        pengali: k.pengali, gajiPokok: k.gajiPokok,
         tunjangan: row.tunjangan, lembur: row.lembur, bonus: row.bonus,
         pph21: pph21Idr(row), bpjsPotongan: row.bpjsPotongan,
-        bankNama: k.bank.nama, bankNomor: k.bank.nomor, bankAtasNama: k.bank.atasNama,
+        bankNama: k.bank.nama ?? "", bankNomor: k.bank.nomor ?? "", bankAtasNama: k.bank.atasNama ?? "",
       };
     });
     const batch = await createBatch.mutateAsync({ periode: { mulai: mulaiStr, selesai: selesaiStr }, tanggalBayar: tanggalBayarStr, slips });

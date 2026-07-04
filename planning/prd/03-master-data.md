@@ -19,9 +19,9 @@
 | Status | Aktif / Nonaktif | Wajib (default Aktif) |
 
 > Area Administrasi / Kawasan Industri adalah salah satu daftar "Master Data
-> Terkelola" (Bab 9.1) — dropdown-nya baru berisi pilihan setelah modul
-> Konfigurasi tersambung ke database sungguhan; sampai saat itu field ini
-> tetap opsional/kosong.
+> Terkelola" (Bab 9.1), dikelola lewat Konfigurasi > Daftar Pilihan (sudah
+> tersambung ke database sungguhan). Field ini tetap opsional pada level
+> Data Perusahaan — belum ditautkan dari form Perusahaan pada tahap ini.
 
 **Narahubung / PIC** — mendukung **lebih dari satu** PIC per perusahaan. PIC
 pertama pada daftar otomatis menjadi kontak utama.
@@ -50,14 +50,15 @@ Sumber relasi untuk Penggajian & assignee Proyek.
 | Bidang | Keterangan |
 | --- | --- |
 | Nama Karyawan | Wajib |
-| Jabatan / Posisi | Dropdown master (mis. Staff Teknik, Ketua Tim) |
-| Status Kepegawaian | Probation / Tetap / Kontrak (master, + pengali) |
-| Gaji Pokok | IDR |
-| Pengali | mis. Probation = 0,8 (dari status kepegawaian) |
-| Tunjangan Default | mis. BPJS Kesehatan (komponen gaji master) |
+| Jabatan / Posisi | Dropdown master (Konfigurasi > Daftar Pilihan > Jabatan) — wajib dipilih |
+| Status Kepegawaian | Dropdown master (Konfigurasi > Daftar Pilihan > Status Kepegawaian), masing-masing punya pengali sendiri — wajib dipilih |
+| Gaji Pokok | IDR, wajib |
+| Pengali | Otomatis mengikuti pengali Status Kepegawaian yang dipilih (tidak diisi manual) |
+| Tunjangan | Dihitung otomatis dari komponen gaji master bertipe "Tunjangan" (Konfigurasi > Daftar Pilihan > Komponen Gaji) yang terpasang pada karyawan tersebut — tampil sebagai ringkasan read-only; pengaturan komponen per karyawan belum punya UI tersendiri pada tahap ini |
 | Info Bank | Opsional |
-| NPWP / PTKP | Untuk perhitungan pajak penggajian |
-| Tanggal Masuk | Tanggal |
+| NPWP | Opsional |
+| PTKP | Opsional — dipilih dari 9 kode PTKP standar (TK/0…K/I/0), untuk perhitungan PPh 21 penggajian |
+| Tanggal Masuk | Tanggal, wajib |
 
 ### 3.4 Profil Perusahaan & Pengaturan
 Dipakai pada header/footer & perhitungan dokumen.

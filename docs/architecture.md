@@ -213,6 +213,21 @@ every module by the time any of them got wired for real (see
 module's wiring pass is expected to re-check its own tables against the
 current mock/PRD shape rather than assume `db-schema` is still accurate.
 
+Karyawan (the third module wired) needed **no migration at all** — `employees`,
+`employee_salary_components`, and all 8 of Konfigurasi's "Daftar Pilihan"
+lookup tables (`positions`, `employment_statuses`, `salary_components`,
+`document_types`, `authorities`, `legal_bases`, `admin_areas`, `bank_accounts`)
+already existed with correct RLS, and 6 of the 8 lookup tables already had
+seed rows (`db-schema/sql/seed/00_seed.sql`). Karyawan's `jabatan`/
+`statusKepegawaian` are real FK references into those lookup tables, so
+wiring it pulled Konfigurasi's Daftar Pilihan tab (all 8 categories, not just
+the 3 Karyawan needs) forward into the same pass rather than leaving it mock
+— see `planning/prd/03-master-data.md` §3.3 for the reconciled Karyawan
+shape. This is the opposite lesson from Perusahaan: sometimes a module's
+wiring pass turns out to be schema-clean but has a hard dependency on
+another still-mock module's backend, which should be pulled forward too
+rather than built against a shared mock.
+
 ## 10. Open / deferred
 
 - **Realtime:** deferred. TanStack Query refetch-on-focus + polling covers

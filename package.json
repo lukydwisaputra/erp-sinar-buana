@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "seed:admin": "node --env-file=.env.local scripts/seed-admin.ts",
     "seed:perusahaan": "node --env-file=.env.local scripts/seed-perusahaan.ts",
+    "seed:daftar-pilihan": "node --env-file=.env.local scripts/seed-daftar-pilihan.ts",
+    "seed:karyawan": "node --env-file=.env.local scripts/seed-karyawan.ts",
     "screenshot:docs": "node --env-file=.env.local scripts/screenshot-docs.ts"
   },
   "dependencies": {

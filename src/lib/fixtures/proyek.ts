@@ -1,15 +1,16 @@
 import type { Proyek } from "@/lib/schemas/proyek";
 import {
-  encodeProyekFromSph, encodeKaryawan, encodeSph, encodeInvTermin,
+  encodeProyekFromSph, encodeSph, encodeInvTermin,
 } from "@/lib/id-generator";
 import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
+import { seedKaryawanId } from "@/lib/karyawan-seed-ids";
 
-const KRY3 = encodeKaryawan(3); // Agus Setiawan
-const KRY4 = encodeKaryawan(4); // Dewi Anggraini
-const KRY5 = encodeKaryawan(5); // Fajar Ramadhan
-const KRY7 = encodeKaryawan(7); // Hendra Permana
-const KRY8 = encodeKaryawan(8); // Nadia Kusumawati
-const KRY9 = encodeKaryawan(9); // Rizky Firmansyah
+const KRY3 = seedKaryawanId(3); // Agus Setiawan
+const KRY4 = seedKaryawanId(4); // Dewi Anggraini
+const KRY5 = seedKaryawanId(5); // Fajar Ramadhan
+const KRY7 = seedKaryawanId(7); // Hendra Permana
+const KRY8 = seedKaryawanId(8); // Nadia Kusumawati
+const KRY9 = seedKaryawanId(9); // Rizky Firmansyah
 
 const agus   = { id: KRY3, nama: "Agus Setiawan" };
 const dewi   = { id: KRY4, nama: "Dewi Anggraini" };

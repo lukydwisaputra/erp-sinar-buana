@@ -47,7 +47,7 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
   const locked = slip.status === "sudah_dibayar";
   const karyawan = karyawanFixtures.find((k) => k.id === slip.karyawanId);
   const tujuanOptions = karyawan
-    ? [{ nama: slip.karyawanNama, telepon: karyawan.telepon, email: karyawan.email }]
+    ? [{ nama: slip.karyawanNama, telepon: karyawan.telepon ?? "", email: karyawan.email ?? "" }]
     : [];
 
   return (

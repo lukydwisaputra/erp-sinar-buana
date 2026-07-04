@@ -5,29 +5,24 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
 import { Users, Wallet, CalendarDays, CalendarIcon, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { ComboboxCreate } from "@/components/shared/combobox-create";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
 import { NpwpField, PhoneField, EmailField } from "@/components/shared/form-fields";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -45,41 +40,36 @@ import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKaryawanList, useCreateKaryawan, useUpdateKaryawan, useDeleteKaryawan } from "@/lib/query/karyawan";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
 import { onFormInvalid } from "@/lib/form-toast";
-import type { Karyawan } from "@/lib/schemas/karyawan";
+import { ptkpStatusValues, type Karyawan } from "@/lib/schemas/karyawan";
+import type { VariantProps } from "class-variance-authority";
 
-const KEPEGAWAIAN_OPTIONS = [
-  { value: "tetap", label: "Tetap" },
-  { value: "kontrak", label: "Kontrak" },
-  { value: "probation", label: "Magang" },
-] as const;
+type BadgeVariant = VariantProps<typeof badgeVariants>["variant"];
 
-const KEPEGAWAIAN: Record<Karyawan["statusKepegawaian"], { label: string; variant: "success" | "info" | "warning" }> = {
-  tetap: { label: "Tetap", variant: "success" },
-  kontrak: { label: "Kontrak", variant: "info" },
-  probation: { label: "Magang", variant: "warning" },
-};
-
-function KepegawaianBadge({ status }: { status: Karyawan["statusKepegawaian"] }) {
-  const k = KEPEGAWAIAN[status];
-  return <Badge variant={k.variant}>{k.label}</Badge>;
+/** Status Kepegawaian is a client-managed Daftar Pilihan list now (Konfigurasi),
+ * not a closed enum — badge color is a best-effort label match with a plain
+ * fallback for any status the client adds later. */
+function kepegawaianVariant(label: string): BadgeVariant {
+  const l = label.toLowerCase();
+  if (l.includes("tetap")) return "success";
+  if (l.includes("kontrak")) return "info";
+  if (l.includes("probation") || l.includes("magang")) return "warning";
+  return "outline";
 }
-
-const KEPEGAWAIAN_FILTER_OPTIONS: MultiSelectOption[] = KEPEGAWAIAN_OPTIONS.map((o) => ({
-  value: o.value, label: o.label, variant: KEPEGAWAIAN[o.value].variant,
-}));
 
 const STATUS_OPTIONS: MultiSelectOption[] = [
   { value: "aktif", label: "Aktif", variant: "success" },
   { value: "terarsip", label: "Terarsip", variant: "secondary" },
 ];
 
-function masaKerja(isoDate: string): string {
+function masaKerja(isoDate: string | null): string {
+  if (!isoDate) return "—";
   const start = new Date(isoDate);
   const years = Math.floor((Date.now() - start.getTime()) / (365.25 * 24 * 3600 * 1000));
   return years <= 0 ? "< 1 tahun" : `${years} tahun`;
 }
 
-function tanggalID(isoDate: string): string {
+function tanggalID(isoDate: string | null): string {
+  if (!isoDate) return "—";
   return new Date(isoDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
@@ -93,8 +83,8 @@ function makeColumns(
       accessorKey: "id", header: "ID", meta: { mono: true },
       cell: ({ row }) => (
         <button type="button" onClick={() => onOpen(row.original)}
-          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-          {row.original.id}
+          className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+          {row.original.id.slice(0, 8)}
         </button>
       ),
     },
@@ -110,7 +100,9 @@ function makeColumns(
     { accessorKey: "jabatan", header: "Jabatan" },
     {
       accessorKey: "statusKepegawaian", header: "Kepegawaian", meta: { className: "text-center" },
-      cell: ({ row }) => <KepegawaianBadge status={row.original.statusKepegawaian} />,
+      cell: ({ row }) => (
+        <Badge variant={kepegawaianVariant(row.original.statusKepegawaian)}>{row.original.statusKepegawaian}</Badge>
+      ),
     },
     {
       accessorKey: "status", header: "Status", meta: { className: "text-center" },
@@ -164,11 +156,13 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
         <SectionLabel>Data Karyawan</SectionLabel>
         <InfoList>
           <InfoRow label="Jabatan" value={k.jabatan} />
-          <InfoRow label="NPWP" value={<span className="font-mono">{k.npwp}</span>} />
-          <InfoRow label="Bank" value={`${k.bank.nama} • ${k.bank.nomor}`} />
-          <InfoRow label="a.n." value={k.bank.atasNama} />
-          <InfoRow label="Email" value={<a href={`mailto:${k.email}`} className="text-[var(--link)] hover:underline">{k.email}</a>} />
-          <InfoRow label="No. HP" value={<span className="font-mono">{k.telepon}</span>} />
+          <InfoRow label="Tunjangan" value={formatRupiah(k.tunjangan)} />
+          <InfoRow label="NPWP" value={<span className="font-mono">{k.npwp ?? "—"}</span>} />
+          <InfoRow label="PTKP" value={k.ptkpStatus ?? "—"} />
+          <InfoRow label="Bank" value={k.bank.nama ? `${k.bank.nama} • ${k.bank.nomor}` : "—"} />
+          <InfoRow label="a.n." value={k.bank.atasNama ?? "—"} />
+          <InfoRow label="Email" value={k.email ? <a href={`mailto:${k.email}`} className="text-(--link) hover:underline">{k.email}</a> : "—"} />
+          <InfoRow label="No. HP" value={<span className="font-mono">{k.telepon ?? "—"}</span>} />
           <InfoRow label="Tanggal Masuk" value={tanggalID(k.tanggalMasuk)} />
         </InfoList>
       </section>
@@ -180,17 +174,16 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
 
 const karyawanFormSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi."),
-  jabatan: z.string().min(1, "Jabatan wajib diisi."),
-  statusKepegawaian: z.enum(["tetap", "kontrak", "probation"]),
+  positionId: z.string().min(1, "Jabatan wajib dipilih."),
+  employmentStatusId: z.string().min(1, "Status kepegawaian wajib dipilih."),
   gajiPokok: z.coerce.number({ message: "Gaji pokok wajib diisi." }).min(1, "Gaji pokok wajib diisi."),
-  bank: z.object({
-    nama: z.string().min(1, "Nama bank wajib diisi."),
-    nomor: z.string().regex(/^\d+$/, "Nomor rekening harus angka."),
-    atasNama: z.string().min(1, "Atas nama wajib diisi."),
-  }),
-  npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]),
-  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
-  telepon: z.string().min(1, "Nomor HP wajib."),
+  bankNama: z.string().optional(),
+  bankNomor: z.union([z.literal(""), z.string().regex(/^\d+$/, "Nomor rekening harus angka.")]).optional(),
+  bankAtasNama: z.string().optional(),
+  npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]).optional(),
+  ptkpStatus: z.string().optional(),
+  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]).optional(),
+  telepon: z.string().optional(),
   tanggalMasuk: z.string().min(1, "Tanggal masuk wajib diisi."),
   status: z.enum(["aktif", "terarsip"]).optional(),
 });
@@ -203,10 +196,10 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
   const form = useForm<KaryawanForm>({
     resolver: zodResolver(karyawanFormSchema),
     defaultValues: {
-      nama: "", jabatan: "", statusKepegawaian: "tetap",
+      nama: "", positionId: "", employmentStatusId: "",
       gajiPokok: undefined,
-      bank: { nama: "", nomor: "", atasNama: "" },
-      npwp: "", email: "", telepon: "", tanggalMasuk: "",
+      bankNama: "", bankNomor: "", bankAtasNama: "",
+      npwp: "", email: "", telepon: "", tanggalMasuk: "", ptkpStatus: undefined,
     },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
@@ -214,13 +207,15 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
   const onSubmit = handleSubmit(async (values) => {
     await mutateAsync({
       nama: values.nama,
-      jabatan: values.jabatan,
-      statusKepegawaian: values.statusKepegawaian,
+      positionId: values.positionId,
+      employmentStatusId: values.employmentStatusId,
       gajiPokok: Number(values.gajiPokok),
-      tunjangan: 0,
-      bank: values.bank,
-      npwp: values.npwp || "0000000000000000",
-      email: values.email || `${values.nama.toLowerCase().replace(/\s+/g, ".")}@sinarbuana.co.id`,
+      bankNama: values.bankNama,
+      bankNomor: values.bankNomor,
+      bankAtasNama: values.bankAtasNama,
+      npwp: values.npwp,
+      ptkpStatus: values.ptkpStatus as (typeof ptkpStatusValues)[number] | undefined,
+      email: values.email,
       telepon: values.telepon,
       tanggalMasuk: values.tanggalMasuk,
     });
@@ -256,51 +251,45 @@ function KaryawanEditForm({
   onSuccess: (updated: Karyawan) => void;
 }) {
   const { mutateAsync, isPending } = useUpdateKaryawan();
+  const defaults = React.useCallback((k: Karyawan): KaryawanForm => ({
+    nama: k.nama,
+    positionId: k.positionId ?? "",
+    employmentStatusId: k.employmentStatusId ?? "",
+    gajiPokok: k.gajiPokok,
+    bankNama: k.bank.nama ?? "",
+    bankNomor: k.bank.nomor ?? "",
+    bankAtasNama: k.bank.atasNama ?? "",
+    npwp: k.npwp ?? "",
+    ptkpStatus: k.ptkpStatus ?? undefined,
+    email: k.email ?? "",
+    telepon: k.telepon ?? "",
+    tanggalMasuk: k.tanggalMasuk ?? "",
+    status: k.status,
+  }), []);
   const form = useForm<KaryawanForm>({
     resolver: zodResolver(karyawanFormSchema),
-    defaultValues: {
-      nama: karyawan.nama,
-      jabatan: karyawan.jabatan,
-      statusKepegawaian: karyawan.statusKepegawaian,
-      gajiPokok: karyawan.gajiPokok,
-      bank: karyawan.bank,
-      npwp: karyawan.npwp,
-      email: karyawan.email,
-      telepon: karyawan.telepon,
-      tanggalMasuk: karyawan.tanggalMasuk,
-      status: karyawan.status,
-    },
+    defaultValues: defaults(karyawan),
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
   React.useEffect(() => {
-    if (open) {
-      reset({
-        nama: karyawan.nama,
-        jabatan: karyawan.jabatan,
-        statusKepegawaian: karyawan.statusKepegawaian,
-        gajiPokok: karyawan.gajiPokok,
-        bank: karyawan.bank,
-        npwp: karyawan.npwp,
-        email: karyawan.email,
-        telepon: karyawan.telepon,
-        tanggalMasuk: karyawan.tanggalMasuk,
-        status: karyawan.status,
-      });
-    }
-  }, [open, karyawan, reset]);
+    if (open) reset(defaults(karyawan));
+  }, [open, karyawan, reset, defaults]);
 
   const onSubmit = handleSubmit(async (values) => {
     const updated = await mutateAsync({
       id: karyawan.id,
       input: {
         nama: values.nama,
-        jabatan: values.jabatan,
-        statusKepegawaian: values.statusKepegawaian,
+        positionId: values.positionId,
+        employmentStatusId: values.employmentStatusId,
         gajiPokok: Number(values.gajiPokok),
-        bank: values.bank,
+        bankNama: values.bankNama,
+        bankNomor: values.bankNomor,
+        bankAtasNama: values.bankAtasNama,
         npwp: values.npwp,
-        email: values.email || karyawan.email,
+        ptkpStatus: values.ptkpStatus as (typeof ptkpStatusValues)[number] | undefined,
+        email: values.email,
         telepon: values.telepon,
         tanggalMasuk: values.tanggalMasuk,
         status: values.status ?? karyawan.status,
@@ -315,7 +304,7 @@ function KaryawanEditForm({
       open={open}
       onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
       title="Ubah Karyawan"
-      description={`Perbarui data karyawan ${karyawan.id}.`}
+      description={`Perbarui data karyawan ${karyawan.nama}.`}
       onSubmit={onSubmit}
       submitLabel={isPending ? "Menyimpan…" : "Simpan Perubahan"}
     >
@@ -368,6 +357,7 @@ function KaryawanFormFields({
   withStatus?: boolean;
 }) {
   const { data: jabatanOptions = [] } = useOptionList("jabatan");
+  const { data: statusOptions = [] } = useOptionList("status_kepegawaian");
   return (
     <>
       <Field data-invalid={!!errors.nama}>
@@ -376,40 +366,42 @@ function KaryawanFormFields({
         <FieldError errors={errors.nama ? [errors.nama] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.jabatan}>
+      <Field data-invalid={!!errors.positionId}>
         <FieldLabel htmlFor="k-jabatan">Jabatan</FieldLabel>
         <Controller
           control={control}
-          name="jabatan"
-          render={({ field }) => (
-            <ComboboxCreate
-              options={jabatanOptions.map((v) => ({ value: v.nama, label: v.nama }))}
-              value={field.value}
-              onChange={field.onChange}
-              placeholder="Pilih atau ketik jabatan…"
-            />
-          )}
-        />
-        <FieldError errors={errors.jabatan ? [errors.jabatan] : undefined} />
-      </Field>
-
-      <Field data-invalid={!!errors.statusKepegawaian}>
-        <FieldLabel htmlFor="k-kepegawaian">Status Kepegawaian</FieldLabel>
-        <Controller
-          control={control}
-          name="statusKepegawaian"
+          name="positionId"
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="k-kepegawaian" className="w-full" aria-invalid={!!errors.statusKepegawaian}>
-                <SelectValue placeholder="Pilih status" />
+              <SelectTrigger id="k-jabatan" className="w-full" aria-invalid={!!errors.positionId}>
+                <SelectValue placeholder="Pilih jabatan…" />
               </SelectTrigger>
               <SelectContent>
-                {KEPEGAWAIAN_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                {jabatanOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
         />
-        <FieldError errors={errors.statusKepegawaian ? [errors.statusKepegawaian] : undefined} />
+        <FieldError errors={errors.positionId ? [errors.positionId] : undefined} />
+      </Field>
+
+      <Field data-invalid={!!errors.employmentStatusId}>
+        <FieldLabel htmlFor="k-kepegawaian">Status Kepegawaian</FieldLabel>
+        <Controller
+          control={control}
+          name="employmentStatusId"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="k-kepegawaian" className="w-full" aria-invalid={!!errors.employmentStatusId}>
+                <SelectValue placeholder="Pilih status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.nama}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <FieldError errors={errors.employmentStatusId ? [errors.employmentStatusId] : undefined} />
       </Field>
 
       <Field data-invalid={!!errors.gajiPokok}>
@@ -422,30 +414,48 @@ function KaryawanFormFields({
       </Field>
 
       <div className="space-y-3 border-t border-border pt-4">
-        <SectionLabel>Rekening Bank</SectionLabel>
+        <SectionLabel>Rekening Bank (opsional)</SectionLabel>
 
-        <Field data-invalid={!!errors.bank?.nama}>
+        <Field data-invalid={!!errors.bankNama}>
           <FieldLabel htmlFor="k-bank-nama">Nama Bank</FieldLabel>
-          <Input id="k-bank-nama" placeholder="BCA" aria-invalid={!!errors.bank?.nama} {...register("bank.nama")} />
-          <FieldError errors={errors.bank?.nama ? [errors.bank.nama] : undefined} />
+          <Input id="k-bank-nama" placeholder="BCA" aria-invalid={!!errors.bankNama} {...register("bankNama")} />
+          <FieldError errors={errors.bankNama ? [errors.bankNama] : undefined} />
         </Field>
 
-        <Field data-invalid={!!errors.bank?.nomor}>
+        <Field data-invalid={!!errors.bankNomor}>
           <FieldLabel htmlFor="k-bank-nomor">Nomor Rekening</FieldLabel>
-          <Input id="k-bank-nomor" inputMode="numeric" placeholder="1234567890" aria-invalid={!!errors.bank?.nomor} {...register("bank.nomor")} />
-          <FieldError errors={errors.bank?.nomor ? [errors.bank.nomor] : undefined} />
+          <Input id="k-bank-nomor" inputMode="numeric" placeholder="1234567890" aria-invalid={!!errors.bankNomor} {...register("bankNomor")} />
+          <FieldError errors={errors.bankNomor ? [errors.bankNomor] : undefined} />
         </Field>
 
-        <Field data-invalid={!!errors.bank?.atasNama}>
+        <Field data-invalid={!!errors.bankAtasNama}>
           <FieldLabel htmlFor="k-bank-an">Atas Nama</FieldLabel>
-          <Input id="k-bank-an" placeholder="Budi Santoso" aria-invalid={!!errors.bank?.atasNama} {...register("bank.atasNama")} />
-          <FieldError errors={errors.bank?.atasNama ? [errors.bank.atasNama] : undefined} />
+          <Input id="k-bank-an" placeholder="Budi Santoso" aria-invalid={!!errors.bankAtasNama} {...register("bankAtasNama")} />
+          <FieldError errors={errors.bankAtasNama ? [errors.bankAtasNama] : undefined} />
         </Field>
       </div>
 
       <NpwpField id="k-npwp" error={errors.npwp} {...register("npwp")} />
       <EmailField id="k-email" error={errors.email} {...register("email")} />
-      <PhoneField id="k-telepon" error={errors.telepon} {...register("telepon")} />
+      <PhoneField id="k-telepon" label="No. HP (opsional)" error={errors.telepon} {...register("telepon")} />
+
+      <Field data-invalid={!!errors.ptkpStatus}>
+        <FieldLabel htmlFor="k-ptkp">PTKP (opsional)</FieldLabel>
+        <Controller
+          control={control}
+          name="ptkpStatus"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="k-ptkp" className="w-full">
+                <SelectValue placeholder="Pilih status PTKP…" />
+              </SelectTrigger>
+              <SelectContent>
+                {ptkpStatusValues.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </Field>
 
       <Controller
         control={control}
@@ -489,6 +499,7 @@ function KaryawanFormFields({
 export default function KaryawanPage() {
   const { data, isLoading, isError, refetch } = useKaryawanList();
   const { mutate: deleteKaryawan, isPending: isDeleting } = useDeleteKaryawan();
+  const { data: statusOptions = [] } = useOptionList("status_kepegawaian");
   const [selected, setSelected] = useState<Karyawan | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Karyawan | null>(null);
@@ -496,10 +507,14 @@ export default function KaryawanPage() {
 
   // Filter state
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const [pendingKepegawaian, setPendingKepegawaian] = React.useState<Karyawan["statusKepegawaian"][]>([]);
+  const [pendingKepegawaian, setPendingKepegawaian] = React.useState<string[]>([]);
   const [pendingStatus, setPendingStatus] = React.useState<Karyawan["status"][]>([]);
-  const [appliedKepegawaian, setAppliedKepegawaian] = React.useState<Karyawan["statusKepegawaian"][]>([]);
+  const [appliedKepegawaian, setAppliedKepegawaian] = React.useState<string[]>([]);
   const [appliedStatus, setAppliedStatus] = React.useState<Karyawan["status"][]>([]);
+
+  const kepegawaianFilterOptions: MultiSelectOption[] = statusOptions.map((o) => ({
+    value: o.nama, label: o.nama, variant: kepegawaianVariant(o.nama),
+  }));
 
   const hasFilter = appliedKepegawaian.length > 0 || appliedStatus.length > 0;
   const hasPending = pendingKepegawaian.length > 0 || pendingStatus.length > 0;
@@ -558,34 +573,27 @@ export default function KaryawanPage() {
         />
       )}
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Nonaktifkan Karyawan?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{deleteTarget?.nama}</strong> akan diubah statusnya menjadi <strong>Terarsip</strong>. Data tetap tersimpan dan dapat diaktifkan kembali melalui menu Ubah.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-              onClick={() => {
-                if (!deleteTarget) return;
-                deleteKaryawan(deleteTarget.id, {
-                  onSuccess: () => {
-                    if (selected?.id === deleteTarget.id) setSelected(null);
-                    setDeleteTarget(null);
-                  },
-                });
-              }}
-            >
-              {isDeleting ? "Menonaktifkan…" : "Nonaktifkan"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        entityLabel="Karyawan"
+        target={deleteTarget?.nama}
+        loading={isDeleting}
+        description={
+          <>
+            <strong>{deleteTarget?.nama}</strong> akan diubah statusnya menjadi <strong>Terarsip</strong>. Data tetap tersimpan dan dapat diaktifkan kembali melalui menu Ubah.
+          </>
+        }
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deleteKaryawan(deleteTarget.id, {
+            onSuccess: () => {
+              if (selected?.id === deleteTarget.id) setSelected(null);
+              setDeleteTarget(null);
+            },
+          });
+        }}
+      />
 
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
@@ -597,7 +605,6 @@ export default function KaryawanPage() {
           searchColumns={["id", "nama"]}
           searchPlaceholder="Cari ID atau nama karyawan…"
           emptyMessage="Belum ada karyawan"
-          defaultSorting={[{ id: "id", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
@@ -621,9 +628,9 @@ export default function KaryawanPage() {
             <div className="space-y-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status Kepegawaian</p>
               <MultiSelectFilter
-                options={KEPEGAWAIAN_FILTER_OPTIONS}
+                options={kepegawaianFilterOptions}
                 value={pendingKepegawaian}
-                onChange={(v) => setPendingKepegawaian(v as Karyawan["statusKepegawaian"][])}
+                onChange={(v) => setPendingKepegawaian(v as string[])}
                 placeholder="Pilih status kepegawaian…"
                 searchPlaceholder="Cari…"
                 noun="status"
@@ -665,8 +672,8 @@ export default function KaryawanPage() {
                 <Avatar className="mb-1 size-10"><AvatarFallback>{initials(selected.nama)}</AvatarFallback></Avatar>
                 <SheetTitle className="text-lg leading-tight font-semibold wrap-break-word">{selected.nama}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-2">
-                  <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id}</SheetDescription>
-                  <KepegawaianBadge status={selected.statusKepegawaian} />
+                  <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id.slice(0, 8)}</SheetDescription>
+                  <Badge variant={kepegawaianVariant(selected.statusKepegawaian)}>{selected.statusKepegawaian}</Badge>
                 </div>
               </SheetHeader>
               <KaryawanDetail k={selected} />

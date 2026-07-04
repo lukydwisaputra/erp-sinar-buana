@@ -52,7 +52,7 @@ export const pengirimanFixtures: PengirimanLog[] = [
     dokumenId: slipBudi.id,
     dokumenNomor: slipBudi.id,
     tujuanNama: karyawanBudi.nama,
-    tujuanKontak: karyawanBudi.telepon,
+    tujuanKontak: karyawanBudi.telepon ?? "",
     channel: "whatsapp",
     timestamp: "2026-04-25T16:45:00.000Z",
   },

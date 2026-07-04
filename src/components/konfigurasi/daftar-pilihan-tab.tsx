@@ -4,45 +4,52 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { FormSheet } from "@/components/shared/form-sheet";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Field, FieldError, FieldLabel, FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onFormInvalid } from "@/lib/form-toast";
 import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
-  useOptionList, useCreateOption, useUpdateOption, useDeleteOption,
+  useOptionList, useCreateOption, useUpdateOption, useDeleteOption, useMoveOption,
 } from "@/lib/query/daftar-pilihan";
-import { calcMethod, daftarPilihanKategori, type CalcMethod, type DaftarPilihanKategori, type OptionItem } from "@/lib/schemas/daftar-pilihan";
+import {
+  calcMethod, komponenGajiKind, daftarPilihanKategori,
+  type CalcMethod, type KomponenGajiKind, type DaftarPilihanKategori, type OptionItem,
+} from "@/lib/schemas/daftar-pilihan";
 
-const KATEGORI_META: Record<DaftarPilihanKategori, { label: string; hasPengali?: boolean; hasCalcMethod?: boolean; hasBank?: boolean }> = {
+const KATEGORI_META: Record<DaftarPilihanKategori, {
+  label: string; hasPengali?: boolean; hasKomponenGaji?: boolean; hasBank?: boolean;
+}> = {
   jenis_dokumen: { label: "Jenis Dokumen" },
   kewenangan: { label: "Kewenangan" },
   dasar_hukum: { label: "Dasar Hukum" },
   area_kawasan: { label: "Area / Kawasan Industri" },
   jabatan: { label: "Jabatan" },
   status_kepegawaian: { label: "Status Kepegawaian", hasPengali: true },
-  komponen_gaji: { label: "Komponen Gaji", hasCalcMethod: true },
+  komponen_gaji: { label: "Komponen Gaji", hasKomponenGaji: true },
   rekening_bank: { label: "Rekening Bank", hasBank: true },
 };
 
+const KIND_LABEL: Record<KomponenGajiKind, string> = {
+  tunjangan: "Tunjangan",
+  potongan: "Potongan",
+};
+
 const CALC_METHOD_LABEL: Record<CalcMethod, string> = {
-  nominal_tetap: "Nominal Tetap",
-  persen_gaji_pokok: "% Gaji Pokok",
-  manual: "Manual",
+  nominal: "Nominal Tetap",
+  persentase: "% Gaji Pokok",
+  per_hari: "Per Hari",
 };
 
 function makeColumns(
@@ -50,6 +57,7 @@ function makeColumns(
   onEdit: (item: OptionItem) => void,
   onDelete: (item: OptionItem) => void,
   onToggleAktif: (item: OptionItem, aktif: boolean) => void,
+  onMove: (item: OptionItem, direction: "up" | "down") => void,
 ): ColumnDef<OptionItem>[] {
   const columns: ColumnDef<OptionItem>[] = [
     rowNumberColumn<OptionItem>(),
@@ -62,18 +70,32 @@ function makeColumns(
       cell: ({ row }) => row.original.extra.pengali ?? "—",
     });
   }
-  if (meta.hasCalcMethod) {
-    columns.push({
-      id: "calcMethod", header: "Cara Hitung", enableSorting: false, meta: { className: "text-center" },
-      cell: ({ row }) => row.original.extra.calcMethod ? CALC_METHOD_LABEL[row.original.extra.calcMethod] : "—",
-    });
+  if (meta.hasKomponenGaji) {
+    columns.push(
+      {
+        id: "kind", header: "Jenis", enableSorting: false, meta: { className: "text-center" },
+        cell: ({ row }) => row.original.extra.kind
+          ? <Badge variant={row.original.extra.kind === "tunjangan" ? "success" : "warning"}>{KIND_LABEL[row.original.extra.kind]}</Badge>
+          : "—",
+      },
+      {
+        id: "calcMethod", header: "Cara Hitung", enableSorting: false, meta: { className: "text-center" },
+        cell: ({ row }) => row.original.extra.calcMethod ? CALC_METHOD_LABEL[row.original.extra.calcMethod] : "—",
+      },
+    );
   }
   if (meta.hasBank) {
     columns.push({
       id: "bank", header: "Rekening", enableSorting: false, meta: { className: "min-w-48" },
       cell: ({ row }) => {
         const bank = row.original.extra.bank;
-        return bank ? `${bank.nama} — ${bank.nomor} a.n. ${bank.atasNama}` : "—";
+        if (!bank) return "—";
+        return (
+          <span>
+            {bank.nama} — {bank.nomor} a.n. {bank.atasNama}
+            {row.original.extra.isDefault && <Badge variant="secondary" className="ml-1.5">Utama</Badge>}
+          </span>
+        );
       },
     });
   }
@@ -82,10 +104,9 @@ function makeColumns(
     {
       id: "aktif", header: "Aktif", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => (
-        <Switch
-          size="sm"
+        <Checkbox
           checked={row.original.aktif}
-          onCheckedChange={(checked) => onToggleAktif(row.original, checked)}
+          onCheckedChange={(checked) => onToggleAktif(row.original, checked === true)}
         />
       ),
     },
@@ -99,6 +120,12 @@ function makeColumns(
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => onEdit(row.original)}>
               <Pencil className="size-3.5" /> Ubah
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onMove(row.original, "up")}>
+              <ArrowUp className="size-3.5" /> Pindah ke Atas
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onMove(row.original, "down")}>
+              <ArrowDown className="size-3.5" /> Pindah ke Bawah
             </DropdownMenuItem>
             {!row.original.locked && (
               <>
@@ -120,19 +147,31 @@ function makeColumns(
 const baseFormSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi."),
   pengali: z.coerce.number().positive().optional(),
+  kind: komponenGajiKind.optional(),
   calcMethod: calcMethod.optional(),
+  defaultValue: z.coerce.number().optional(),
+  isEmployerPortion: z.boolean().optional(),
   bankNama: z.string().optional(),
   bankAtasNama: z.string().optional(),
   bankNomor: z.string().optional(),
+  isDefault: z.boolean().optional(),
 });
 type OptionForm = z.input<typeof baseFormSchema>;
 
 function extraFromForm(meta: (typeof KATEGORI_META)[DaftarPilihanKategori], values: OptionForm): OptionItem["extra"] {
   const extra: OptionItem["extra"] = {};
   if (meta.hasPengali && values.pengali !== undefined) extra.pengali = Number(values.pengali);
-  if (meta.hasCalcMethod && values.calcMethod) extra.calcMethod = values.calcMethod;
-  if (meta.hasBank && values.bankNama && values.bankAtasNama && values.bankNomor) {
-    extra.bank = { nama: values.bankNama, atasNama: values.bankAtasNama, nomor: values.bankNomor };
+  if (meta.hasKomponenGaji) {
+    if (values.kind) extra.kind = values.kind;
+    if (values.calcMethod) extra.calcMethod = values.calcMethod;
+    if (values.defaultValue !== undefined) extra.defaultValue = Number(values.defaultValue);
+    extra.isEmployerPortion = !!values.isEmployerPortion;
+  }
+  if (meta.hasBank) {
+    if (values.bankNama && values.bankAtasNama && values.bankNomor) {
+      extra.bank = { nama: values.bankNama, atasNama: values.bankAtasNama, nomor: values.bankNomor };
+    }
+    extra.isDefault = !!values.isDefault;
   }
   return extra;
 }
@@ -158,24 +197,58 @@ function OptionFormFields({ meta, register, control, errors }: {
           {errors.pengali && <FieldError>{errors.pengali.message}</FieldError>}
         </Field>
       )}
-      {meta.hasCalcMethod && (
-        <Field>
-          <FieldLabel>Cara Hitung</FieldLabel>
-          <Controller
-            name="calcMethod"
-            control={control}
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger><SelectValue placeholder="Pilih cara hitung…" /></SelectTrigger>
-                <SelectContent>
-                  {calcMethod.options.map((v) => (
-                    <SelectItem key={v} value={v}>{CALC_METHOD_LABEL[v]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </Field>
+      {meta.hasKomponenGaji && (
+        <>
+          <Field>
+            <FieldLabel>Jenis</FieldLabel>
+            <Controller
+              name="kind"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger><SelectValue placeholder="Pilih jenis…" /></SelectTrigger>
+                  <SelectContent>
+                    {komponenGajiKind.options.map((v) => (
+                      <SelectItem key={v} value={v}>{KIND_LABEL[v]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+          <Field>
+            <FieldLabel>Cara Hitung</FieldLabel>
+            <Controller
+              name="calcMethod"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger><SelectValue placeholder="Pilih cara hitung…" /></SelectTrigger>
+                  <SelectContent>
+                    {calcMethod.options.map((v) => (
+                      <SelectItem key={v} value={v}>{CALC_METHOD_LABEL[v]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </Field>
+          <Field>
+            <FieldLabel>Nilai Default</FieldLabel>
+            <Input type="number" step="1" {...register("defaultValue")} />
+            <FieldDescription>Nominal (Rp) atau persentase, tergantung cara hitung.</FieldDescription>
+          </Field>
+          <Field className="flex-row items-center gap-2">
+            <Controller
+              name="isEmployerPortion"
+              control={control}
+              render={({ field }) => (
+                <Checkbox checked={field.value ?? false} onCheckedChange={(c) => field.onChange(c === true)} />
+              )}
+            />
+            <FieldLabel className="font-normal">Porsi perusahaan (mis. BPJS sisi perusahaan)</FieldLabel>
+          </Field>
+        </>
       )}
       {meta.hasBank && (
         <>
@@ -190,6 +263,16 @@ function OptionFormFields({ meta, register, control, errors }: {
           <Field>
             <FieldLabel>Nomor Rekening</FieldLabel>
             <Input {...register("bankNomor")} />
+          </Field>
+          <Field className="flex-row items-center gap-2">
+            <Controller
+              name="isDefault"
+              control={control}
+              render={({ field }) => (
+                <Checkbox checked={field.value ?? false} onCheckedChange={(c) => field.onChange(c === true)} />
+              )}
+            />
+            <FieldLabel className="font-normal">Jadikan rekening utama</FieldLabel>
           </Field>
         </>
       )}
@@ -239,20 +322,26 @@ function EditOptionForm({
   onOpenChange: (open: boolean) => void;
 }) {
   const { mutateAsync, isPending } = useUpdateOption();
+  const defaults = React.useCallback((it: OptionItem | null): OptionForm => ({
+    nama: it?.nama ?? "",
+    pengali: it?.extra.pengali,
+    kind: it?.extra.kind,
+    calcMethod: it?.extra.calcMethod,
+    defaultValue: it?.extra.defaultValue,
+    isEmployerPortion: it?.extra.isEmployerPortion,
+    bankNama: it?.extra.bank?.nama ?? "",
+    bankAtasNama: it?.extra.bank?.atasNama ?? "",
+    bankNomor: it?.extra.bank?.nomor ?? "",
+    isDefault: it?.extra.isDefault,
+  }), []);
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<OptionForm>({
     resolver: zodResolver(baseFormSchema),
-    defaultValues: {
-      nama: item?.nama ?? "", pengali: item?.extra.pengali, calcMethod: item?.extra.calcMethod,
-      bankNama: item?.extra.bank?.nama ?? "", bankAtasNama: item?.extra.bank?.atasNama ?? "", bankNomor: item?.extra.bank?.nomor ?? "",
-    },
+    defaultValues: defaults(item),
   });
 
   React.useEffect(() => {
-    reset({
-      nama: item?.nama ?? "", pengali: item?.extra.pengali, calcMethod: item?.extra.calcMethod,
-      bankNama: item?.extra.bank?.nama ?? "", bankAtasNama: item?.extra.bank?.atasNama ?? "", bankNomor: item?.extra.bank?.nomor ?? "",
-    });
-  }, [item, reset]);
+    reset(defaults(item));
+  }, [item, reset, defaults]);
 
   const onSubmit = handleSubmit(async (values) => {
     if (!item) return;
@@ -288,6 +377,7 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
   const { data, isLoading } = useOptionList(kategori, { includeInactive: true });
   const { mutate: updateOption } = useUpdateOption();
   const { mutate: deleteOption, isPending: isDeleting } = useDeleteOption();
+  const { mutate: moveOption } = useMoveOption();
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<OptionItem | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<OptionItem | null>(null);
@@ -297,16 +387,11 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
     setEditTarget,
     setDeleteTarget,
     (item, aktif) => updateOption({ id: item.id, kategori, patch: { aktif } }),
+    (item, direction) => moveOption({ id: item.id, kategori, direction }),
   );
 
   return (
     <div className="space-y-4">
-      {kategori === "komponen_gaji" && (
-        <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          Katalog referensi — belum terhubung ke perhitungan slip gaji. Kolom Tunjangan/Lembur/Bonus/PPh 21/BPJS
-          di Penggajian tetap dihitung dari field tetap, bukan dari daftar ini.
-        </p>
-      )}
       <div className="flex items-center justify-end">
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" /> Tambah {meta.label}
@@ -316,29 +401,17 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
       <CreateOptionForm kategori={kategori} meta={meta} open={createOpen} onOpenChange={setCreateOpen} />
       <EditOptionForm kategori={kategori} meta={meta} item={editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null); }} />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Item?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{deleteTarget?.nama}</strong> akan dihapus permanen.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-              onClick={() => {
-                if (!deleteTarget) return;
-                deleteOption({ id: deleteTarget.id, kategori }, { onSuccess: () => setDeleteTarget(null) });
-              }}
-            >
-              Hapus
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        entityLabel="Item"
+        target={deleteTarget?.nama}
+        loading={isDeleting}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deleteOption({ id: deleteTarget.id, kategori }, { onSuccess: () => setDeleteTarget(null) });
+        }}
+      />
 
       <DataTable
         columns={columns}

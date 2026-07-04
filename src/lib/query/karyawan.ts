@@ -1,31 +1,29 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  listKaryawan,
-  createKaryawan,
-  updateKaryawan,
-  deactivateKaryawan,
-  type ListKaryawanParams,
-  type CreateKaryawanInput,
-  type UpdateKaryawanInput,
-} from "@/lib/data/karyawan";
+import { apiClient, ApiError } from "@/lib/api-client";
+import type { Karyawan, CreateKaryawanInput, UpdateKaryawanInput } from "@/lib/schemas/karyawan";
 
-export function useKaryawanList(params: ListKaryawanParams = {}) {
-  return useQuery({ queryKey: ["karyawan", params], queryFn: () => listKaryawan(params) });
+function apiErrorMessage(error: unknown, fallback: string) {
+  return error instanceof ApiError ? error.message : fallback;
+}
+
+export function useKaryawanList() {
+  return useQuery({
+    queryKey: ["karyawan"],
+    queryFn: () => apiClient.get<Karyawan[]>("/api/karyawan"),
+  });
 }
 
 export function useCreateKaryawan() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateKaryawanInput) => createKaryawan(input),
+    mutationFn: (input: CreateKaryawanInput) => apiClient.post<Karyawan>("/api/karyawan", input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["karyawan"] });
       toast.success("Karyawan berhasil ditambahkan.");
     },
-    onError: () => {
-      toast.error("Gagal menambahkan karyawan. Coba lagi.");
-    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal menambahkan karyawan.")),
   });
 }
 
@@ -33,27 +31,25 @@ export function useUpdateKaryawan() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateKaryawanInput }) =>
-      updateKaryawan(id, input),
+      apiClient.patch<Karyawan>(`/api/karyawan/${id}`, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["karyawan"] });
       toast.success("Data karyawan berhasil diperbarui.");
     },
-    onError: () => {
-      toast.error("Gagal memperbarui karyawan. Coba lagi.");
-    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal memperbarui karyawan.")),
   });
 }
 
+/** Karyawan has no hard delete — this archives the employee (isActive: false)
+ * via PATCH, matching the mock's deactivate-only behavior. */
 export function useDeleteKaryawan() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deactivateKaryawan(id),
+    mutationFn: (id: string) => apiClient.patch<Karyawan>(`/api/karyawan/${id}`, { status: "terarsip" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["karyawan"] });
       toast.success("Karyawan berhasil dinonaktifkan.");
     },
-    onError: () => {
-      toast.error("Gagal menonaktifkan karyawan. Coba lagi.");
-    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal menonaktifkan karyawan.")),
   });
 }

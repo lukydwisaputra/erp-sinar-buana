@@ -21,7 +21,10 @@ function makeSlip(
     karyawanId: k.id,
     karyawanNama: k.nama,
     jabatan: k.jabatan,
-    statusKepegawaian: k.statusKepegawaian,
+    // The fixture roster still uses the historical tetap/kontrak/probation
+    // labels; the real Karyawan type widened this field to `string` once
+    // status_kepegawaian became a client-managed Daftar Pilihan list.
+    statusKepegawaian: k.statusKepegawaian as "tetap" | "kontrak" | "probation",
     pengali: k.pengali,
     gajiPokok: k.gajiPokok,
     tunjangan: k.tunjangan,
@@ -29,15 +32,15 @@ function makeSlip(
     bonus: overrides.bonus ?? 0,
     pph21: overrides.pph21 ?? 0,
     bpjsPotongan: overrides.bpjsPotongan ?? 0,
-    bankNama: k.bank.nama,
-    bankNomor: k.bank.nomor,
-    bankAtasNama: k.bank.atasNama,
+    bankNama: k.bank.nama ?? "",
+    bankNomor: k.bank.nomor ?? "",
+    bankAtasNama: k.bank.atasNama ?? "",
     status: overrides.status ?? ("menunggu_pembayaran" as const),
     paidAt: overrides.paidAt ?? null,
   };
 }
 
-export let penggajianFixtures: PenggajianBatch[] = [
+export const penggajianFixtures: PenggajianBatch[] = [
   {
     id: "GAJ-001",
     periode: { mulai: "2026-03-24", selesai: "2026-04-24" },

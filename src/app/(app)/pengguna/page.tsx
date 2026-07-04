@@ -28,7 +28,34 @@ import {
   usePenggunaList, useCreatePengguna, useUpdatePengguna, useSetPenggunaActive,
   useResendInvite, useAdminResetPassword, type PenggunaAccount,
 } from "@/lib/query/pengguna";
+import { useKaryawanList } from "@/lib/query/karyawan";
 import { appRoleValues, appRoleLabels, akunStatusLabels, type AkunStatus } from "@/lib/schemas/pengguna";
+
+/** Radix Select can't carry an empty-string value, so "Tidak Ditautkan" uses
+ * this sentinel and gets mapped back to `null` at the form boundary. */
+const NO_EMPLOYEE = "__none__";
+
+function KaryawanLinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data: karyawan = [] } = useKaryawanList();
+  const aktif = karyawan.filter((k) => k.status === "aktif");
+  return (
+    <Field>
+      <FieldLabel htmlFor="p-karyawan">Tautan Karyawan</FieldLabel>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id="p-karyawan" className="w-full">
+          <SelectValue placeholder="Pilih karyawan…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_EMPLOYEE}>Tidak Ditautkan</SelectItem>
+          {aktif.map((k) => <SelectItem key={k.id} value={k.id}>{k.nama}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <FieldDescription>
+        Diperlukan untuk akses &ldquo;slip gaji sendiri&rdquo; dan assignment proyek.
+      </FieldDescription>
+    </Field>
+  );
+}
 
 const STATUS_BADGE: Record<AkunStatus, StatusBadgeConfig> = {
   aktif: { label: akunStatusLabels.aktif, variant: "success" },
@@ -136,6 +163,7 @@ const createFormSchema = z.object({
   fullName: z.string().min(1, "Nama wajib diisi."),
   email: z.string().min(1, "Email wajib diisi.").email("Format email tidak valid."),
   role: z.enum(appRoleValues, { message: "Peran wajib dipilih." }),
+  employeeId: z.string(),
 });
 type CreateForm = z.infer<typeof createFormSchema>;
 
@@ -151,11 +179,14 @@ function PenggunaCreateForm({
   const { mutateAsync, isPending } = useCreatePengguna();
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<CreateForm>({
     resolver: zodResolver(createFormSchema),
-    defaultValues: { fullName: "", email: "", role: "viewer" },
+    defaultValues: { fullName: "", email: "", role: "viewer", employeeId: NO_EMPLOYEE },
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    const account = await mutateAsync({ ...values, employeeId: null });
+    const account = await mutateAsync({
+      fullName: values.fullName, email: values.email, role: values.role,
+      employeeId: values.employeeId === NO_EMPLOYEE ? null : values.employeeId,
+    });
     onOpenChange(false);
     reset();
     onCreated(`/accept-invite?token=${account.inviteToken}`);
@@ -201,14 +232,11 @@ function PenggunaCreateForm({
         <FieldError errors={errors.role ? [errors.role] : undefined} />
       </Field>
 
-      <Field>
-        <FieldLabel>Tautan Karyawan</FieldLabel>
-        <Input disabled placeholder="Tersedia setelah modul Karyawan tersambung ke database" />
-        <FieldDescription>
-          Diperlukan untuk akses &ldquo;slip gaji sendiri&rdquo; dan assignment proyek — belum
-          tersedia pada tahap ini (Data Karyawan masih data contoh).
-        </FieldDescription>
-      </Field>
+      <Controller
+        control={control}
+        name="employeeId"
+        render={({ field }) => <KaryawanLinkField value={field.value} onChange={field.onChange} />}
+      />
     </FormSheet>
   );
 }
@@ -217,6 +245,7 @@ function PenggunaCreateForm({
 
 const editFormSchema = z.object({
   role: z.enum(appRoleValues, { message: "Peran wajib dipilih." }),
+  employeeId: z.string(),
 });
 type EditForm = z.infer<typeof editFormSchema>;
 
@@ -230,17 +259,23 @@ function PenggunaEditForm({
   onOpenChange: (open: boolean) => void;
 }) {
   const { mutateAsync, isPending } = useUpdatePengguna();
+  const defaults = React.useCallback((a: PenggunaAccount): EditForm => ({
+    role: a.role, employeeId: a.employeeId ?? NO_EMPLOYEE,
+  }), []);
   const { handleSubmit, control, reset, formState: { errors } } = useForm<EditForm>({
     resolver: zodResolver(editFormSchema),
-    defaultValues: { role: account.role },
+    defaultValues: defaults(account),
   });
 
   React.useEffect(() => {
-    if (open) reset({ role: account.role });
-  }, [open, account, reset]);
+    if (open) reset(defaults(account));
+  }, [open, account, reset, defaults]);
 
   const onSubmit = handleSubmit(async (values) => {
-    await mutateAsync({ id: account.id, input: { role: values.role } });
+    await mutateAsync({
+      id: account.id,
+      input: { role: values.role, employeeId: values.employeeId === NO_EMPLOYEE ? null : values.employeeId },
+    });
     onOpenChange(false);
   }, onFormInvalid);
 
@@ -271,6 +306,12 @@ function PenggunaEditForm({
         />
         <FieldError errors={errors.role ? [errors.role] : undefined} />
       </Field>
+
+      <Controller
+        control={control}
+        name="employeeId"
+        render={({ field }) => <KaryawanLinkField value={field.value} onChange={field.onChange} />}
+      />
     </FormSheet>
   );
 }
