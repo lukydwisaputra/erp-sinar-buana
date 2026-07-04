@@ -179,6 +179,23 @@ export const bankAccounts = pgTable("bank_accounts", {
   isDefault: boolean("is_default").notNull().default(false),
 });
 
+// ── Katalog Layanan (db-schema/src/schema/master-data.ts) ────────────────────
+// `milestone_template_id` is deliberately omitted here — this pass doesn't
+// query/write it (see docs/architecture.md's Katalog note); Drizzle simply
+// won't know about that column, which is fine since we never touch it.
+
+export const serviceCatalog = pgTable("service_catalog", {
+  id: pk(),
+  name: text("name").notNull(),
+  documentTypeId: uuid("document_type_id").references(() => documentTypes.id, { onDelete: "set null" }),
+  authorityId: uuid("authority_id").references(() => authorities.id, { onDelete: "set null" }),
+  legalBasisId: uuid("legal_basis_id").references(() => legalBases.id, { onDelete: "set null" }),
+  standardPrice: money("standard_price"),
+  isRecurring: boolean("is_recurring").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  ...bookkeeping,
+});
+
 // ── Data Karyawan (db-schema/src/schema/master-data.ts) ──────────────────────
 
 export const employees = pgTable("employees", {

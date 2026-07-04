@@ -2,8 +2,9 @@ import type { Sph, SphKelengkapan } from "@/lib/schemas/penawaran";
 
 const noKelengkapan: SphKelengkapan[] = [];
 import { sampleItemRab, sampleItemJadwal, type RabRow } from "@/lib/sph-templates";
-import { encodeSph, encodeLayanan } from "@/lib/id-generator";
+import { encodeSph } from "@/lib/id-generator";
 import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
+import { seedLayananId } from "@/lib/katalog-seed-ids";
 
 function itemRab(tweak?: (r: { personil: RabRow[]; langsung: RabRow[] }) => void) {
   const rab = sampleItemRab();
@@ -31,12 +32,12 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Penyusunan Pertek Air Limbah dan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(1), nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
+        layananId: seedLayananId(1), nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil[0].hargaSatuan = 5_000_000; }),
         jadwal: sampleItemJadwal("Penyusunan Pertek Air Limbah"),
       },
       {
-        layananId: encodeLayanan(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 2, harga: 25_000_000, satuan: "Paket",
+        layananId: seedLayananId(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 2, harga: 25_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.langsung[3].hargaSatuan = 4_000_000; }),
         jadwal: sampleItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
       },
@@ -65,7 +66,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen AMDAL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
+        layananId: seedLayananId(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 6)); }),
         jadwal: sampleItemJadwal("Dokumen AMDAL"),
       },
@@ -94,7 +95,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        layananId: seedLayananId(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },
@@ -119,7 +120,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Persetujuan Teknis Emisi Udara. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(5), nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
+        layananId: seedLayananId(5), nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.langsung[2].hargaSatuan = 1_500_000; }),
         jadwal: sampleItemJadwal("Persetujuan Teknis Emisi Udara"),
       },
@@ -147,12 +148,12 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL dan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        layananId: seedLayananId(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },
       {
-        layananId: encodeLayanan(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket",
+        layananId: seedLayananId(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 1)); }),
         jadwal: sampleItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
       },
@@ -181,12 +182,12 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan Dokumen UKL-UPL dan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        layananId: seedLayananId(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },
       {
-        layananId: encodeLayanan(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket",
+        layananId: seedLayananId(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 1)); }),
         jadwal: sampleItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
       },
@@ -214,7 +215,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen AMDAL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
+        layananId: seedLayananId(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 6)); }),
         jadwal: sampleItemJadwal("Dokumen AMDAL"),
       },
@@ -242,7 +243,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Penyusunan Pertek Air Limbah. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(1), nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
+        layananId: seedLayananId(1), nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Penyusunan Pertek Air Limbah"),
       },
@@ -270,7 +271,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Persetujuan Teknis Emisi Udara. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(5), nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
+        layananId: seedLayananId(5), nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.langsung[2].hargaSatuan = 1_500_000; }),
         jadwal: sampleItemJadwal("Persetujuan Teknis Emisi Udara"),
       },
@@ -298,7 +299,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen AMDAL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
+        layananId: seedLayananId(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen AMDAL"),
       },
@@ -326,7 +327,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        layananId: seedLayananId(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },
@@ -352,7 +353,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 2, harga: 25_000_000, satuan: "Paket",
+        layananId: seedLayananId(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 2, harga: 25_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 1)); }),
         jadwal: sampleItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
       },
@@ -378,7 +379,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        layananId: seedLayananId(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },
@@ -405,12 +406,12 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan Pertek Air Limbah dan Persetujuan Teknis Emisi Udara. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(1), nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
+        layananId: seedLayananId(1), nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Penyusunan Pertek Air Limbah"),
       },
       {
-        layananId: encodeLayanan(5), nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
+        layananId: seedLayananId(5), nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.langsung[2].hargaSatuan = 1_500_000; }),
         jadwal: sampleItemJadwal("Persetujuan Teknis Emisi Udara"),
       },
@@ -438,7 +439,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen AMDAL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
+        layananId: seedLayananId(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen AMDAL"),
       },
@@ -465,7 +466,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen AMDAL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
+        layananId: seedLayananId(2), nama: "Dokumen AMDAL", volume: 1, harga: 350_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen AMDAL"),
       },
@@ -493,7 +494,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan Pertek Air Limbah. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(1), nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
+        layananId: seedLayananId(1), nama: "Penyusunan Pertek Air Limbah", volume: 1, harga: 75_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Penyusunan Pertek Air Limbah"),
       },
@@ -521,12 +522,12 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan Dokumen UKL-UPL dan Laporan Pelaksanaan RKL-RPL Semester. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        layananId: seedLayananId(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },
       {
-        layananId: encodeLayanan(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket",
+        layananId: seedLayananId(4), nama: "Laporan Pelaksanaan RKL-RPL Semester", volume: 1, harga: 25_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.personil.forEach((p) => (p.vol = 1)); }),
         jadwal: sampleItemJadwal("Laporan Pelaksanaan RKL-RPL Semester"),
       },
@@ -554,7 +555,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan Persetujuan Teknis Emisi Udara. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(5), nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
+        layananId: seedLayananId(5), nama: "Persetujuan Teknis Emisi Udara", volume: 1, harga: 68_000_000, satuan: "Paket",
         rab: itemRab((r) => { r.langsung[2].hargaSatuan = 1_500_000; }),
         jadwal: sampleItemJadwal("Persetujuan Teknis Emisi Udara"),
       },
@@ -582,7 +583,7 @@ export const penawaranFixtures: Sph[] = [
       "Sehubungan dengan adanya permintaan untuk Penyusunan dan Pengurusan Dokumen UKL-UPL. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:",
     items: [
       {
-        layananId: encodeLayanan(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
+        layananId: seedLayananId(3), nama: "Dokumen UKL-UPL", volume: 1, harga: 45_000_000, satuan: "Paket",
         rab: itemRab(),
         jadwal: sampleItemJadwal("Dokumen UKL-UPL"),
       },

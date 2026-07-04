@@ -38,12 +38,12 @@ Daftar jenis layanan sebagai **master data** (bukan teks bebas). Diturunkan dari
 | Bidang | Keterangan |
 | --- | --- |
 | Nama Layanan | mis. "Penyusunan Pertek Air Limbah" |
-| Jenis Dokumen | mis. Rintek B3, Standar Teknis, SPPL, RKL-RPL Rinci, SLO |
-| Kewenangan | Provinsi / Kota-Kabupaten / Kawasan Industri |
-| Dasar Hukum | mis. Permenlhk No.5 Tahun 2021 |
+| Jenis Dokumen | Dropdown master (Konfigurasi > Daftar Pilihan > Jenis Dokumen) — wajib dipilih |
+| Kewenangan | Dropdown master (Konfigurasi > Daftar Pilihan > Kewenangan) — wajib dipilih |
+| Dasar Hukum (opsional) | Dropdown master (Konfigurasi > Daftar Pilihan > Dasar Hukum) |
 | Harga Standar (opsional) | Nilai acuan untuk penawaran |
-| Tag Berulang | mis. Laporan Semester (memicu pengingat) |
-| Template Milestone (opsional) | Langkah default proyek untuk layanan ini |
+| Berulang | Ya/Tidak — menandai layanan berulang mis. Laporan Semester (memicu pengingat) |
+| Template Milestone (opsional) | Langkah default proyek untuk layanan ini — belum ada UI untuk memilihnya pada tahap ini, menunggu modul Konfigurasi > Template tersambung ke database sungguhan |
 
 ### 3.3 Data Karyawan *(baru)*
 Sumber relasi untuk Penggajian & assignee Proyek.

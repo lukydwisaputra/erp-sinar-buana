@@ -23,10 +23,10 @@ import {
 import { SphCoverLetter } from "@/components/penawaran/sph-cover-letter";
 import { SphDocumentPackage } from "@/components/penawaran/sph-document-package";
 import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/document/kirim-dokumen-dialog";
-import { katalogFixtures } from "@/lib/fixtures/katalog";
 import { defaultItemRab, defaultItemJadwal } from "@/lib/sph-templates";
 import { onFormInvalid } from "@/lib/form-toast";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
+import { useKatalogList } from "@/lib/query/katalog";
 import {
   sphFormSchema,
   type SphFormValues,
@@ -49,12 +49,6 @@ const SPH_STATUS: Record<SphStatus, StatusBadgeConfig> = {
 };
 import { useSph, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
 import { useTarifConfig } from "@/lib/query/tarif-config";
-
-const layananOptions: LayananOption[] = katalogFixtures.map((l) => ({
-  id: l.id,
-  nama: l.nama,
-  harga: l.hargaStandar ?? 0,
-}));
 
 const emptyValues: SphFormValues = {
   perusahaanId: "",
@@ -239,6 +233,12 @@ function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string })
 function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
   const { data: tarif } = useTarifConfig();
   const { data: perusahaanOptions = [] } = usePerusahaanList();
+  const { data: katalogData = [] } = useKatalogList();
+  const layananOptions: LayananOption[] = katalogData.map((l) => ({
+    id: l.id,
+    nama: l.nama,
+    harga: l.hargaStandar ?? 0,
+  }));
   const form = useForm<SphFormValues>({
     // sphFormSchema uses z.coerce.number(), so the resolver's inferred input
     // type differs from SphFormValues (the output). Cast keeps SphForm's

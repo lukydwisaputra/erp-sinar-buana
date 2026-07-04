@@ -4,7 +4,9 @@
  * gaps `legal_bases`/`admin_areas` were left empty on purpose (PRD anticipated
  * this: dropdown "baru berisi pilihan setelah modul Konfigurasi tersambung"),
  * plus the extra job titles the Karyawan seed data (scripts/seed-karyawan.ts)
- * needs beyond the 6 generic `positions` rows already seeded.
+ * needs beyond the 6 generic `positions` rows already seeded, plus the extra
+ * document types/authorities the Katalog seed data (scripts/seed-katalog.ts)
+ * needs beyond what was already seeded.
  * Idempotent — checks by label per table before inserting.
  * Run: node --env-file=.env.local scripts/seed-daftar-pilihan.ts
  */
@@ -32,6 +34,23 @@ const positions = [
   "Analis Lingkungan", "Admin Keuangan", "Drafter", "Petugas Lapangan",
   "Staf Legal", "Konsultan Junior",
 ];
+
+// Document types the 15 Katalog seed rows use (scripts/seed-katalog.ts)
+// beyond what db-schema/sql/seed/00_seed.sql already seeded (Rintek LB3,
+// Standar Teknis (Pertek), SPPL, UKL-UPL, RKL-RPL Rinci, Andalalin, SLO,
+// Laporan Semester) — these are distinct, shorter-form categories the demo
+// catalog uses (e.g. "Pertek" as its own item vs. the seeded "Standar Teknis
+// (Pertek)"), not typos of the existing rows.
+const documentTypes = [
+  "Pertek", "AMDAL", "Laporan", "RKL-RPL", "Kajian", "Audit", "DELH",
+];
+
+// "Pusat (KLHK)" is the only authority Katalog's seed data needs beyond what
+// was already seeded (Provinsi, Kota/Kabupaten, Kawasan Industri) — the
+// katalog fixtures' "Kabupaten/Kota" is the same concept as the already-
+// seeded "Kota/Kabupaten", just reordered, so scripts/seed-katalog.ts maps
+// to the existing label instead of creating a near-duplicate row.
+const authorities = ["Pusat (KLHK)"];
 
 async function seedLookup(
   sql: postgres.Sql,
@@ -66,6 +85,8 @@ async function main() {
     await seedLookup(sql, "legal_bases", legalBases);
     await seedLookup(sql, "admin_areas", adminAreas);
     await seedLookup(sql, "positions", positions);
+    await seedLookup(sql, "document_types", documentTypes);
+    await seedLookup(sql, "authorities", authorities);
   } finally {
     await sql.end();
   }

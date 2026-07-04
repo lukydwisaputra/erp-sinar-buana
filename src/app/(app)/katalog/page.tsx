@@ -5,20 +5,16 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
 import { BookOpen, FileText, FolderKanban, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
-import { ComboboxCreate } from "@/components/shared/combobox-create";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { FormSheet } from "@/components/shared/form-sheet";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
 import { StatusBadge, type StatusBadgeConfig } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -36,9 +32,8 @@ import {
 } from "@/components/ui/sheet";
 import { StatTile, InfoRow, InfoList, SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
-import { useKatalogList, useUpdateLayanan, useDeleteLayanan } from "@/lib/query/katalog";
+import { useKatalogList, useCreateLayanan, useUpdateLayanan, useDeleteLayanan } from "@/lib/query/katalog";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
-import { delay } from "@/lib/data/_delay";
 import { onFormInvalid } from "@/lib/form-toast";
 import type { Layanan } from "@/lib/schemas/katalog";
 
@@ -65,8 +60,8 @@ function makeColumns(
       accessorKey: "id", header: "ID", meta: { mono: true },
       cell: ({ row }) => (
         <button type="button" onClick={() => onOpen(row.original)}
-          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-          {row.original.id}
+          className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+          {row.original.id.slice(0, 8)}
         </button>
       ),
     },
@@ -134,11 +129,12 @@ function LayananDetail({ l }: { l: Layanan }) {
         <InfoList>
           <InfoRow label="Jenis Dokumen" value={l.jenisDokumen} />
           <InfoRow label="Kewenangan" value={l.kewenangan} />
-          <InfoRow label="Dasar Hukum" value={l.dasarHukum || "—"} />
+          <InfoRow label="Dasar Hukum" value={l.dasarHukum ?? "—"} />
           <InfoRow
             label="Harga Standar"
             value={l.hargaStandar === null ? "Diisi manual di SPH" : formatRupiah(l.hargaStandar)}
           />
+          <InfoRow label="Berulang" value={l.isRecurring ? "Ya" : "Tidak"} />
         </InfoList>
       </section>
     </div>
@@ -149,27 +145,37 @@ function LayananDetail({ l }: { l: Layanan }) {
 
 const layananCreateSchema = z.object({
   nama: z.string().min(1, "Nama layanan wajib diisi."),
-  jenisDokumen: z.string().min(1, "Jenis dokumen wajib dipilih."),
-  kewenangan: z.string().min(1, "Kewenangan wajib dipilih."),
-  dasarHukum: z.string(),
+  documentTypeId: z.string().min(1, "Jenis dokumen wajib dipilih."),
+  authorityId: z.string().min(1, "Kewenangan wajib dipilih."),
+  legalBasisId: z.string().optional(),
   hargaStandar: z.string(),
-  tags: z.string(),
+  isRecurring: z.boolean().optional(),
 });
 type LayananCreate = z.infer<typeof layananCreateSchema>;
 
 function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { mutateAsync, isPending } = useCreateLayanan();
   const { data: jenisDokumenOptions = [] } = useOptionList("jenis_dokumen");
   const { data: kewenanganOptions = [] } = useOptionList("kewenangan");
   const { data: dasarHukumOptions = [] } = useOptionList("dasar_hukum");
   const form = useForm<LayananCreate>({
     resolver: zodResolver(layananCreateSchema),
-    defaultValues: { nama: "", jenisDokumen: "", kewenangan: "", dasarHukum: "", hargaStandar: "", tags: "" },
+    defaultValues: { nama: "", documentTypeId: "", authorityId: "", legalBasisId: "", hargaStandar: "", isRecurring: false },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
-  const onSubmit = handleSubmit(async () => {
-    await delay();
-    toast.success("Demo: data tidak benar-benar disimpan");
+  const onSubmit = handleSubmit(async (values) => {
+    const hargaNum = values.hargaStandar.trim()
+      ? Number(values.hargaStandar.replace(/\D/g, ""))
+      : null;
+    await mutateAsync({
+      nama: values.nama,
+      documentTypeId: values.documentTypeId,
+      authorityId: values.authorityId,
+      legalBasisId: values.legalBasisId,
+      hargaStandar: hargaNum,
+      isRecurring: values.isRecurring,
+    });
     onOpenChange(false);
     reset();
   }, onFormInvalid);
@@ -181,6 +187,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
       title="Tambah Layanan"
       description="Tambahkan jenis layanan perizinan ke katalog."
       onSubmit={onSubmit}
+      submitLabel={isPending ? "Menyimpan…" : "Simpan"}
     >
       <Field data-invalid={!!errors.nama}>
         <FieldLabel htmlFor="l-nama">Nama Layanan</FieldLabel>
@@ -188,56 +195,58 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
         <FieldError errors={errors.nama ? [errors.nama] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.jenisDokumen}>
+      <Field data-invalid={!!errors.documentTypeId}>
         <FieldLabel htmlFor="l-jenis">Jenis Dokumen</FieldLabel>
         <Controller
           control={control}
-          name="jenisDokumen"
+          name="documentTypeId"
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="l-jenis" className="w-full" aria-invalid={!!errors.jenisDokumen}>
+              <SelectTrigger id="l-jenis" className="w-full" aria-invalid={!!errors.documentTypeId}>
                 <SelectValue placeholder="Pilih jenis dokumen" />
               </SelectTrigger>
               <SelectContent>
-                {jenisDokumenOptions.map((v) => <SelectItem key={v.id} value={v.nama}>{v.nama}</SelectItem>)}
+                {jenisDokumenOptions.map((v) => <SelectItem key={v.id} value={v.id}>{v.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
         />
-        <FieldError errors={errors.jenisDokumen ? [errors.jenisDokumen] : undefined} />
+        <FieldError errors={errors.documentTypeId ? [errors.documentTypeId] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.kewenangan}>
+      <Field data-invalid={!!errors.authorityId}>
         <FieldLabel htmlFor="l-kewenangan">Kewenangan</FieldLabel>
         <Controller
           control={control}
-          name="kewenangan"
+          name="authorityId"
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="l-kewenangan" className="w-full" aria-invalid={!!errors.kewenangan}>
+              <SelectTrigger id="l-kewenangan" className="w-full" aria-invalid={!!errors.authorityId}>
                 <SelectValue placeholder="Pilih kewenangan" />
               </SelectTrigger>
               <SelectContent>
-                {kewenanganOptions.map((v) => <SelectItem key={v.id} value={v.nama}>{v.nama}</SelectItem>)}
+                {kewenanganOptions.map((v) => <SelectItem key={v.id} value={v.id}>{v.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
         />
-        <FieldError errors={errors.kewenangan ? [errors.kewenangan] : undefined} />
+        <FieldError errors={errors.authorityId ? [errors.authorityId] : undefined} />
       </Field>
 
       <Field>
         <FieldLabel htmlFor="l-dasar">Dasar Hukum (opsional)</FieldLabel>
         <Controller
           control={control}
-          name="dasarHukum"
+          name="legalBasisId"
           render={({ field }) => (
-            <ComboboxCreate
-              options={dasarHukumOptions.map((v) => ({ value: v.nama, label: v.nama }))}
-              value={field.value}
-              onChange={field.onChange}
-              placeholder="Pilih atau ketik dasar hukum…"
-            />
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="l-dasar" className="w-full">
+                <SelectValue placeholder="Pilih dasar hukum…" />
+              </SelectTrigger>
+              <SelectContent>
+                {dasarHukumOptions.map((v) => <SelectItem key={v.id} value={v.id}>{v.nama}</SelectItem>)}
+              </SelectContent>
+            </Select>
           )}
         />
       </Field>
@@ -253,10 +262,15 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
         <FieldDescription>Harga standar; masih dapat disesuaikan per proyek di SPH.</FieldDescription>
       </Field>
 
-      <Field>
-        <FieldLabel htmlFor="l-tags">Tag (opsional)</FieldLabel>
-        <Input id="l-tags" placeholder="Pisahkan dengan koma, Air Limbah, Berulang" {...register("tags")} />
-        <FieldDescription>Pisahkan dengan koma.</FieldDescription>
+      <Field className="flex-row items-center gap-2">
+        <Controller
+          control={control}
+          name="isRecurring"
+          render={({ field }) => (
+            <Checkbox checked={field.value ?? false} onCheckedChange={(c) => field.onChange(c === true)} />
+          )}
+        />
+        <FieldLabel className="font-normal">Berulang (mis. Laporan Semester)</FieldLabel>
       </Field>
     </FormSheet>
   );
@@ -266,11 +280,11 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
 
 const layananEditSchema = z.object({
   nama: z.string().min(1, "Nama layanan wajib diisi."),
-  jenisDokumen: z.string().min(1, "Jenis dokumen wajib dipilih."),
-  kewenangan: z.string().min(1, "Kewenangan wajib dipilih."),
-  dasarHukum: z.string(),
+  documentTypeId: z.string().min(1, "Jenis dokumen wajib dipilih."),
+  authorityId: z.string().min(1, "Kewenangan wajib dipilih."),
+  legalBasisId: z.string().optional(),
   hargaStandar: z.string(),
-  tags: z.string(),
+  isRecurring: z.boolean().optional(),
   status: z.enum(["aktif", "terarsip"]),
 });
 type LayananEdit = z.infer<typeof layananEditSchema>;
@@ -290,51 +304,38 @@ function LayananEditForm({
   const { data: jenisDokumenOptions = [] } = useOptionList("jenis_dokumen");
   const { data: kewenanganOptions = [] } = useOptionList("kewenangan");
   const { data: dasarHukumOptions = [] } = useOptionList("dasar_hukum");
+  const defaults = React.useCallback((l: Layanan): LayananEdit => ({
+    nama: l.nama,
+    documentTypeId: l.documentTypeId ?? "",
+    authorityId: l.authorityId ?? "",
+    legalBasisId: l.legalBasisId ?? "",
+    hargaStandar: l.hargaStandar === null ? "" : String(l.hargaStandar),
+    isRecurring: l.isRecurring,
+    status: l.status,
+  }), []);
   const form = useForm<LayananEdit>({
     resolver: zodResolver(layananEditSchema),
-    defaultValues: {
-      nama: layanan.nama,
-      jenisDokumen: layanan.jenisDokumen,
-      kewenangan: layanan.kewenangan,
-      dasarHukum: layanan.dasarHukum,
-      hargaStandar: layanan.hargaStandar === null ? "" : String(layanan.hargaStandar),
-      tags: layanan.tags.join(", "),
-      status: layanan.status,
-    },
+    defaultValues: defaults(layanan),
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
   React.useEffect(() => {
-    if (open) {
-      reset({
-        nama: layanan.nama,
-        jenisDokumen: layanan.jenisDokumen,
-        kewenangan: layanan.kewenangan,
-        dasarHukum: layanan.dasarHukum,
-        hargaStandar: layanan.hargaStandar === null ? "" : String(layanan.hargaStandar),
-        tags: layanan.tags.join(", "),
-        status: layanan.status,
-      });
-    }
-  }, [open, layanan, reset]);
+    if (open) reset(defaults(layanan));
+  }, [open, layanan, reset, defaults]);
 
   const onSubmit = handleSubmit(async (values) => {
     const hargaNum = values.hargaStandar.trim()
       ? Number(values.hargaStandar.replace(/\D/g, ""))
       : null;
-    const tags = values.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
     const updated = await mutateAsync({
       id: layanan.id,
       input: {
         nama: values.nama,
-        jenisDokumen: values.jenisDokumen,
-        kewenangan: values.kewenangan,
-        dasarHukum: values.dasarHukum,
+        documentTypeId: values.documentTypeId,
+        authorityId: values.authorityId,
+        legalBasisId: values.legalBasisId || null,
         hargaStandar: hargaNum,
-        tags,
+        isRecurring: values.isRecurring,
         status: values.status,
       },
     });
@@ -347,7 +348,7 @@ function LayananEditForm({
       open={open}
       onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
       title="Ubah Layanan"
-      description={`Perbarui data layanan ${layanan.id}.`}
+      description={`Perbarui data layanan ${layanan.nama}.`}
       onSubmit={onSubmit}
       submitLabel={isPending ? "Menyimpan…" : "Simpan Perubahan"}
     >
@@ -357,56 +358,58 @@ function LayananEditForm({
         <FieldError errors={errors.nama ? [errors.nama] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.jenisDokumen}>
+      <Field data-invalid={!!errors.documentTypeId}>
         <FieldLabel htmlFor="e-jenis">Jenis Dokumen</FieldLabel>
         <Controller
           control={control}
-          name="jenisDokumen"
+          name="documentTypeId"
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="e-jenis" className="w-full" aria-invalid={!!errors.jenisDokumen}>
+              <SelectTrigger id="e-jenis" className="w-full" aria-invalid={!!errors.documentTypeId}>
                 <SelectValue placeholder="Pilih jenis dokumen" />
               </SelectTrigger>
               <SelectContent>
-                {jenisDokumenOptions.map((v) => <SelectItem key={v.id} value={v.nama}>{v.nama}</SelectItem>)}
+                {jenisDokumenOptions.map((v) => <SelectItem key={v.id} value={v.id}>{v.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
         />
-        <FieldError errors={errors.jenisDokumen ? [errors.jenisDokumen] : undefined} />
+        <FieldError errors={errors.documentTypeId ? [errors.documentTypeId] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.kewenangan}>
+      <Field data-invalid={!!errors.authorityId}>
         <FieldLabel htmlFor="e-kewenangan">Kewenangan</FieldLabel>
         <Controller
           control={control}
-          name="kewenangan"
+          name="authorityId"
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="e-kewenangan" className="w-full" aria-invalid={!!errors.kewenangan}>
+              <SelectTrigger id="e-kewenangan" className="w-full" aria-invalid={!!errors.authorityId}>
                 <SelectValue placeholder="Pilih kewenangan" />
               </SelectTrigger>
               <SelectContent>
-                {kewenanganOptions.map((v) => <SelectItem key={v.id} value={v.nama}>{v.nama}</SelectItem>)}
+                {kewenanganOptions.map((v) => <SelectItem key={v.id} value={v.id}>{v.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
         />
-        <FieldError errors={errors.kewenangan ? [errors.kewenangan] : undefined} />
+        <FieldError errors={errors.authorityId ? [errors.authorityId] : undefined} />
       </Field>
 
       <Field>
         <FieldLabel htmlFor="e-dasar">Dasar Hukum (opsional)</FieldLabel>
         <Controller
           control={control}
-          name="dasarHukum"
+          name="legalBasisId"
           render={({ field }) => (
-            <ComboboxCreate
-              options={dasarHukumOptions.map((v) => ({ value: v.nama, label: v.nama }))}
-              value={field.value}
-              onChange={field.onChange}
-              placeholder="Pilih atau ketik dasar hukum…"
-            />
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="e-dasar" className="w-full">
+                <SelectValue placeholder="Pilih dasar hukum…" />
+              </SelectTrigger>
+              <SelectContent>
+                {dasarHukumOptions.map((v) => <SelectItem key={v.id} value={v.id}>{v.nama}</SelectItem>)}
+              </SelectContent>
+            </Select>
           )}
         />
       </Field>
@@ -422,10 +425,15 @@ function LayananEditForm({
         <FieldDescription>Harga standar; masih dapat disesuaikan per proyek di SPH.</FieldDescription>
       </Field>
 
-      <Field>
-        <FieldLabel htmlFor="e-tags">Tag (opsional)</FieldLabel>
-        <Input id="e-tags" placeholder="Pisahkan dengan koma" {...register("tags")} />
-        <FieldDescription>Pisahkan dengan koma.</FieldDescription>
+      <Field className="flex-row items-center gap-2">
+        <Controller
+          control={control}
+          name="isRecurring"
+          render={({ field }) => (
+            <Checkbox checked={field.value ?? false} onCheckedChange={(c) => field.onChange(c === true)} />
+          )}
+        />
+        <FieldLabel className="font-normal">Berulang (mis. Laporan Semester)</FieldLabel>
       </Field>
 
       <Field>
@@ -601,34 +609,22 @@ export default function KatalogPage() {
       )}
 
       {/* Delete confirm */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Layanan?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{deleteTarget?.nama}</strong> akan dihapus permanen dan tidak dapat dipulihkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-              onClick={() => {
-                if (!deleteTarget) return;
-                deleteLayanan(deleteTarget.id, {
-                  onSuccess: () => {
-                    if (selected?.id === deleteTarget.id) setSelected(null);
-                    setDeleteTarget(null);
-                  },
-                });
-              }}
-            >
-              {isDeleting ? "Menghapus…" : "Hapus"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        entityLabel="Layanan"
+        target={deleteTarget?.nama}
+        loading={isDeleting}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deleteLayanan(deleteTarget.id, {
+            onSuccess: () => {
+              if (selected?.id === deleteTarget.id) setSelected(null);
+              setDeleteTarget(null);
+            },
+          });
+        }}
+      />
 
       {/* Detail sheet */}
       <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
@@ -641,7 +637,7 @@ export default function KatalogPage() {
                 </div>
                 <SheetTitle className="text-lg leading-tight font-semibold wrap-break-word">{selected.nama}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-2">
-                  <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id}</SheetDescription>
+                  <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id.slice(0, 8)}</SheetDescription>
                   <StatusBadge status={selected.status} map={STATUS_BADGE} />
                 </div>
               </SheetHeader>
