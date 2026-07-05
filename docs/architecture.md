@@ -260,6 +260,63 @@ Proyek and Faktur aren't wired yet. That cascade stays mocked
 consumers) until those modules get their own wiring pass. See
 `planning/prd/04-penawaran-sph.md` for the reconciled Penawaran shape.
 
+Proyek (the sixth module wired) needed the largest reconciliation of any
+module so far — three real schema gaps plus two scope-expansion decisions
+made with the user up front (a Gantt/timeline view and Realisasi RAB, both
+originally separate follow-ups, pulled into this same pass):
+
+- **Milestone nesting.** `milestones` had no self-referencing `parent_id` —
+  the detail view's milestone tree needs it (migration `0008`, `onDelete:
+  cascade` — deleting a parent now cascades to children/their comments at
+  the DB level, replacing the mock's manual recursive-descendant walk).
+- **Milestone assignees are genuinely multi-select** (verified by reading
+  the component directly, not assumed) — added a `milestone_assignees` join
+  table rather than using the existing single `assigneeEmployeeId` column,
+  which stays unused. The mock's picker also allowed assigning a company PIC
+  to a milestone; that option is dropped (employees only) as a disclosed
+  scope cut — a milestone assignee is internal staff per the PRD, and
+  company PICs are already shown separately via `PerusahaanPic`.
+- **`milestones.description`/`project_comments.milestone_id` were both
+  missing** — the mock's real "Deskripsi" textarea and per-milestone
+  activity feed had no DB columns to write to (migration `0008` again).
+- **Status became fully config-driven.** The mock shipped a hardcoded
+  5-value Proyek enum and 4-value Milestone enum with fixed transitions/
+  colors, matching neither the PRD's actual 7-stage process
+  (PO/Kontrak→…→Selesai/Batal) nor the DB's already-seeded
+  `workflow_statuses` rows for `entity='proyek'`/`entity='milestone'`. Status
+  is now a live dropdown sourced from `workflow_statuses` with no client-side
+  gating (same free-dropdown pattern as Penawaran) — automation (e.g.
+  Dasbor's "active project" filter) keys off `system_role`
+  (`SELESAI`/`BATAL`), never the label, since labels are user-renameable.
+- **Gantt/timeline (new capability).** `activity_schedules` already had a
+  nullable `project_id` column and `activity_schedule_rows.milestone_id`
+  from the original db-schema design ("Attached to a quotation, a project,
+  or both, after Deal") — the app just never built a UI for it.
+  Converting an SPH to a project now **re-points the same schedule rows**
+  Penawaran wrote (`UPDATE activity_schedules SET project_id = ...`) rather
+  than duplicating them; `activity_schedule_marked_weeks.isActual` (0=
+  rencana/1=aktual) was written but never read as `1` until now — the new
+  Gantt view overlays both, with actual-progress marking as a small
+  incremental toggle endpoint rather than Penawaran's full delete-reinsert
+  (ongoing week-by-week marking doesn't fit a wholesale-replace model).
+- **Realisasi RAB (new capability, pulled forward).** Its own small module
+  (own schema/fixtures/query files, `rab_actuals` table) with almost-matching
+  but not identical columns — added `rab_actuals.rab_line_label` (the mock's
+  free-text RAB-line identifier had no DB equivalent, only a generic `note`).
+  `cashflow_entry_id` stays unlinked (Arus Kas isn't wired).
+
+Dropped without replacement (documented, not silently lost): the mock's
+fine-grained per-field activity log ("Status diubah: X → Y", "Assignee
+diubah", …) has no DB equivalent — real automatic history is limited to
+`project_status_log` (project-level status changes only, trigger-written,
+`SECURITY DEFINER`, the app never inserts into it directly). Milestone
+description/comment attachments (drag-and-drop, blob-URL only in the mock)
+are dropped entirely — no real object storage wired for this module.
+`@mention` parsing/notifications, milestone-template auto-loading on project
+creation, and recurring Laporan Semester auto-generation are all deferred
+(PRD-described, unimplemented in the mock, and out of scope for this pass).
+See `planning/prd/06-manajemen-proyek.md` for the reconciled Proyek shape.
+
 ## 10. Open / deferred
 
 - **Realtime:** deferred. TanStack Query refetch-on-focus + polling covers

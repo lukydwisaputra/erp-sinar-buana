@@ -1,8 +1,6 @@
 import { delay } from "@/lib/data/_delay";
 import { penawaranFixtures } from "@/lib/fixtures/penawaran";
 import { sphSchema, type Sph, type SphStatus } from "@/lib/schemas/penawaran";
-import { createFakturSetFromSph } from "@/lib/data/faktur";
-import { createProyekFromSph } from "@/lib/data/proyek";
 
 export type ListPenawaranParams = { q?: string };
 
@@ -27,10 +25,10 @@ export async function updatePenawaranStatus(id: string, newStatus: SphStatus): P
   const idx = penawaranFixtures.findIndex((s) => s.id === id);
   if (idx === -1) throw new Error(`SPH ${id} not found`);
   penawaranFixtures[idx] = { ...penawaranFixtures[idx], status: newStatus };
-  if (newStatus === "deal") {
-    createFakturSetFromSph(penawaranFixtures[idx]);
-    createProyekFromSph(penawaranFixtures[idx]);
-  }
+  // Deal-time Proyek/Faktur creation is no longer triggered from here — the
+  // real Penawaran/Proyek modules use their own explicit create flows now
+  // (this mock file only survives to serve the still-unwired Faktur/Dasbor
+  // consumers that call the functions above).
 }
 
 export async function deletePenawaran(id: string): Promise<void> {

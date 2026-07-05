@@ -7,6 +7,25 @@
 Diakses **semua karyawan** sesuai assignment. Menggabungkan tracker nyata klien dengan
 fitur kolaborasi bergaya ClickUp (assignee + komentar ber-timeline).
 
+> **Status implementasi:** Proyek sudah tersambung ke database sungguhan
+> (header, milestone bertingkat, assignee, Gantt/Estimasi Jadwal, komentar,
+> Realisasi RAB). Beberapa catatan penting:
+> - **Batasan hak akses assignment** ("Tim Teknis: CRU sesuai assignment")
+>   belum diberlakukan seketat itu — implementasi saat ini mengikuti RBAC
+>   database (Tim Teknis dapat CRU semua proyek/milestone, bukan hanya yang
+>   ditugaskan padanya); penghapusan tetap Admin-only sesuai PRD.
+> - **Log perubahan per-field otomatis** (mis. "Status diubah: X → Y") belum
+>   ada — riwayat otomatis yang tersedia hanya perubahan status di level
+>   proyek (bukan milestone).
+> - **Mention (`@karyawan`) dan lampiran pada komentar/deskripsi** belum
+>   tersedia — komentar saat ini teks polos, tanpa notifikasi.
+> - **Template milestone otomatis saat proyek dibuat** dan **Laporan
+>   Semester berulang otomatis** (Bab 6.6) belum berjalan — keduanya
+>   menunggu giliran wiring modul Konfigurasi > Template dan mekanisme
+>   penjadwalan (worker) yang belum dibangun.
+> - **Buat Faktur Induk** dari milestone pemicu termin masih simulasi (data
+>   contoh) — menunggu modul Faktur tersambung ke database.
+
 ### 6.1 Field Proyek
 | Field | Keterangan |
 | --- | --- |

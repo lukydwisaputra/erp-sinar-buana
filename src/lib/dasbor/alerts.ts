@@ -3,7 +3,14 @@ import type { KewajibanPajak } from "@/lib/schemas/kewajiban-pajak";
 import type { Proyek } from "@/lib/schemas/proyek";
 import type { AlertItem, AlertJenis, AlertPrioritas, ProyekProfit } from "@/lib/dasbor/types";
 
-const ACTIVE_PROYEK_STATUSES = new Set<Proyek["status"]>(["belum_mulai", "on_track", "terlambat"]);
+// Proyek's status is now a config-driven workflow_statuses label (client can
+// rename/reorder freely) — "active" (can still be "mangkrak"/stalled) means
+// anything whose systemRole isn't a terminal SELESAI/BATAL, never a label
+// match (PRD Bab 9.2: automation keys off systemRole, not label).
+const TERMINAL_PROYEK_SYSTEM_ROLES = new Set(["SELESAI", "BATAL"]);
+function isActiveProyek(p: Proyek): boolean {
+  return !p.statusSystemRole || !TERMINAL_PROYEK_SYSTEM_ROLES.has(p.statusSystemRole);
+}
 
 export const FAKTUR_DUE_SOON_DAYS = 7;
 export const PAJAK_DUE_SOON_DAYS = 3;
@@ -114,7 +121,7 @@ export function lastActivityDate(p: Proyek): string {
 export function alertsProyekMangkrak(proyeks: Proyek[], today: string, ambangHari: number): AlertItem[] {
   const items: AlertItem[] = [];
   for (const p of proyeks) {
-    if (!ACTIVE_PROYEK_STATUSES.has(p.status)) continue; // selesai/dibatalkan can never be "stalled"
+    if (!isActiveProyek(p)) continue; // selesai/dibatalkan can never be "stalled"
     const last = lastActivityDate(p);
     const diff = daysDiff(last, today);
     if (diff >= ambangHari) {

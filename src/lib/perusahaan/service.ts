@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
 import { withUserTransaction, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/api-error";
@@ -30,6 +30,31 @@ async function countPenawaranByCompany(tx: Tx, companyIds: string[]): Promise<Ma
   return new Map(rows.map((r) => [r.companyId, r.count]));
 }
 
+/** Real count/sum of active (non-terminal) projects per company — Proyek is
+ * wired, so `proyekAktif`/`nilaiKontrak` no longer read the frozen mock
+ * fixture array. "Active" = systemRole isn't a terminal SELESAI/BATAL (never
+ * a label match — clients rename/reorder workflow_statuses labels freely). */
+async function countActiveProjectsByCompany(tx: Tx, companyIds: string[]): Promise<Map<string, { proyekAktif: number; nilaiKontrak: number }>> {
+  if (!companyIds.length) return new Map();
+  const rows = await tx
+    .select({
+      companyId: schema.projects.companyId,
+      count: sql<number>`count(*)::int`,
+      total: sql<string>`coalesce(sum(${schema.projects.contractValue}), 0)`,
+    })
+    .from(schema.projects)
+    .leftJoin(schema.workflowStatuses, eq(schema.projects.statusId, schema.workflowStatuses.id))
+    .where(
+      and(
+        inArray(schema.projects.companyId, companyIds),
+        isNull(schema.projects.deletedAt),
+        or(isNull(schema.workflowStatuses.systemRole), notInArray(schema.workflowStatuses.systemRole, ["SELESAI", "BATAL"])),
+      ),
+    )
+    .groupBy(schema.projects.companyId);
+  return new Map(rows.map((r) => [r.companyId, { proyekAktif: r.count, nilaiKontrak: Number(r.total) }]));
+}
+
 export async function listCompanies(userId: string): Promise<Perusahaan[]> {
   return withUserTransaction(userId, async (tx) => {
     const companies = await tx
@@ -47,10 +72,15 @@ export async function listCompanies(userId: string): Promise<Perusahaan[]> {
       list.push(c);
       contactsByCompany.set(c.companyId, list);
     }
-    const penawaranCounts = await countPenawaranByCompany(tx, companies.map((c) => c.id));
-    return companies.map((c) =>
-      toPerusahaan(c, contactsByCompany.get(c.id) ?? [], penawaranCounts.get(c.id) ?? 0),
-    );
+    const companyIds = companies.map((c) => c.id);
+    const [penawaranCounts, projectStats] = await Promise.all([
+      countPenawaranByCompany(tx, companyIds),
+      countActiveProjectsByCompany(tx, companyIds),
+    ]);
+    return companies.map((c) => {
+      const stats = projectStats.get(c.id);
+      return toPerusahaan(c, contactsByCompany.get(c.id) ?? [], penawaranCounts.get(c.id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0);
+    });
   });
 }
 
@@ -63,8 +93,12 @@ export async function getCompany(userId: string, id: string): Promise<Perusahaan
       .limit(1);
     if (!company) throw new NotFoundError("Perusahaan tidak ditemukan.");
     const contacts = await loadContacts(tx, id);
-    const penawaranCounts = await countPenawaranByCompany(tx, [id]);
-    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0);
+    const [penawaranCounts, projectStats] = await Promise.all([
+      countPenawaranByCompany(tx, [id]),
+      countActiveProjectsByCompany(tx, [id]),
+    ]);
+    const stats = projectStats.get(id);
+    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0);
   });
 }
 
@@ -92,7 +126,7 @@ export async function createCompany(
           .values(toContactRows(input.pic, company.id))
           .returning()
       : [];
-    return toPerusahaan(company, contacts, 0);
+    return toPerusahaan(company, contacts, 0, 0, 0);
   });
 }
 
@@ -132,8 +166,12 @@ export async function updateCompany(
     }
 
     const contacts = await loadContacts(tx, id);
-    const penawaranCounts = await countPenawaranByCompany(tx, [id]);
-    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0);
+    const [penawaranCounts, projectStats] = await Promise.all([
+      countPenawaranByCompany(tx, [id]),
+      countActiveProjectsByCompany(tx, [id]),
+    ]);
+    const stats = projectStats.get(id);
+    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0);
   });
 }
 

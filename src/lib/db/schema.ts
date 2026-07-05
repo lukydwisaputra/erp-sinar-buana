@@ -13,6 +13,7 @@
  * remain authoritative.
  */
 import {
+  type AnyPgColumn,
   boolean,
   date,
   integer,
@@ -334,13 +335,15 @@ export const quotationRabDirectCosts = pgTable("quotation_rab_direct_costs", {
 });
 
 // ── Estimasi Jadwal (db-schema/src/schema/schedules.ts) ──────────────────────
-// `project_id` is deliberately omitted — this pass never attaches a schedule
-// to a project (Proyek stays mock), only to a quotation/quotation item.
+// `projectId` attaches the SAME rows created at Penawaran-time to a project
+// after Deal (schedules.ts's own comment: "Attached to a quotation, a
+// project, or both (after Deal)") — see proyek/jadwal-service.ts.
 
 export const activitySchedules = pgTable("activity_schedules", {
   id: pk(),
   quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "cascade" }),
   quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }),
   numMonths: smallint("num_months").notNull().default(4),
   weeksPerMonth: smallint("weeks_per_month").notNull().default(4),
   createdAt: createdAt(),
@@ -352,6 +355,7 @@ export const activityScheduleRows = pgTable("activity_schedule_rows", {
   scheduleId: uuid("schedule_id").notNull().references(() => activitySchedules.id, { onDelete: "cascade" }),
   activityName: text("activity_name").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
+  milestoneId: uuid("milestone_id").references(() => milestones.id, { onDelete: "set null" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -366,3 +370,129 @@ export const activityScheduleMarkedWeeks = pgTable(
   },
   (t) => [unique("activity_schedule_marked_weeks_uq").on(t.rowId, t.weekNumber, t.isActual)],
 );
+
+// ── Manajemen Proyek (db-schema/src/schema/projects.ts) ──────────────────────
+
+export const projectRole = pgEnum("project_role", [
+  "ketua_tim",
+  "anggota",
+  "document_controller",
+]);
+
+export const projects = pgTable(
+  "projects",
+  {
+    id: pk(),
+    name: text("name").notNull(),
+    companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "restrict" }),
+    adminAreaId: uuid("admin_area_id").references(() => adminAreas.id, { onDelete: "set null" }),
+    workYear: integer("work_year"),
+    statusId: uuid("status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
+    contractValue: money("contract_value").notNull().default("0"),
+    quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "set null" }),
+    recurringPeriod: smallint("recurring_period"),
+    ...bookkeeping,
+  },
+  (t) => [unique("projects_recurring_uq").on(t.companyId, t.workYear, t.recurringPeriod)],
+);
+
+export const projectServices = pgTable("project_services", {
+  id: pk(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  serviceId: uuid("service_id").references(() => serviceCatalog.id, { onDelete: "set null" }),
+  documentTypeLabel: text("document_type_label"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const projectAssignees = pgTable(
+  "project_assignees",
+  {
+    id: pk(),
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+    role: projectRole("role").notNull().default("anggota"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [unique("project_assignees_uq").on(t.projectId, t.employeeId, t.role)],
+);
+
+export const milestones = pgTable("milestones", {
+  id: pk(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  parentId: uuid("parent_id").references((): AnyPgColumn => milestones.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  assigneeEmployeeId: uuid("assignee_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  statusId: uuid("status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
+  targetDate: date("target_date"),
+  actualDate: date("actual_date"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  triggersTerm: boolean("triggers_term").notNull().default(false),
+  linkedProjectServiceId: uuid("linked_project_service_id").references(() => projectServices.id, { onDelete: "set null" }),
+  linkedMasterInvoiceId: uuid("linked_master_invoice_id"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const milestoneAssignees = pgTable(
+  "milestone_assignees",
+  {
+    id: pk(),
+    milestoneId: uuid("milestone_id").notNull().references(() => milestones.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id").notNull().references(() => employees.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [unique("milestone_assignees_uq").on(t.milestoneId, t.employeeId)],
+);
+
+export const projectComments = pgTable("project_comments", {
+  id: pk(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  milestoneId: uuid("milestone_id").references(() => milestones.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").references(() => userProfiles.id, { onDelete: "set null" }),
+  body: text("body").notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const commentMentions = pgTable(
+  "comment_mentions",
+  {
+    id: pk(),
+    commentId: uuid("comment_id").notNull().references(() => projectComments.id, { onDelete: "cascade" }),
+    mentionedUserId: uuid("mentioned_user_id").notNull().references(() => userProfiles.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [unique("comment_mentions_uq").on(t.commentId, t.mentionedUserId)],
+);
+
+// `project_status_log` is written only by a trigger (fn_project_status_log,
+// SECURITY DEFINER) — the app never inserts into it directly, only reads.
+export const projectStatusLog = pgTable("project_status_log", {
+  id: pk(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  fromStatusId: uuid("from_status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
+  toStatusId: uuid("to_status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
+  changedBy: uuid("changed_by").references(() => userProfiles.id, { onDelete: "set null" }),
+  changedAt: createdAt(),
+});
+
+// ── Realisasi RAB / Profitabilitas (db-schema/src/schema/profitability.ts) ───
+// `cashflowEntryId` is deliberately omitted — Arus Kas stays mock, so this
+// pass never links a realisasi row to a real cashflow entry.
+
+export const rabCategory = pgEnum("rab_category", ["personil_a", "langsung_b"]);
+
+export const rabActuals = pgTable("rab_actuals", {
+  id: pk(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  rabCategory: rabCategory("rab_category").notNull(),
+  rabLineLabel: text("rab_line_label"),
+  amount: money("amount").notNull().default("0"),
+  date: date("date").notNull(),
+  note: text("note"),
+  ...bookkeeping,
+});

@@ -53,6 +53,19 @@ async function countUsageByService(tx: Tx, serviceIds: string[]): Promise<Map<st
   return new Map(rows.filter((r) => r.serviceId !== null).map((r) => [r.serviceId as string, r.count]));
 }
 
+/** Real count of (non-deleted) project_services per service — Proyek is
+ * wired, so `dipakaiProyek` no longer name-matches a frozen mock fixture array. */
+async function countProjectUsageByService(tx: Tx, serviceIds: string[]): Promise<Map<string, number>> {
+  if (!serviceIds.length) return new Map();
+  const rows = await tx
+    .select({ serviceId: schema.projectServices.serviceId, count: sql<number>`count(*)::int` })
+    .from(schema.projectServices)
+    .innerJoin(schema.projects, eq(schema.projectServices.projectId, schema.projects.id))
+    .where(and(inArray(schema.projectServices.serviceId, serviceIds), isNull(schema.projects.deletedAt)))
+    .groupBy(schema.projectServices.serviceId);
+  return new Map(rows.filter((r) => r.serviceId !== null).map((r) => [r.serviceId as string, r.count]));
+}
+
 export async function listServices(userId: string): Promise<Layanan[]> {
   return withUserTransaction(userId, async (tx) => {
     const rows = await tx
@@ -61,10 +74,14 @@ export async function listServices(userId: string): Promise<Layanan[]> {
       .where(isNull(schema.serviceCatalog.deletedAt))
       .orderBy(desc(schema.serviceCatalog.createdAt));
     const { documentTypesById, authoritiesById, legalBasesById } = await loadRefs(tx, rows);
-    const usageCounts = await countUsageByService(tx, rows.map((r) => r.id));
+    const serviceIds = rows.map((r) => r.id);
+    const [usageCounts, projectCounts] = await Promise.all([
+      countUsageByService(tx, serviceIds),
+      countProjectUsageByService(tx, serviceIds),
+    ]);
     return rows.map((row) => {
       const { documentType, authority, legalBasis } = refFor(row, documentTypesById, authoritiesById, legalBasesById);
-      return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(row.id) ?? 0);
+      return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(row.id) ?? 0, projectCounts.get(row.id) ?? 0);
     });
   });
 }
@@ -79,8 +96,11 @@ export async function getService(userId: string, id: string): Promise<Layanan> {
     if (!row) throw new NotFoundError("Layanan tidak ditemukan.");
     const { documentTypesById, authoritiesById, legalBasesById } = await loadRefs(tx, [row]);
     const { documentType, authority, legalBasis } = refFor(row, documentTypesById, authoritiesById, legalBasesById);
-    const usageCounts = await countUsageByService(tx, [id]);
-    return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(id) ?? 0);
+    const [usageCounts, projectCounts] = await Promise.all([
+      countUsageByService(tx, [id]),
+      countProjectUsageByService(tx, [id]),
+    ]);
+    return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(id) ?? 0, projectCounts.get(id) ?? 0);
   });
 }
 
@@ -101,7 +121,7 @@ export async function createService(userId: string, input: CreateLayananInput): 
       .returning();
     const { documentTypesById, authoritiesById, legalBasesById } = await loadRefs(tx, [row]);
     const { documentType, authority, legalBasis } = refFor(row, documentTypesById, authoritiesById, legalBasesById);
-    return toLayanan(row, documentType, authority, legalBasis, 0);
+    return toLayanan(row, documentType, authority, legalBasis, 0, 0);
   });
 }
 
@@ -135,8 +155,11 @@ export async function updateService(
 
     const { documentTypesById, authoritiesById, legalBasesById } = await loadRefs(tx, [row]);
     const { documentType, authority, legalBasis } = refFor(row, documentTypesById, authoritiesById, legalBasesById);
-    const usageCounts = await countUsageByService(tx, [id]);
-    return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(id) ?? 0);
+    const [usageCounts, projectCounts] = await Promise.all([
+      countUsageByService(tx, [id]),
+      countProjectUsageByService(tx, [id]),
+    ]);
+    return toLayanan(row, documentType, authority, legalBasis, usageCounts.get(id) ?? 0, projectCounts.get(id) ?? 0);
   });
 }
 

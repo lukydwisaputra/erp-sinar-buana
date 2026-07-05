@@ -31,6 +31,7 @@ import {
   projectServices,
   projectAssignees,
   milestones,
+  milestoneAssignees,
   projectComments,
   commentMentions,
   projectStatusLog,
@@ -281,20 +282,41 @@ export const projectAssigneesRelations = relations(
   }),
 );
 
-export const milestonesRelations = relations(milestones, ({ one }) => ({
+export const milestonesRelations = relations(milestones, ({ one, many }) => ({
   project: one(projects, {
     fields: [milestones.projectId],
     references: [projects.id],
   }),
+  parent: one(milestones, {
+    fields: [milestones.parentId],
+    references: [milestones.id],
+    relationName: "milestoneParent",
+  }),
+  children: many(milestones, { relationName: "milestoneParent" }),
   assignee: one(employees, {
     fields: [milestones.assigneeEmployeeId],
     references: [employees.id],
   }),
+  assignees: many(milestoneAssignees),
   linkedMasterInvoice: one(masterInvoices, {
     fields: [milestones.linkedMasterInvoiceId],
     references: [masterInvoices.id],
   }),
 }));
+
+export const milestoneAssigneesRelations = relations(
+  milestoneAssignees,
+  ({ one }) => ({
+    milestone: one(milestones, {
+      fields: [milestoneAssignees.milestoneId],
+      references: [milestones.id],
+    }),
+    employee: one(employees, {
+      fields: [milestoneAssignees.employeeId],
+      references: [employees.id],
+    }),
+  }),
+);
 
 export const projectCommentsRelations = relations(
   projectComments,

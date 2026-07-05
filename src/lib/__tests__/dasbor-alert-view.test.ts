@@ -9,14 +9,14 @@ vi.mock("@/lib/data/kewajiban-pajak", () => ({
       jatuhTempo: "2026-05-30", status: "belum_setor", buktiPotongDiterima: true, keterangan: "" },
   ]),
 }));
-vi.mock("@/lib/data/proyek", () => ({
+vi.mock("@/lib/proyek/service", () => ({
   listProyek: vi.fn(async () => []),
 }));
 vi.mock("@/lib/data/penawaran", () => ({
   listPenawaran: vi.fn(async () => []),
 }));
-vi.mock("@/lib/data/realisasi-rab", () => ({
-  listRealisasiRab: vi.fn(async () => []),
+vi.mock("@/lib/realisasi-rab/service", () => ({
+  listAll: vi.fn(async () => []),
 }));
 
 import { getAlerts } from "@/lib/dasbor/alert-view";
@@ -25,7 +25,7 @@ describe("getAlerts", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns alert items sorted by priority", async () => {
-    const alerts = await getAlerts();
+    const alerts = await getAlerts("test-user-id");
     // K1 overdue → pajak_terlambat, tinggi
     expect(alerts).toHaveLength(1);
     expect(alerts[0].prioritas).toBe("tinggi");

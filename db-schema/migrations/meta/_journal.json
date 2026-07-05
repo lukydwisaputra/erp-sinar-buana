@@ -57,6 +57,13 @@
       "when": 1783186278660,
       "tag": "0007_add_quotation_item_unit",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783190805293,
+      "tag": "0008_add_milestone_nesting_comment_scope_and_rab_line_label",
+      "breakpoints": true
     }
   ]
 }

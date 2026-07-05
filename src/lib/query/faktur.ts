@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { listFaktur, getFaktur, updateFaktur, updateFakturStatus, cancelAllFakturBySph, deleteAllFakturBySph } from "@/lib/data/faktur";
 import type { Faktur } from "@/lib/schemas/faktur";
 import { updatePenawaranStatus } from "@/lib/data/penawaran";
-import { cancelProyekBySph } from "@/lib/data/proyek";
+import { cancelProyekBySph } from "@/lib/query/proyek";
 
 export function useFakturList(q?: string) {
   return useQuery({ queryKey: ["faktur", { q }], queryFn: () => listFaktur({ q }) });

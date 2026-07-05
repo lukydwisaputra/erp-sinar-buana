@@ -1,11 +1,10 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
-  Paperclip, Send, FileText, ChevronDown, ChevronUp, CalendarIcon, X,
-  ExternalLink, Pencil, UploadCloud, Check, Plus,
+  ChevronDown, ChevronUp, CalendarIcon, X,
+  Pencil, Check, Plus,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -18,32 +17,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
-  useUpdateMilestone, useMilestoneLog, useMilestoneComments, useAddMilestoneComment,
-  useLogMilestoneActivity,
+  useUpdateMilestone, useMilestoneComments, useAddMilestoneComment, useWorkflowStatuses,
+  type WorkflowStatusOption,
 } from "@/lib/query/proyek";
-import { karyawanFixtures } from "@/lib/fixtures/karyawan";
-import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
+import { useKaryawanList } from "@/lib/query/karyawan";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Milestone, MilestoneStatus, Proyek } from "@/lib/schemas/proyek";
-import type { MilestoneAttachment } from "@/lib/data/proyek";
+import type { Milestone, Proyek } from "@/lib/schemas/proyek";
 
-const MILESTONE_STATUS: {
-  value: MilestoneStatus;
-  label: string;
-  variant: "secondary" | "info" | "warning" | "success";
-}[] = [
-  { value: "belum_mulai", label: "Belum Mulai",     variant: "secondary" },
-  { value: "on_track",    label: "Sedang Berjalan", variant: "info" },
-  { value: "terlambat",   label: "Terlambat",       variant: "warning" },
-  { value: "selesai",     label: "Selesai",         variant: "success" },
-];
-
-const MILESTONE_STATUS_MAP = Object.fromEntries(
-  MILESTONE_STATUS.map((s) => [s.value, s]),
-) as Record<MilestoneStatus, (typeof MILESTONE_STATUS)[0]>;
-
-
-const CURRENT_USER = "Admin";
+/** Same systemRole-based heuristic as proyek-detail.tsx — status is
+ * config-driven (no fixed enum), never a hardcoded label match. */
+function statusVariant(status: WorkflowStatusOption | undefined): "info" | "warning" | "success" | "secondary" | "destructive" {
+  if (!status) return "secondary";
+  if (status.systemRole === "SELESAI") return "success";
+  if (status.systemRole === "BATAL") return "destructive";
+  return "info";
+}
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
@@ -57,44 +45,6 @@ function relativeTime(iso: string) {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours} jam lalu`;
   return format(new Date(iso), "d MMM yyyy, HH:mm", { locale: idLocale });
-}
-
-function isImage(a: MilestoneAttachment) {
-  return a.type?.startsWith("image/") ?? /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(a.name);
-}
-
-function AttachmentPreview({
-  attachment, onRemove,
-}: { attachment: MilestoneAttachment; onRemove?: () => void }) {
-  if (isImage(attachment)) {
-    return (
-      <div className="relative group/img inline-block">
-        <a href={attachment.url} target="_blank" rel="noreferrer">
-          <img src={attachment.url} alt={attachment.name}
-            className="h-16 w-16 rounded-md object-cover border border-border" />
-        </a>
-        {onRemove && (
-          <button type="button" onClick={onRemove}
-            className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
-            <X className="size-2.5" />
-          </button>
-        )}
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs">
-      <FileText className="size-3 shrink-0 text-muted-foreground" />
-      <a href={attachment.url} target="_blank" rel="noreferrer" className="max-w-35 truncate hover:underline">
-        {attachment.name}
-      </a>
-      {onRemove && (
-        <button type="button" onClick={onRemove} className="ml-0.5 text-muted-foreground hover:text-destructive">
-          <X className="size-3" />
-        </button>
-      )}
-    </div>
-  );
 }
 
 /** Cell for the 2-column detail grid */
@@ -141,44 +91,27 @@ function DateCell({
   );
 }
 
+/** Real comments only now — the mock's fine-grained per-field activity log
+ * (status/nama/assignee/date changes) had no DB equivalent and stays out of
+ * scope (see docs/architecture.md's Proyek note); attachments on a comment
+ * are dropped too (no real object storage wired for this module yet). */
 function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId: string }) {
-  const { data: logEntries = [] } = useMilestoneLog(proyekId, milestoneId);
   const { data: comments = [] } = useMilestoneComments(proyekId, milestoneId);
   const addComment = useAddMilestoneComment();
 
   const [text, setText] = React.useState("");
-  const [attachments, setAttachments] = React.useState<MilestoneAttachment[]>([]);
-  const fileRef = React.useRef<HTMLInputElement>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
-
-  type TimelineItem =
-    | { type: "log"; id: string; description: string; timestamp: string }
-    | { type: "comment"; id: string; author: string; content: string; attachments: MilestoneAttachment[]; timestamp: string };
-
-  const timeline: TimelineItem[] = [
-    ...logEntries.map((e) => ({ type: "log" as const, id: e.id, description: e.description, timestamp: e.timestamp })),
-    ...comments.map((c) => ({ type: "comment" as const, id: c.id, author: c.author, content: c.content, attachments: c.attachments, timestamp: c.timestamp })),
-  ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [timeline.length]);
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    setAttachments((prev) => [
-      ...prev,
-      ...files.map((f) => ({ name: f.name, url: URL.createObjectURL(f), type: f.type })),
-    ]);
-    e.target.value = "";
-  };
+  }, [comments.length]);
 
   const handleSend = () => {
     const trimmed = text.trim();
-    if (!trimmed && attachments.length === 0) return;
+    if (!trimmed) return;
     addComment.mutate(
-      { proyekId, milestoneId, input: { author: CURRENT_USER, content: trimmed, attachments } },
-      { onSuccess: () => { setText(""); setAttachments([]); } },
+      { proyekId, milestoneId, input: { body: trimmed, mentionedUserIds: [] } },
+      { onSuccess: () => setText("") },
     );
   };
 
@@ -189,82 +122,28 @@ function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {timeline.length === 0 && (
+        {comments.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-6">Belum ada aktivitas</p>
         )}
-        {timeline.map((item) =>
-          item.type === "log" ? (
-            <div key={item.id} className="flex items-start gap-2.5">
-              <div className="mt-0.5 size-4 shrink-0 rounded-full bg-muted/80 flex items-center justify-center">
-                <div className="size-1 rounded-full bg-muted-foreground/50" />
+        {comments.map((c) => (
+          <div key={c.id} className="flex items-start gap-2.5">
+            <Avatar className="size-6 shrink-0">
+              <AvatarFallback className="text-[9px]">{initials(c.authorNama)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5 mb-0.5">
+                <span className="text-xs font-medium">{c.authorNama}</span>
+                <span className="text-[10px] text-muted-foreground">{relativeTime(c.createdAt)}</span>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
-                <p className="text-[10px] text-muted-foreground/50 mt-0.5">{relativeTime(item.timestamp)}</p>
-              </div>
+              <p className="text-xs leading-relaxed wrap-break-word whitespace-pre-wrap">{c.body}</p>
             </div>
-          ) : (
-            <div key={item.id} className="flex items-start gap-2.5">
-              <Avatar className="size-6 shrink-0">
-                <AvatarFallback className="text-[9px]">{initials(item.author)}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-1.5 mb-0.5">
-                  <span className="text-xs font-medium">{item.author}</span>
-                  <span className="text-[10px] text-muted-foreground">{relativeTime(item.timestamp)}</span>
-                </div>
-                {item.content && (
-                  <p className="text-xs leading-relaxed wrap-break-word whitespace-pre-wrap">{item.content}</p>
-                )}
-                {item.attachments.length > 0 && (
-                  <div className="mt-1.5 space-y-1.5">
-                    {item.attachments.filter(isImage).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {item.attachments.filter(isImage).map((a, i) => (
-                          <a key={i} href={a.url} target="_blank" rel="noreferrer">
-                            <img src={a.url} alt={a.name} className="h-14 rounded object-cover border border-border" />
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                    {item.attachments.filter((a) => !isImage(a)).length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {item.attachments.filter((a) => !isImage(a)).map((a, i) => (
-                          <AttachmentPreview key={i} attachment={a} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        )}
+          </div>
+        ))}
         <div ref={bottomRef} />
       </div>
 
       {/* Comment input */}
       <div className="border-t border-border p-3 space-y-2 shrink-0">
-        {attachments.length > 0 && (
-          <div className="space-y-1.5">
-            {attachments.filter(isImage).length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {attachments.filter(isImage).map((a, i) => (
-                  <AttachmentPreview key={i} attachment={a}
-                    onRemove={() => setAttachments((prev) => prev.filter((x) => x !== a))} />
-                ))}
-              </div>
-            )}
-            {attachments.filter((a) => !isImage(a)).length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {attachments.filter((a) => !isImage(a)).map((a, i) => (
-                  <AttachmentPreview key={i} attachment={a}
-                    onRemove={() => setAttachments((prev) => prev.filter((x) => x !== a))} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
         <div className="flex items-stretch gap-2">
           <textarea
             value={text}
@@ -274,51 +153,30 @@ function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId
             rows={2}
             className="flex-1 resize-none rounded-lg border border-input bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          <div className="flex flex-col gap-1">
-            <button type="button" onClick={() => fileRef.current?.click()}
-              className="flex-1 flex items-center justify-center rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/70 transition-colors min-w-8" title="Lampirkan">
-              <Paperclip className="size-3.5" />
-            </button>
-            <button type="button" onClick={handleSend}
-              className="flex-1 flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors min-w-8" title="Kirim">
-              <Send className="size-3.5" />
-            </button>
-          </div>
+          <button type="button" onClick={handleSend}
+            className="flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors min-w-8 px-2" title="Kirim">
+            Kirim
+          </button>
         </div>
-        <input ref={fileRef} type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-          className="hidden" onChange={handleFile} />
       </div>
     </div>
   );
 }
 
-type PersonOption = { id: string; nama: string; jabatan: string; group: "PIC" | "Karyawan" };
-
-function buildPersonOptions(perusahaanId: string): PersonOption[] {
-  const pics = (perusahaanFixtures.find((p) => p.id === perusahaanId)?.pic ?? []).map((p, i) => ({
-    id: `PIC-${perusahaanId}-${i}`,
-    nama: p.nama,
-    jabatan: p.jabatan,
-    group: "PIC" as const,
-  }));
-  const karyawan = karyawanFixtures
-    .filter((k) => k.status === "aktif")
-    .map((k) => ({ id: k.id, nama: k.nama, jabatan: k.jabatan, group: "Karyawan" as const }));
-  return [...pics, ...karyawan];
-}
+type PersonOption = { id: string; nama: string; jabatan: string };
 
 function AssigneeField({
   assignees,
   personOptions,
   onChange,
 }: {
-  assignees: { id: string; nama: string }[];
+  assignees: { karyawanId: string; nama: string }[];
   personOptions: PersonOption[];
-  onChange: (next: { id: string; nama: string }[]) => void;
+  onChange: (next: { karyawanId: string; nama: string }[]) => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [q, setQ] = React.useState("");
-  const selectedIds = new Set(assignees.map((a) => a.id));
+  const selectedIds = new Set(assignees.map((a) => a.karyawanId));
 
   const filtered = q.trim()
     ? personOptions.filter((o) => o.nama.toLowerCase().includes(q.toLowerCase()) || o.jabatan.toLowerCase().includes(q.toLowerCase()))
@@ -326,8 +184,8 @@ function AssigneeField({
 
   const toggle = (person: PersonOption) => {
     const next = selectedIds.has(person.id)
-      ? assignees.filter((a) => a.id !== person.id)
-      : [...assignees, { id: person.id, nama: person.nama }];
+      ? assignees.filter((a) => a.karyawanId !== person.id)
+      : [...assignees, { karyawanId: person.id, nama: person.nama }];
     onChange(next);
   };
 
@@ -339,9 +197,9 @@ function AssigneeField({
             <span className="text-sm text-muted-foreground">—</span>
           )}
           {assignees.map((a, i) => {
-            const jabatan = personOptions.find((p) => p.id === a.id)?.jabatan;
+            const jabatan = personOptions.find((p) => p.id === a.karyawanId)?.jabatan;
             return (
-              <Tooltip key={a.id}>
+              <Tooltip key={a.karyawanId}>
                 <TooltipTrigger asChild>
                   <Avatar className="size-7 ring-2 ring-background cursor-default" style={{ marginLeft: i === 0 ? 0 : "-9px" }}>
                     <AvatarFallback className="text-[10px]">{initials(a.nama)}</AvatarFallback>
@@ -376,28 +234,19 @@ function AssigneeField({
             {filtered.length === 0 && (
               <p className="py-4 text-center text-xs text-muted-foreground">Tidak ditemukan</p>
             )}
-            {(["PIC", "Karyawan"] as const).map((group) => {
-              const items = filtered.filter((o) => o.group === group);
-              if (!items.length) return null;
-              return (
-                <div key={group}>
-                  <p className="mt-1 mb-0.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">{group}</p>
-                  {items.map((person) => (
-                    <button key={person.id} type="button" onClick={() => toggle(person)}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60 transition-colors">
-                      <Avatar className="size-6 shrink-0">
-                        <AvatarFallback className="text-[9px]">{initials(person.nama)}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs leading-tight">{person.nama}</p>
-                        <p className="truncate text-[10px] text-muted-foreground leading-tight">{person.jabatan}</p>
-                      </div>
-                      {selectedIds.has(person.id) && <Check className="size-3 shrink-0 text-primary" />}
-                    </button>
-                  ))}
+            {filtered.map((person) => (
+              <button key={person.id} type="button" onClick={() => toggle(person)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60 transition-colors">
+                <Avatar className="size-6 shrink-0">
+                  <AvatarFallback className="text-[9px]">{initials(person.nama)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs leading-tight">{person.nama}</p>
+                  <p className="truncate text-[10px] text-muted-foreground leading-tight">{person.jabatan}</p>
                 </div>
-              );
-            })}
+                {selectedIds.has(person.id) && <Check className="size-3 shrink-0 text-primary" />}
+              </button>
+            ))}
           </div>
         </PopoverContent>
       </Popover>
@@ -414,16 +263,17 @@ export function MilestoneModal({
   proyek: Proyek;
 }) {
   const updateMilestone = useUpdateMilestone();
-  const logActivity = useLogMilestoneActivity();
+  const { data: karyawanList = [] } = useKaryawanList();
+  const personOptions: PersonOption[] = karyawanList
+    .filter((k) => k.status === "aktif")
+    .map((k) => ({ id: k.id, nama: k.nama, jabatan: k.jabatan }));
+  const { data: statusOptions = [] } = useWorkflowStatuses("milestone");
 
   const [nama, setNama] = React.useState("");
   const [editingTitle, setEditingTitle] = React.useState(false);
   const [description, setDescription] = React.useState("");
   const [descExpanded, setDescExpanded] = React.useState(false);
   const [needsExpand, setNeedsExpand] = React.useState(false);
-  const [descAttachments, setDescAttachments] = React.useState<MilestoneAttachment[]>([]);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const descFileRef = React.useRef<HTMLInputElement>(null);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   // true while user is actively typing; false on dialog open and after manual collapse
@@ -434,10 +284,8 @@ export function MilestoneModal({
     if (!milestone) return;
     isAutoExpand.current = false;
     setNama(milestone.nama);
-    setDescAttachments(milestone.descriptionAttachments ?? []);
     setEditingTitle(false);
     setDescExpanded(false);
-    setIsDragging(false);
     setDescription(milestone.description ?? "");
     // needsExpand is computed exclusively by useLayoutEffect after description lands
   }, [milestone?.id]);
@@ -466,27 +314,17 @@ export function MilestoneModal({
 
   if (!milestone) return null;
 
-  const save = (patch: Partial<Omit<import("@/lib/schemas/proyek").Milestone, "id" | "urutan">>) =>
-    updateMilestone.mutate({ proyekId: proyek.id, milestoneId: milestone.id, patch });
+  const save = (patch: {
+    nama?: string;
+    description?: string | null;
+    assigneeIds?: string[];
+    targetDate?: string | null;
+    actualDate?: string | null;
+    statusId?: string;
+    triggersTerm?: boolean;
+  }) => updateMilestone.mutate({ proyekId: proyek.id, milestoneId: milestone.id, patch });
 
-  const statusInfo = MILESTONE_STATUS_MAP[milestone.status];
-
-  const addAttachments = (files: File[]) => {
-    const newItems: MilestoneAttachment[] = files.map((f) => ({
-      name: f.name, url: URL.createObjectURL(f), type: f.type,
-    }));
-    const next = [...descAttachments, ...newItems];
-    setDescAttachments(next);
-    save({ descriptionAttachments: next });
-    newItems.forEach((a) =>
-      logActivity.mutate({ proyekId: proyek.id, milestoneId: milestone.id, message: `Lampiran ditambahkan: ${a.name}` }),
-    );
-  };
-
-  const handleDescFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    addAttachments(Array.from(e.target.files ?? []));
-    e.target.value = "";
-  };
+  const currentStatus = statusOptions.find((s) => s.id === milestone.statusId);
 
   const commitTitle = () => {
     setEditingTitle(false);
@@ -506,14 +344,14 @@ export function MilestoneModal({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" className="flex items-center gap-1 rounded px-1.5 py-1 hover:bg-muted/50 transition-colors shrink-0">
-                <Badge variant={statusInfo.variant} className="text-xs">{statusInfo.label}</Badge>
+                <Badge variant={statusVariant(currentStatus)} className="text-xs">{currentStatus?.label ?? "—"}</Badge>
                 <ChevronDown className="size-3 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {MILESTONE_STATUS.map((s) => (
-                <DropdownMenuItem key={s.value} onSelect={() => save({ status: s.value })} className="gap-2">
-                  <Badge variant={s.variant} className="text-xs">{s.label}</Badge>
+              {statusOptions.map((s) => (
+                <DropdownMenuItem key={s.id} onSelect={() => save({ statusId: s.id })} className="gap-2">
+                  <Badge variant={statusVariant(s)} className="text-xs">{s.label}</Badge>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -566,8 +404,8 @@ export function MilestoneModal({
                 <DetailCell label="Assignee" className="border-r border-border pr-6">
                   <AssigneeField
                     assignees={milestone.assignees}
-                    personOptions={buildPersonOptions(proyek.perusahaanId)}
-                    onChange={(next) => save({ assignees: next })}
+                    personOptions={personOptions}
+                    onChange={(next) => save({ assigneeIds: next.map((a) => a.karyawanId) })}
                   />
                 </DetailCell>
                 <DetailCell label="Proyek" className="pl-6">
@@ -589,17 +427,11 @@ export function MilestoneModal({
                 </DetailCell>
               </div>
 
-              {/* Termin — full width */}
-              {milestone.pemicuTermin && (
+              {/* Termin — full width. No linked Faktur yet (module unwired); this
+                  is a UI suggestion only, never automatic (PRD Bab 6.5). */}
+              {milestone.triggersTerm && (
                 <DetailCell label="Termin" className="col-span-2 mt-0 border-t border-border">
-                  <Link
-                    href={`/faktur/${encodeURIComponent(milestone.pemicuTermin.fakturId)}`}
-                    className="inline-flex items-center gap-1.5 text-sm text-[var(--link)] hover:underline"
-                  >
-                    {milestone.pemicuTermin.fakturId}
-                    <ExternalLink className="size-3" />
-                    <Badge variant="warning" className="text-xs">{milestone.pemicuTermin.persen}%</Badge>
-                  </Link>
+                  <Badge variant="warning" className="text-xs">Akan menagih termin saat selesai</Badge>
                 </DetailCell>
               )}
             </div>
@@ -642,70 +474,6 @@ export function MilestoneModal({
                 </div>
               )}
 
-            </div>
-
-            {/* Lampiran */}
-            <div className="px-6 pt-3 pb-5">
-              <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">Lampiran</p>
-
-              {/* Dropzone */}
-              <div
-                role="button"
-                tabIndex={0}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-6 transition-colors cursor-pointer select-none outline-none",
-                  isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-muted-foreground/40 hover:bg-muted/20 focus-visible:border-primary focus-visible:bg-primary/5",
-                )}
-                onClick={() => descFileRef.current?.click()}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") descFileRef.current?.click(); }}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  addAttachments(Array.from(e.dataTransfer.files));
-                }}
-              >
-                <UploadCloud className={cn("size-7 transition-colors", isDragging ? "text-primary" : "text-muted-foreground")} />
-                <div className="text-center">
-                  <p className="text-xs font-medium">
-                    {isDragging ? "Lepaskan untuk mengunggah" : "Seret file ke sini atau klik untuk memilih"}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">Gambar, PDF, Word, Excel</p>
-                </div>
-              </div>
-              <input ref={descFileRef} type="file" multiple
-                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-                className="hidden" onChange={handleDescFile} />
-
-              {/* Unified file list — images and docs in the same row format */}
-              {descAttachments.length > 0 && (
-                <div className="mt-3 space-y-1.5">
-                  {descAttachments.map((a, i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
-                      {isImage(a) ? (
-                        <img src={a.url} alt={a.name}
-                          className="h-9 w-9 shrink-0 rounded object-cover border border-border/50" />
-                      ) : (
-                        <div className="h-9 w-9 shrink-0 rounded bg-muted flex items-center justify-center">
-                          <FileText className="size-4 text-muted-foreground" />
-                        </div>
-                      )}
-                      <a href={a.url} target="_blank" rel="noreferrer"
-                        className="flex-1 min-w-0 text-xs truncate hover:underline text-foreground">
-                        {a.name}
-                      </a>
-                      <button type="button"
-                        onClick={() => { const next = descAttachments.filter((x) => x !== a); setDescAttachments(next); save({ descriptionAttachments: next }); }}
-                        className="shrink-0 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                        <X className="size-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 

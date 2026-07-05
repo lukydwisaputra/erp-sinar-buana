@@ -1,7 +1,7 @@
 import { listFaktur } from "@/lib/data/faktur";
-import { listProyek } from "@/lib/data/proyek";
+import { listProyek } from "@/lib/proyek/service";
 import { listPenawaran } from "@/lib/data/penawaran";
-import { listRealisasiRab } from "@/lib/data/realisasi-rab";
+import { listAll as listRealisasiRab } from "@/lib/realisasi-rab/service";
 import { listArusKas } from "@/lib/data/arus-kas";
 import { listExpenseNature } from "@/lib/data/expense-nature";
 import { getPajakConfig } from "@/lib/data/pajak-config";
@@ -15,12 +15,12 @@ import { computeProjectProfitability } from "@/lib/dasbor/project-profit";
 
 export type ProfitabilitasView = { labaRugi: LabaRugi; proyek: ProyekProfit[] };
 
-export async function getProfitabilitas(periode: Periode): Promise<ProfitabilitasView> {
+export async function getProfitabilitas(userId: string, periode: Periode): Promise<ProfitabilitasView> {
   const [fakturs, proyeks, penawarans, realisasi, arusKas, natureRows, config, params] = await Promise.all([
     listFaktur(),
-    listProyek(),
+    listProyek(userId),
     listPenawaran(),
-    listRealisasiRab(),
+    listRealisasiRab(userId),
     listArusKas(),
     listExpenseNature(),
     getPajakConfig(),
