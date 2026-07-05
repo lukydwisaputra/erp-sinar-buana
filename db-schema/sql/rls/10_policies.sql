@@ -43,7 +43,7 @@ declare
     'quotation_rab_personnel','quotation_rab_direct_costs',
     'activity_schedules','activity_schedule_rows','activity_schedule_marked_weeks',
     'projects','project_services','project_assignees','milestones',
-    'project_comments','comment_mentions','project_status_log'
+    'milestone_assignees','project_comments','comment_mentions','project_status_log'
   ];
 begin
   foreach t in array read_auth loop
@@ -101,7 +101,7 @@ end $$;
 do $$
 declare t text;
   p text[] := array['projects','project_services','project_assignees',
-                    'milestones'];
+                    'milestones','milestone_assignees'];
 begin
   foreach t in array p loop
     execute format(

@@ -45,11 +45,11 @@ function contact(overrides: Partial<Parameters<typeof toPerusahaan>[1][number]> 
 
 describe("toPerusahaan", () => {
   it("maps is_active true to status 'aktif'", () => {
-    expect(toPerusahaan(company({ isActive: true }), [], 0).status).toBe("aktif");
+    expect(toPerusahaan(company({ isActive: true }), [], 0, 0, 0).status).toBe("aktif");
   });
 
   it("maps is_active false to status 'nonaktif'", () => {
-    expect(toPerusahaan(company({ isActive: false }), [], 0).status).toBe("nonaktif");
+    expect(toPerusahaan(company({ isActive: false }), [], 0, 0, 0).status).toBe("nonaktif");
   });
 
   it("sorts contacts so the primary PIC is first", () => {
@@ -57,19 +57,22 @@ describe("toPerusahaan", () => {
       contact({ id: "c1", name: "Sekunder", isPrimary: false }),
       contact({ id: "c2", name: "Utama", isPrimary: true }),
     ];
-    const result = toPerusahaan(company(), rows, 0);
+    const result = toPerusahaan(company(), rows, 0, 0, 0);
     expect(result.pic[0].nama).toBe("Utama");
   });
 
   it("falls back to empty strings for nullable contact fields", () => {
     const rows = [contact({ position: null, email: null })];
-    const result = toPerusahaan(company(), rows, 0);
+    const result = toPerusahaan(company(), rows, 0, 0, 0);
     expect(result.pic[0].jabatan).toBe("");
     expect(result.pic[0].email).toBe("");
   });
 
-  it("passes through the real jumlahPenawaran count", () => {
-    expect(toPerusahaan(company(), [], 5).metrik.jumlahPenawaran).toBe(5);
+  it("passes through the real jumlahPenawaran/proyekAktif/nilaiKontrak counts", () => {
+    const result = toPerusahaan(company(), [], 5, 2, 150_000_000);
+    expect(result.metrik.jumlahPenawaran).toBe(5);
+    expect(result.metrik.proyekAktif).toBe(2);
+    expect(result.metrik.nilaiKontrak).toBe(150_000_000);
   });
 });
 
@@ -98,14 +101,15 @@ describe("toContactRows", () => {
 
 describe("computeMetrik", () => {
   it("returns zeroed metrik for a company with no cross-referenced records", () => {
-    const metrik = computeMetrik("no-such-company-id", 0);
+    const metrik = computeMetrik("no-such-company-id", 0, 0, 0);
     expect(metrik).toEqual({ jumlahPenawaran: 0, proyekAktif: 0, nilaiKontrak: 0, piutang: 0 });
   });
 
-  it("passes through the given jumlahPenawaran and counts proyek/faktur for a seeded demo company", () => {
+  it("passes through the given jumlahPenawaran/proyekAktif/nilaiKontrak and counts faktur for a seeded demo company", () => {
     // seedPerusahaanId(1) is PT Maju Bersama Industri in the demo fixtures.
-    const metrik = computeMetrik(seedPerusahaanId(1), 4);
+    const metrik = computeMetrik(seedPerusahaanId(1), 4, 2, 150_000_000);
     expect(metrik.jumlahPenawaran).toBe(4);
-    expect(metrik.proyekAktif).toBeGreaterThanOrEqual(0);
+    expect(metrik.proyekAktif).toBe(2);
+    expect(metrik.nilaiKontrak).toBe(150_000_000);
   });
 });

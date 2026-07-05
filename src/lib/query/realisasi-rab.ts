@@ -1,22 +1,17 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  listRealisasiRab,
-  listRealisasiRabByProyek,
-  createRealisasiRab,
-  removeRealisasiRab,
-} from "@/lib/data/realisasi-rab";
-import type { RealisasiRabFormValues } from "@/lib/schemas/realisasi-rab";
+import { apiClient, ApiError } from "@/lib/api-client";
+import type { RealisasiRab, RealisasiRabFormValues } from "@/lib/schemas/realisasi-rab";
 
-export function useRealisasiRabList() {
-  return useQuery({ queryKey: ["realisasi-rab"], queryFn: listRealisasiRab });
+function apiErrorMessage(error: unknown, fallback: string) {
+  return error instanceof ApiError ? error.message : fallback;
 }
 
 export function useRealisasiRabByProyek(proyekId: string) {
   return useQuery({
     queryKey: ["realisasi-rab", proyekId],
-    queryFn: () => listRealisasiRabByProyek(proyekId),
+    queryFn: () => apiClient.get<RealisasiRab[]>(`/api/realisasi-rab?proyekId=${proyekId}`),
     enabled: !!proyekId,
   });
 }
@@ -24,27 +19,23 @@ export function useRealisasiRabByProyek(proyekId: string) {
 export function useCreateRealisasiRab() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: RealisasiRabFormValues) => createRealisasiRab(input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["realisasi-rab"] });
+    mutationFn: (input: RealisasiRabFormValues) => apiClient.post<RealisasiRab>("/api/realisasi-rab", input),
+    onSuccess: (row) => {
+      qc.invalidateQueries({ queryKey: ["realisasi-rab", row.proyekId] });
       toast.success("Realisasi RAB berhasil dicatat.");
     },
-    onError: () => {
-      toast.error("Gagal mencatat realisasi RAB. Coba lagi.");
-    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal mencatat realisasi RAB.")),
   });
 }
 
 export function useRemoveRealisasiRab() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => removeRealisasiRab(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["realisasi-rab"] });
+    mutationFn: ({ id }: { id: string; proyekId: string }) => apiClient.delete(`/api/realisasi-rab/${id}`),
+    onSuccess: (_, { proyekId }) => {
+      qc.invalidateQueries({ queryKey: ["realisasi-rab", proyekId] });
       toast.success("Realisasi RAB berhasil dihapus.");
     },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Gagal menghapus realisasi RAB.");
-    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal menghapus realisasi RAB.")),
   });
 }

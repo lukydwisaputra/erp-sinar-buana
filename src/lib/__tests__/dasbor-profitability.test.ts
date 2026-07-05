@@ -10,7 +10,7 @@ vi.mock("@/lib/data/faktur", () => ({
     },
   ]),
 }));
-vi.mock("@/lib/data/proyek", () => ({
+vi.mock("@/lib/proyek/service", () => ({
   listProyek: vi.fn(async () => [{ id: "P1", nama: "Proyek Satu", sphId: "SPH-1", nilaiKontrak: 100_000_000 }]),
 }));
 vi.mock("@/lib/data/penawaran", () => ({
@@ -18,8 +18,8 @@ vi.mock("@/lib/data/penawaran", () => ({
     { id: "SPH-1", items: [{ rab: { personil: [{ uraian: "A", vol: 1, satuan: "x", hargaSatuan: 30_000_000 }], langsung: [] } }] },
   ]),
 }));
-vi.mock("@/lib/data/realisasi-rab", () => ({
-  listRealisasiRab: vi.fn(async () => [
+vi.mock("@/lib/realisasi-rab/service", () => ({
+  listAll: vi.fn(async () => [
     { id: "r1", proyekId: "P1", kategori: "personil", rabLineLabel: "x", jumlah: 20_000_000, tanggal: "2026-06-05", keterangan: "" },
   ]),
 }));
@@ -43,7 +43,7 @@ describe("getProfitabilitas", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns a P&L waterfall and per-project rows from the data layers", async () => {
-    const view = await getProfitabilitas(juni);
+    const view = await getProfitabilitas("test-user-id", juni);
     // revenue 100jt, HPP 20jt, Opex 5jt
     expect(view.labaRugi.pendapatan).toBe(100_000_000);
     expect(view.labaRugi.hpp).toBe(20_000_000);
@@ -56,7 +56,7 @@ describe("getProfitabilitas", () => {
   });
 
   it("uses DEFAULT_SIFAT (operasional) for unmapped categories", async () => {
-    const view = await getProfitabilitas(juni);
+    const view = await getProfitabilitas("test-user-id", juni);
     // Sewa Kantor is mapped; an unmapped category would still default to operasional.
     expect(view.labaRugi.bebanOperasional).toBe(5_000_000);
   });

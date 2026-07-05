@@ -37,9 +37,13 @@ create index if not exists idx_project_services_project on project_services (pro
 create index if not exists idx_project_assignees_project on project_assignees (project_id);
 create index if not exists idx_project_assignees_employee on project_assignees (employee_id);
 create index if not exists idx_milestones_project on milestones (project_id);
+create index if not exists idx_milestones_parent on milestones (parent_id);
 create index if not exists idx_milestones_assignee on milestones (assignee_employee_id);
 create index if not exists idx_milestones_master_invoice on milestones (linked_master_invoice_id);
+create index if not exists idx_milestone_assignees_milestone on milestone_assignees (milestone_id);
+create index if not exists idx_milestone_assignees_employee on milestone_assignees (employee_id);
 create index if not exists idx_project_comments_project on project_comments (project_id);
+create index if not exists idx_project_comments_milestone on project_comments (milestone_id);
 create index if not exists idx_comment_mentions_user on comment_mentions (mentioned_user_id);
 create index if not exists idx_project_status_log_project on project_status_log (project_id);
 

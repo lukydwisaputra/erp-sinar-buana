@@ -9,30 +9,30 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ComboboxCreate } from "@/components/shared/combobox-create";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SectionLabel } from "@/components/shared/detail-drawer";
 import { formatRupiah } from "@/lib/format";
 import { afterTaxAmount } from "@/lib/faktur";
 import { useCreateProyek } from "@/lib/query/proyek";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
-import { karyawanFixtures } from "@/lib/fixtures/karyawan";
+import { useKaryawanList } from "@/lib/query/karyawan";
 import { onFormInvalid } from "@/lib/form-toast";
 import type { Sph } from "@/lib/schemas/penawaran";
 
 const schema = z.object({
   nama: z.string().min(1, "Nama proyek wajib diisi."),
-  area: z.string().min(1, "Area wajib diisi."),
+  areaId: z.string().min(1, "Area wajib dipilih."),
   tahun: z.number().min(2020, "Tahun tidak valid."),
   assigneeIds: z.array(z.string()),
 });
 type FormValues = z.infer<typeof schema>;
 
-const activeKaryawan = karyawanFixtures.filter((k) => k.status === "aktif");
-
 export function ProyekCreate({ sph }: { sph: Sph }) {
   const router = useRouter();
   const createProyek = useCreateProyek();
   const { data: areaOptions = [] } = useOptionList("area_kawasan");
+  const { data: karyawanList = [] } = useKaryawanList();
+  const activeKaryawan = karyawanList.filter((k) => k.status === "aktif");
 
   const defaultNama = `Proyek — ${sph.perusahaanNama}`;
   const layananNama = sph.items.map((i) => i.nama);
@@ -45,27 +45,21 @@ export function ProyekCreate({ sph }: { sph: Sph }) {
     resolver: zodResolver(schema),
     defaultValues: {
       nama: defaultNama,
-      area: "",
+      areaId: "",
       tahun: new Date().getFullYear(),
       assigneeIds: [],
     },
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    const assignees = activeKaryawan
-      .filter((k) => values.assigneeIds.includes(k.id))
-      .map((k) => ({ karyawanId: k.id, nama: k.nama }));
-
     const proyek = await createProyek.mutateAsync({
       nama: values.nama,
       perusahaanId: sph.perusahaanId,
-      perusahaanNama: sph.perusahaanNama,
-      area: values.area,
+      areaId: values.areaId,
       tahun: values.tahun,
-      layananNama,
-      nilaiKontrak,
       sphId: sph.id,
-      assignees,
+      serviceIds: [],
+      assigneeIds: values.assigneeIds,
     });
     router.push(`/proyek/${encodeURIComponent(proyek.id)}`);
   }, onFormInvalid);
@@ -98,21 +92,23 @@ export function ProyekCreate({ sph }: { sph: Sph }) {
           <FieldError errors={errors.nama ? [errors.nama] : undefined} />
         </Field>
 
-        <Field data-invalid={!!errors.area}>
+        <Field data-invalid={!!errors.areaId}>
           <FieldLabel htmlFor="p-area">Area / Kawasan</FieldLabel>
           <Controller
             control={control}
-            name="area"
+            name="areaId"
             render={({ field }) => (
-              <ComboboxCreate
-                options={areaOptions.map((v) => ({ value: v.nama, label: v.nama }))}
-                value={field.value}
-                onChange={field.onChange}
-                placeholder="Pilih atau ketik area/kawasan…"
-              />
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="p-area" className="w-full" aria-invalid={!!errors.areaId}>
+                  <SelectValue placeholder="Pilih area/kawasan…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {areaOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.nama}</SelectItem>)}
+                </SelectContent>
+              </Select>
             )}
           />
-          <FieldError errors={errors.area ? [errors.area] : undefined} />
+          <FieldError errors={errors.areaId ? [errors.areaId] : undefined} />
         </Field>
 
         <Field data-invalid={!!errors.tahun}>

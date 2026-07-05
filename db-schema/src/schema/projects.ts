@@ -6,6 +6,7 @@
  * timeline/Gantt (via the shared activity_schedule), and a comment/activity feed.
  */
 import {
+  type AnyPgColumn,
   boolean,
   date,
   integer,
@@ -105,7 +106,17 @@ export const milestones = pgTable("milestones", {
   projectId: uuid("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
+  // Nested milestones (up to a few levels, enforced client-side) — the
+  // project detail view renders a tree of milestones/sub-milestones.
+  parentId: uuid("parent_id").references((): AnyPgColumn => milestones.id, {
+    onDelete: "cascade",
+  }),
   name: text("name").notNull(),
+  // Detail-view "Deskripsi" textarea (PRD Bab 6.2) — attachments on this
+  // description are a mock-only drag-and-drop stand-in (ephemeral blob URLs,
+  // never persisted even before this pass) and stay out of scope until real
+  // object storage is wired for this module.
+  description: text("description"),
   assigneeEmployeeId: uuid("assignee_employee_id").references(
     () => employees.id,
     { onDelete: "set null" },
@@ -129,12 +140,46 @@ export const milestones = pgTable("milestones", {
   ...timestamps,
 });
 
-/** Comment / activity feed (PRD Bab 6.4). Author is a user account. */
+/**
+ * Multi-assignee support for a milestone (PRD Bab 6.2 — the detail view's
+ * assignee picker is a genuine multi-select). `assigneeEmployeeId` above is
+ * unused in favor of this join table; kept in the column list only because
+ * it already existed before this table was added.
+ */
+export const milestoneAssignees = pgTable(
+  "milestone_assignees",
+  {
+    id: pk(),
+    milestoneId: uuid("milestone_id")
+      .notNull()
+      .references(() => milestones.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    ...timestamps,
+  },
+  (t) => ({
+    uqAssignee: unique("milestone_assignees_uq").on(
+      t.milestoneId,
+      t.employeeId,
+    ),
+  }),
+);
+
+/**
+ * Comment / activity feed (PRD Bab 6.4). Author is a user account.
+ * `milestoneId` is nullable — the detail view's activity feed is scoped per
+ * milestone (each milestone's modal has its own comment thread), while a null
+ * `milestoneId` reads as a project-wide comment (not exposed in the UI yet).
+ */
 export const projectComments = pgTable("project_comments", {
   id: pk(),
   projectId: uuid("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
+  milestoneId: uuid("milestone_id").references(() => milestones.id, {
+    onDelete: "cascade",
+  }),
   authorId: uuid("author_id").references(() => userProfiles.id, {
     onDelete: "set null",
   }),

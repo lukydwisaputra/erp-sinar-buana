@@ -19,6 +19,9 @@ export const rabActuals = pgTable("rab_actuals", {
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
   rabCategory: rabCategory("rab_category").notNull(), // personil_a / langsung_b
+  // Which RAB line this actual cost belongs to (e.g. "Tenaga Ahli") — distinct
+  // from `note`, which is a free-text remark on the entry itself.
+  rabLineLabel: text("rab_line_label"),
   amount: money("amount").notNull().default("0"),
   date: date("date").notNull(),
   note: text("note"),

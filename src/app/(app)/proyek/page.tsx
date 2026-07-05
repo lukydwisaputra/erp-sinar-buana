@@ -16,21 +16,17 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useProyekList } from "@/lib/query/proyek";
+import { useProyekList, useWorkflowStatuses } from "@/lib/query/proyek";
 import { useKatalogList } from "@/lib/query/katalog";
-import type { Proyek, ProyekStatus } from "@/lib/schemas/proyek";
+import type { Proyek } from "@/lib/schemas/proyek";
 
-const STATUS: Record<ProyekStatus, { label: string; variant: "info" | "warning" | "success" | "secondary" | "destructive" }> = {
-  belum_mulai: { label: "Belum Mulai",     variant: "secondary" },
-  on_track:    { label: "Sedang Berjalan", variant: "info" },
-  terlambat:   { label: "Terlambat",       variant: "destructive" },
-  selesai:     { label: "Selesai",         variant: "success" },
-  dibatalkan:  { label: "Dibatalkan",      variant: "secondary" },
-};
-
-const STATUS_OPTIONS: MultiSelectOption[] = (Object.keys(STATUS) as ProyekStatus[]).map((s) => ({
-  value: s, label: STATUS[s].label, variant: STATUS[s].variant,
-}));
+/** Same systemRole-based heuristic used across the Proyek module — status is
+ * config-driven (no fixed enum), never a hardcoded label match. */
+function statusVariant(systemRole: string | null): "info" | "warning" | "success" | "secondary" | "destructive" {
+  if (systemRole === "SELESAI") return "success";
+  if (systemRole === "BATAL") return "destructive";
+  return "info";
+}
 
 function LayananCell({ names }: { names: string[] }) {
   const first = names[0];
@@ -89,12 +85,16 @@ export default function ProyekPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useProyekList();
   const { data: katalogData } = useKatalogList();
+  const { data: statusOptionsRaw = [] } = useWorkflowStatuses("proyek");
+  const statusOptions: MultiSelectOption[] = statusOptionsRaw.map((s) => ({
+    value: s.id, label: s.label, variant: statusVariant(s.systemRole),
+  }));
 
   // Filter state
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const [pendingStatus, setPendingStatus] = React.useState<ProyekStatus[]>([]);
+  const [pendingStatus, setPendingStatus] = React.useState<string[]>([]);
   const [pendingLayanan, setPendingLayanan] = React.useState<string[]>([]);
-  const [appliedStatus, setAppliedStatus] = React.useState<ProyekStatus[]>([]);
+  const [appliedStatus, setAppliedStatus] = React.useState<string[]>([]);
   const [appliedLayanan, setAppliedLayanan] = React.useState<string[]>([]);
 
   const hasFilter = appliedStatus.length > 0 || appliedLayanan.length > 0;
@@ -106,7 +106,7 @@ export default function ProyekPage() {
   const layananOptions = React.useMemo<MultiSelectOption[]>(() => {
     const names = new Set<string>();
     (katalogData ?? []).forEach((l) => names.add(l.nama));
-    (data ?? []).forEach((p) => p.layananNama.forEach((n) => names.add(n)));
+    (data ?? []).forEach((p) => p.layanan.forEach((l) => names.add(l.nama)));
     return Array.from(names)
       .sort((a, b) => a.localeCompare(b))
       .map((l) => ({ value: l, label: l }));
@@ -131,9 +131,9 @@ export default function ProyekPage() {
   const filteredData = React.useMemo(() => {
     let base = data ?? [];
     if (appliedStatus.length > 0)
-      base = base.filter((p) => appliedStatus.includes(p.status));
+      base = base.filter((p) => p.statusId && appliedStatus.includes(p.statusId));
     if (appliedLayanan.length > 0)
-      base = base.filter((p) => appliedLayanan.some((l) => p.layananNama.includes(l)));
+      base = base.filter((p) => appliedLayanan.some((l) => p.layanan.some((pl) => pl.nama === l)));
     return base;
   }, [data, appliedStatus, appliedLayanan]);
 
@@ -150,15 +150,14 @@ export default function ProyekPage() {
     },
     { accessorKey: "perusahaanNama", header: "Perusahaan", meta: { className: "min-w-40" } },
     {
-      accessorKey: "layananNama", header: "Layanan",
-      cell: ({ row }) => <LayananCell names={row.original.layananNama} />,
+      accessorKey: "layanan", header: "Layanan",
+      cell: ({ row }) => <LayananCell names={row.original.layanan.map((l) => l.nama)} />,
     },
     {
       accessorKey: "status", header: "Status", meta: { className: "text-center" },
-      cell: ({ row }) => {
-        const s = STATUS[row.original.status];
-        return <Badge variant={s.variant}>{s.label}</Badge>;
-      },
+      cell: ({ row }) => (
+        <Badge variant={statusVariant(row.original.statusSystemRole)}>{row.original.status}</Badge>
+      ),
     },
     {
       id: "actions", header: "", meta: { className: "w-10" },
@@ -208,9 +207,9 @@ export default function ProyekPage() {
             <div className="space-y-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</p>
               <MultiSelectFilter
-                options={STATUS_OPTIONS}
+                options={statusOptions}
                 value={pendingStatus}
-                onChange={(v) => setPendingStatus(v as ProyekStatus[])}
+                onChange={setPendingStatus}
                 placeholder="Pilih status…"
                 searchPlaceholder="Cari status…"
                 noun="status"

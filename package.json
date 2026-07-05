@@ -15,6 +15,8 @@
     "seed:karyawan": "node --env-file=.env.local scripts/seed-karyawan.ts",
     "seed:katalog": "node --env-file=.env.local scripts/seed-katalog.ts",
     "seed:penawaran": "node --env-file=.env.local scripts/seed-penawaran.ts",
+    "seed:proyek": "node --env-file=.env.local scripts/seed-proyek.ts",
+    "seed:realisasi-rab": "node --env-file=.env.local scripts/seed-realisasi-rab.ts",
     "screenshot:docs": "node --env-file=.env.local scripts/screenshot-docs.ts"
   },
   "dependencies": {

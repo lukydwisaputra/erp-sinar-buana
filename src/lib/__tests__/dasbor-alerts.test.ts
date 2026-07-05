@@ -30,9 +30,10 @@ const mkKewajiban = (
   ...opts,
 });
 
-const mkProyekEntity = (id: string, status: Proyek["status"], overrides: Partial<Proyek> = {}): Proyek => ({
+const mkProyekEntity = (id: string, statusSystemRole: string | null, overrides: Partial<Proyek> = {}): Proyek => ({
   id, nama: "Proyek " + id, perusahaanId: "C1", perusahaanNama: "PT Klien",
-  area: "", tahun: 2026, layananNama: [], status, nilaiKontrak: 100_000_000,
+  areaId: null, area: "—", tahun: 2026, layanan: [], statusId: null, status: "Aktif",
+  statusSystemRole, nilaiKontrak: 100_000_000,
   sphId: null, assignees: [], milestones: [], createdAt: "2026-01-01T00:00:00.000Z",
   ...overrides,
 });
@@ -154,37 +155,37 @@ describe("computeAlerts", () => {
 
 describe("lastActivityDate", () => {
   it("uses the most recent milestone actualDate", () => {
-    const p = mkProyekEntity("P1", "on_track", {
+    const p = mkProyekEntity("P1", null, {
       milestones: [
-        { id: "M1", parentId: null, nama: "A", urutan: 1, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-05-01", status: "selesai", pemicuTermin: null },
-        { id: "M2", parentId: null, nama: "B", urutan: 2, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-06-10", status: "selesai", pemicuTermin: null },
+        { id: "M1", parentId: null, nama: "A", urutan: 1, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-05-01", statusId: null, status: "Selesai", triggersTerm: false },
+        { id: "M2", parentId: null, nama: "B", urutan: 2, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-06-10", statusId: null, status: "Selesai", triggersTerm: false },
       ],
     });
     expect(lastActivityDate(p)).toBe("2026-06-10");
   });
 
   it("falls back to createdAt when no milestone has an actualDate", () => {
-    const p = mkProyekEntity("P2", "belum_mulai", { createdAt: "2026-03-15T10:00:00.000Z" });
+    const p = mkProyekEntity("P2", null, { createdAt: "2026-03-15T10:00:00.000Z" });
     expect(lastActivityDate(p)).toBe("2026-03-15");
   });
 });
 
 describe("alertsProyekMangkrak", () => {
   it("flags a project with no recent activity past the threshold", () => {
-    const p = mkProyekEntity("P1", "on_track", { createdAt: "2026-05-01T00:00:00.000Z" });
+    const p = mkProyekEntity("P1", null, { createdAt: "2026-05-01T00:00:00.000Z" });
     const alerts = alertsProyekMangkrak([p], TODAY, 30); // 2026-06-22 - 2026-05-01 = 52 days
     expect(alerts).toHaveLength(1);
     expect(alerts[0].jenis).toBe("proyek_mangkrak");
   });
 
   it("does not flag a project with recent activity", () => {
-    const p = mkProyekEntity("P2", "on_track", { createdAt: "2026-06-20T00:00:00.000Z" });
+    const p = mkProyekEntity("P2", null, { createdAt: "2026-06-20T00:00:00.000Z" });
     expect(alertsProyekMangkrak([p], TODAY, 30)).toHaveLength(0);
   });
 
-  it("never flags selesai or dibatalkan projects regardless of staleness", () => {
-    const selesai = mkProyekEntity("P3", "selesai", { createdAt: "2026-01-01T00:00:00.000Z" });
-    const dibatalkan = mkProyekEntity("P4", "dibatalkan", { createdAt: "2026-01-01T00:00:00.000Z" });
+  it("never flags projects whose systemRole is a terminal SELESAI/BATAL, regardless of staleness", () => {
+    const selesai = mkProyekEntity("P3", "SELESAI", { createdAt: "2026-01-01T00:00:00.000Z" });
+    const dibatalkan = mkProyekEntity("P4", "BATAL", { createdAt: "2026-01-01T00:00:00.000Z" });
     expect(alertsProyekMangkrak([selesai, dibatalkan], TODAY, 30)).toHaveLength(0);
   });
 });
