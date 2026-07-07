@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   listBatch, getBatch, getSlip, createBatch, updateSlip, markSlipDibayar,
 } from "@/lib/data/penggajian";
-import { listArusKas } from "@/lib/data/arus-kas";
+import { arusKasFixtures } from "@/lib/fixtures/arus-kas";
 import { calcSlip } from "@/lib/schemas/penggajian";
 
 describe("listBatch", () => {
@@ -114,20 +114,22 @@ describe("Arus Kas automation on Penggajian status change (regression)", () => {
     });
     const slip = created.slips[0];
 
-    const before = await listArusKas();
-    expect(before.filter((e) => e.referensiId === created.id).length).toBe(0);
+    const matchesBatch = (e: { sumber: string; keterangan: string }) =>
+      e.sumber === "penggajian" && e.keterangan.includes(created.id);
+    expect(arusKasFixtures.filter(matchesBatch).length).toBe(0);
 
     await markSlipDibayar(created.id, slip.id);
-    const after = await listArusKas();
-    expect(after.filter((e) => e.referensiId === created.id && e.sumber === "otomatis_penggajian").length).toBe(1);
+    expect(arusKasFixtures.filter(matchesBatch).length).toBe(1);
   });
 
   it("posts nothing for a batch whose slips are never marked dibayar", async () => {
     const b = await getBatch("GAJ-001");
     const pending = b!.slips.find((s) => s.status === "menunggu_pembayaran");
     if (!pending) return; // every slip in this fixture batch is already paid — nothing to assert
-    const before = await listArusKas();
-    expect(before.filter((e) => e.referensiId === "GAJ-001" && e.sumber === "otomatis_penggajian" && e.keterangan.includes(pending.karyawanNama)).length).toBe(0);
+    const matches = arusKasFixtures.filter(
+      (e) => e.sumber === "penggajian" && e.keterangan.includes("GAJ-001") && e.keterangan.includes(pending.karyawanNama),
+    );
+    expect(matches.length).toBe(0);
   });
 });
 

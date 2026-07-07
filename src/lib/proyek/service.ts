@@ -276,6 +276,7 @@ export async function updateMilestone(userId: string, projectId: string, milesto
         ...(input.actualDate !== undefined && { actualDate: input.actualDate }),
         ...(input.statusId !== undefined && { statusId: input.statusId }),
         ...(input.triggersTerm !== undefined && { triggersTerm: input.triggersTerm }),
+        ...(input.linkedMasterInvoiceId !== undefined && { linkedMasterInvoiceId: input.linkedMasterInvoiceId }),
         updatedAt: new Date(),
       })
       .where(eq(schema.milestones.id, milestoneId));

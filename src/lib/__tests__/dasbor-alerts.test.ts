@@ -3,30 +3,26 @@ import {
   alertsFaktur, alertsPajak, alertsProyek, alertsProyekMangkrak, lastActivityDate, computeAlerts,
   FAKTUR_DUE_SOON_DAYS, PAJAK_DUE_SOON_DAYS,
 } from "@/lib/dasbor/alerts";
-import type { Faktur } from "@/lib/schemas/faktur";
-import type { KewajibanPajak } from "@/lib/schemas/kewajiban-pajak";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
+import type { TaxEntry } from "@/lib/schemas/tax-entries";
 import type { Proyek } from "@/lib/schemas/proyek";
 import type { ProyekProfit } from "@/lib/dasbor/types";
 
 const TODAY = "2026-06-22";
 
-const mkFaktur = (id: string, jatuhTempo: string, status: "terkirim" | "lunas" = "terkirim"): Faktur => ({
-  id, sphId: "SPH-1", perusahaanId: "C1", perusahaanNama: "PT Klien",
-  alamat: "", kota: "", npwp: "", tanggal: "2026-06-01", jatuhTempo,
-  items: [{ uraian: "Jasa", volume: 1, harga: 100_000_000, satuan: "ls" }],
-  terminList: [{ label: "I", persen: 100, pemicu: "" }], terminIndex: 0,
-  ppnAktif: false, ppnPersen: 11, pph23Aktif: false, pph23Persen: 2,
-  catatan: [], status, tanggalBayar: "",
-  bankNama: "", bankAtasNama: "", bankNoRekening: "",
-  jabatanPenerima: "Direktur", picAktif: false, picNama: "", picJabatan: "",
+const mkFaktur = (id: string, jatuhTempo: string, statusSystemRole: string | null = null): FakturTerminRow => ({
+  id, proyekId: "P1", perusahaanNama: "PT Klien",
+  tanggal: "2026-06-01", jatuhTempo, statusSystemRole,
+  nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
 });
 
 const mkKewajiban = (
-  id: string, jatuhTempo: string,
-  opts: Partial<KewajibanPajak> = {},
-): KewajibanPajak => ({
-  id, jenis: "ppn", periode: "2026-06", jumlah: 5_000_000,
-  jatuhTempo, status: "belum_setor", buktiPotongDiterima: true, keterangan: "",
+  id: string, dueDate: string,
+  opts: Partial<TaxEntry> = {},
+): TaxEntry => ({
+  id, taxType: "ppn_keluaran", nature: "kewajiban", taxPeriod: "2026-06-01", jumlah: 5_000_000,
+  dueDate, settlementStatus: "belum_disetor", settledDate: null, ntpn: null,
+  buktiPotongReceived: true, notes: "", companyId: null, employeeId: null,
   ...opts,
 });
 
@@ -77,7 +73,7 @@ describe("alertsFaktur", () => {
 
   it("ignores paid invoices and future invoices beyond window", () => {
     const alerts = alertsFaktur([
-      mkFaktur("F3", "2026-06-10", "lunas"),  // paid
+      mkFaktur("F3", "2026-06-10", "LUNAS"),  // paid
       mkFaktur("F4", "2026-08-01"),            // beyond FAKTUR_DUE_SOON_DAYS, not overdue
     ], TODAY);
     expect(alerts).toHaveLength(0);
@@ -98,21 +94,21 @@ describe("alertsPajak", () => {
   });
 
   it("flags PPh 23 without bukti potong as sedang", () => {
-    const k = mkKewajiban("K3", "2026-07-01", { jenis: "pph23", buktiPotongDiterima: false });
+    const k = mkKewajiban("K3", "2026-07-01", { taxType: "pph23_dipotong", buktiPotongReceived: false });
     const alerts = alertsPajak([k], TODAY);
     expect(alerts.find(a => a.jenis === "bukti_potong_belum")).toBeTruthy();
     expect(alerts.find(a => a.jenis === "bukti_potong_belum")!.prioritas).toBe("sedang");
   });
 
   it("ignores already-submitted obligations", () => {
-    const k = mkKewajiban("K4", "2026-06-15", { status: "disetor" });
+    const k = mkKewajiban("K4", "2026-06-15", { settlementStatus: "sudah_disetor" });
     const alerts = alertsPajak([k], TODAY);
     // no terlambat/jatuh_tempo for disetor; check no terlambat or jatuh_tempo
     expect(alerts.filter(a => a.jenis === "pajak_terlambat" || a.jenis === "pajak_jatuh_tempo")).toHaveLength(0);
   });
 
   it("still flags PPh 23 bukti potong even when obligation is disetor", () => {
-    const k = mkKewajiban("K5", "2026-07-01", { jenis: "pph23", status: "disetor", buktiPotongDiterima: false });
+    const k = mkKewajiban("K5", "2026-07-01", { taxType: "pph23_dipotong", settlementStatus: "sudah_disetor", buktiPotongReceived: false });
     const alerts = alertsPajak([k], TODAY);
     expect(alerts).toHaveLength(1);
     expect(alerts[0].jenis).toBe("bukti_potong_belum");
@@ -157,8 +153,8 @@ describe("lastActivityDate", () => {
   it("uses the most recent milestone actualDate", () => {
     const p = mkProyekEntity("P1", null, {
       milestones: [
-        { id: "M1", parentId: null, nama: "A", urutan: 1, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-05-01", statusId: null, status: "Selesai", triggersTerm: false },
-        { id: "M2", parentId: null, nama: "B", urutan: 2, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-06-10", statusId: null, status: "Selesai", triggersTerm: false },
+        { id: "M1", parentId: null, nama: "A", urutan: 1, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-05-01", statusId: null, status: "Selesai", triggersTerm: false, linkedMasterInvoiceId: null },
+        { id: "M2", parentId: null, nama: "B", urutan: 2, description: null, descriptionAttachments: [], assignees: [], targetDate: null, actualDate: "2026-06-10", statusId: null, status: "Selesai", triggersTerm: false, linkedMasterInvoiceId: null },
       ],
     });
     expect(lastActivityDate(p)).toBe("2026-06-10");

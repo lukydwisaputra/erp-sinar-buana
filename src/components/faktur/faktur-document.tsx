@@ -1,20 +1,17 @@
 import { companyProfileFixture } from "@/lib/fixtures/company-profile";
 import { formatRupiah, formatTanggalPanjang as tglPanjang, titleCase } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
-import { computeFaktur, toRoman, afterTaxAmount } from "@/lib/faktur";
-import type { FakturFormValues } from "@/lib/schemas/faktur";
+import type { FakturInduk, InvoiceTermin } from "@/lib/schemas/faktur";
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
 
-export function FakturDocument({
-  values,
-  noFaktur,
-}: {
-  values: FakturFormValues;
-  noFaktur: string;
-}): React.JSX.Element {
+/** Printable Invoice Termin document. Faktur Induk no longer stores per-item
+ * volume/harga (that lived on the SPH; the DB's normalized model just lists
+ * service names on `master_invoice_services`) — the itemized "Baris Tagihan"
+ * table from the old mock is replaced by a plain service list, with the
+ * total sourced from the Faktur Induk's stored `totalBiaya`. */
+export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: InvoiceTermin }): React.JSX.Element {
   const companyProfile = companyProfileFixture.current;
-  const t = computeFaktur(values);
   const cell = "border border-[var(--doc-rule)] px-2 py-1";
   const sumLabel = `${cell} text-right font-bold`;
   const sumVal = `${cell} text-right font-mono tabular-nums whitespace-nowrap`;
@@ -26,30 +23,19 @@ export function FakturDocument({
         <div className="flex items-start justify-between gap-6">
           <div>
             <p>Kepada Yth.</p>
-            <p className="font-semibold">{values.perusahaanNama || "—"}</p>
-            {values.picAktif && values.picNama ? (
-              <>
-                <p>u.p. Bapak/Ibu {values.picNama}</p>
-                <p>{values.picJabatan}</p>
-              </>
-            ) : (
-              <p>u.p. Bapak/Ibu {values.jabatanPenerima || "Direktur"}</p>
-            )}
+            <p className="font-semibold">{induk.perusahaanNama || "—"}</p>
             <p>Di Tempat</p>
           </div>
           <div className="shrink-0 text-right">
-            {companyProfile.kota}, {tglPanjang(values.tanggal)}
+            {companyProfile.kota}, {tglPanjang(termin.tanggal)}
           </div>
         </div>
 
         {/* Title */}
         <div className="mt-4 text-center">
           <p className="text-lg font-bold tracking-[0.3em]">INVOICE</p>
-          <p className="font-semibold">
-            TERMIN {toRoman(values.terminIndex + 1)}
-            {t.pemicu ? ` (${t.pemicu})` : ""}
-          </p>
-          <p className="font-mono">No Inv: {noFaktur}</p>
+          <p className="font-semibold">{termin.label}</p>
+          <p className="font-mono">No Inv: {termin.number ?? "—"}</p>
         </div>
 
         {/* Table */}
@@ -57,38 +43,27 @@ export function FakturDocument({
           <thead>
             <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
               <th className={cell}>No.</th>
-              <th className={cell}>Uraian</th>
-              <th className={cell}>Biaya Satuan (Rp)</th>
-              <th className={cell}>Vol</th>
-              <th className={cell}>Total (Rp)</th>
+              <th className={cell}>Layanan</th>
             </tr>
           </thead>
           <tbody>
-            {values.items.map((it, i) => (
-              <tr key={i}>
+            {induk.layanan.map((l, i) => (
+              <tr key={l.serviceId ?? i}>
                 <td className={`${cell} text-center`}>{i + 1}</td>
-                <td className={cell}>{it.uraian || "—"}</td>
-                <td className={`${cell} text-right font-mono tabular-nums`}>{formatRupiah(it.harga)}</td>
-                <td className={`${cell} text-center`}>{it.volume}</td>
-                <td className={`${cell} text-right font-mono tabular-nums`}>
-                  {formatRupiah((Number(it.volume) || 0) * (Number(it.harga) || 0))}
-                </td>
+                <td className={cell}>{l.nama}</td>
               </tr>
             ))}
-            {/* two empty filler rows like the PDF */}
-            <tr><td className={cell}>&nbsp;</td><td className={cell} /><td className={cell} /><td className={cell} /><td className={cell} /></tr>
-            <tr><td className={cell}>&nbsp;</td><td className={cell} /><td className={cell} /><td className={cell} /><td className={cell} /></tr>
 
-            <SummaryRow label="TOTAL BIAYA" value={formatRupiah(t.totalBiaya)} labelCls={sumLabel} valCls={sumVal} />
-            <SummaryRow label={t.pemicu || "Termin ini"} value={formatRupiah(t.nilaiTermin)} labelCls={sumLabel} valCls={sumVal} />
-            {values.ppnAktif && <SummaryRow label="DPP" value={formatRupiah(t.dpp)} labelCls={sumLabel} valCls={sumVal} />}
-            {values.ppnAktif && <SummaryRow label="PPN" value={formatRupiah(t.ppn)} labelCls={sumLabel} valCls={sumVal} />}
-            {values.pph23Aktif && <SummaryRow label="PPh" value={formatRupiah(-t.pph23)} labelCls={sumLabel} valCls={`${sumVal} text-destructive`} />}
-            <SummaryRow label="TOTAL BIAYA SETELAH PAJAK" value={formatRupiah(t.total)} labelCls={sumLabel} valCls={`${sumVal} font-bold`} />
+            <SummaryRow label="TOTAL BIAYA" value={formatRupiah(induk.totalBiaya)} labelCls={sumLabel} valCls={sumVal} colSpan={1} />
+            <SummaryRow label={termin.label} value={formatRupiah(termin.nilaiTermin)} labelCls={sumLabel} valCls={sumVal} colSpan={1} />
+            {termin.ppn > 0 && <SummaryRow label="DPP" value={formatRupiah(termin.dpp)} labelCls={sumLabel} valCls={sumVal} colSpan={1} />}
+            {termin.ppn > 0 && <SummaryRow label="PPN" value={formatRupiah(termin.ppn)} labelCls={sumLabel} valCls={sumVal} colSpan={1} />}
+            {termin.pph23 > 0 && <SummaryRow label="PPh" value={formatRupiah(-termin.pph23)} labelCls={sumLabel} valCls={`${sumVal} text-destructive`} colSpan={1} />}
+            <SummaryRow label="TOTAL BIAYA SETELAH PAJAK" value={formatRupiah(termin.totalSetelahPajak)} labelCls={sumLabel} valCls={`${sumVal} font-bold`} colSpan={1} />
             <tr>
-              <td colSpan={5} className={`${cell} text-center`}>
+              <td colSpan={2} className={`${cell} text-center`}>
                 <span className="font-semibold">Terbilang: </span>
-                <span className="font-bold italic">{titleCase(terbilang(t.total))} Rupiah</span>
+                <span className="font-bold italic">{titleCase(terbilang(termin.totalSetelahPajak))} Rupiah</span>
               </td>
             </tr>
           </tbody>
@@ -99,20 +74,15 @@ export function FakturDocument({
           <p className="font-bold">Catatan:</p>
           <p>Pembayaran dapat dilakukan melalui</p>
           <div className="grid grid-cols-[auto_auto_1fr] gap-x-2">
-            <span>Bank</span><span>:</span><span>{values.bankNama || companyProfile.bank.nama}</span>
-            <span>Atas Nama</span><span>:</span><span>{values.bankAtasNama || companyProfile.bank.atasNama}</span>
-            <span>Nomor Rekening</span><span>:</span><span className="font-mono">{values.bankNoRekening || companyProfile.bank.noRekening}</span>
+            <span>Bank</span><span>:</span><span>{termin.bankNama || companyProfile.bank.nama}</span>
+            <span>Atas Nama</span><span>:</span><span>{termin.bankAtasNama || companyProfile.bank.atasNama}</span>
+            <span>Nomor Rekening</span><span>:</span><span className="font-mono">{termin.bankNoRekening || companyProfile.bank.noRekening}</span>
           </div>
           <ul className="mt-1 list-disc pl-5">
-            {t.previous.map((p, i) => {
-              const paid = afterTaxAmount(p.amount, values.ppnAktif, values.ppnPersen, values.pph23Aktif, values.pph23Persen);
-              return (
-                <li key={i}>
-                  {p.label} - {p.persen}%: {formatRupiah(paid)} (Sudah dibayar)
-                </li>
-              );
-            })}
-            {values.catatan.filter((c) => c.trim()).map((c, i) => <li key={`c${i}`}>{c}</li>)}
+            {termin.previousTermins.map((p, i) => (
+              <li key={i}>{p.label}: {formatRupiah(p.nilai)} (Sudah dibayar)</li>
+            ))}
+            {termin.catatan && <li>{termin.catatan}</li>}
           </ul>
           <p className="mt-2 font-bold">Invoice ini berlaku sebagai kwitansi</p>
         </div>
@@ -129,10 +99,10 @@ export function FakturDocument({
   );
 }
 
-function SummaryRow({ label, value, labelCls, valCls }: { label: string; value: string; labelCls: string; valCls: string }) {
+function SummaryRow({ label, value, labelCls, valCls }: { label: string; value: string; labelCls: string; valCls: string; colSpan: number }) {
   return (
     <tr>
-      <td className={labelCls} colSpan={4}>{label}</td>
+      <td className={labelCls} colSpan={1}>{label}</td>
       <td className={valCls}>{value}</td>
     </tr>
   );

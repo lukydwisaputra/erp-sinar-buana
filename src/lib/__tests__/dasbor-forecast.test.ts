@@ -4,8 +4,8 @@ import {
   estimateMonthlyObligation, computeWeeklyProjections, computeForekast,
 } from "@/lib/dasbor/forecast";
 import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
-import type { Faktur } from "@/lib/schemas/faktur";
-import type { KewajibanPajak } from "@/lib/schemas/kewajiban-pajak";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
+import type { TaxEntry } from "@/lib/schemas/tax-entries";
 import type { PenggajianBatch } from "@/lib/schemas/penggajian";
 
 const TODAY = "2026-06-22";
@@ -13,23 +13,19 @@ const TODAY = "2026-06-22";
 // Helpers
 const ak = (jenis: "kredit" | "debit", jumlah: number): ArusKasEntry => ({
   id: "ak1", jenis, tanggal: "2026-06-01", jumlah, kategori: "test",
-  sumber: "manual", keterangan: "", locked: false,
+  sumber: "manual", keterangan: "", proyekId: null, locked: false, isCancelled: false,
 });
 
-const mkFaktur = (id: string, jatuhTempo: string, status: "terkirim" | "lunas" = "terkirim"): Faktur => ({
-  id, sphId: "SPH-1", perusahaanId: "C1", perusahaanNama: "PT Klien",
-  alamat: "", kota: "", npwp: "", tanggal: "2026-06-01", jatuhTempo,
-  items: [{ uraian: "Jasa", volume: 1, harga: 100_000_000, satuan: "ls" }],
-  terminList: [{ label: "I", persen: 100, pemicu: "" }], terminIndex: 0,
-  ppnAktif: false, ppnPersen: 11, pph23Aktif: false, pph23Persen: 2,
-  catatan: [], status, tanggalBayar: "",
-  bankNama: "", bankAtasNama: "", bankNoRekening: "",
-  jabatanPenerima: "Direktur", picAktif: false, picNama: "", picJabatan: "",
+const mkFaktur = (id: string, jatuhTempo: string, statusSystemRole: string | null = null): FakturTerminRow => ({
+  id, proyekId: "P1", perusahaanNama: "PT Klien",
+  tanggal: "2026-06-01", jatuhTempo, statusSystemRole,
+  nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
 });
 
-const mkKewajiban = (id: string, jatuhTempo: string, status: "belum_setor" | "disetor" = "belum_setor"): KewajibanPajak => ({
-  id, jenis: "ppn", periode: "2026-06", jumlah: 5_000_000,
-  jatuhTempo, status, buktiPotongDiterima: true, keterangan: "",
+const mkKewajiban = (id: string, dueDate: string, settlementStatus: "belum_disetor" | "sudah_disetor" = "belum_disetor"): TaxEntry => ({
+  id, taxType: "ppn_keluaran", nature: "kewajiban", taxPeriod: "2026-06-01", jumlah: 5_000_000,
+  dueDate, settlementStatus, settledDate: null, ntpn: null, buktiPotongReceived: true, notes: "",
+  companyId: null, employeeId: null,
 });
 
 const mkBatch = (id: string, netPerSlip: number): PenggajianBatch => ({
@@ -53,50 +49,53 @@ describe("saldoArusKas", () => {
   it("returns 0 for empty", () => {
     expect(saldoArusKas([])).toBe(0);
   });
+  it("excludes cancelled entries", () => {
+    const cancelled: ArusKasEntry = { ...ak("kredit", 50_000_000), isCancelled: true };
+    expect(saldoArusKas([ak("kredit", 100_000_000), cancelled])).toBe(100_000_000);
+  });
 });
 
 describe("forecastInflows", () => {
-  it("includes terkirim invoices with jatuhTempo within horizon", () => {
+  it("includes unpaid termins with jatuhTempo within horizon", () => {
     const fakturs = [
-      mkFaktur("F1", "2026-06-25"),  // within 90 days
-      mkFaktur("F2", "2026-10-01"),  // outside horizon (> today+90)
-      mkFaktur("F3", "2026-06-10", "lunas"),  // paid AND past — exclude
-      mkFaktur("F3b", "2026-06-25", "lunas"),  // within horizon but lunas — must be excluded
+      mkFaktur("F1", "2026-06-25"),          // within 90 days
+      mkFaktur("F2", "2026-10-01"),          // outside horizon (> today+90)
+      mkFaktur("F3", "2026-06-10", "LUNAS"), // paid — exclude
+      mkFaktur("F3b", "2026-06-25", "BATAL"),// cancelled — exclude
     ];
     const result = forecastInflows(fakturs, TODAY, 90);
     expect(result).toHaveLength(1);
     expect(result[0].refId).toBe("F1");
     expect(result[0].jenis).toBe("masuk");
-    expect(result[0].jumlah).toBe(100_000_000); // nilaiTermin, no pph23
+    expect(result[0].jumlah).toBe(100_000_000); // netIncome, no pph23
   });
 
   it("includes invoice due exactly on today and on the last day of horizon", () => {
     const fakturs = [
-      mkFaktur("F-today", TODAY),                   // jatuhTempo == today
-      mkFaktur("F-horizon", "2026-09-20"),          // jatuhTempo == today + 90
+      mkFaktur("F-today", TODAY),           // jatuhTempo == today
+      mkFaktur("F-horizon", "2026-09-20"),  // jatuhTempo == today + 90
     ];
     const result = forecastInflows(fakturs, TODAY, 90);
     expect(result).toHaveLength(2);
     expect(result.map(e => e.refId).sort()).toEqual(["F-horizon", "F-today"]);
   });
 
-  it("deducts pph23 from inflow amount when pph23Aktif", () => {
-    const f: Faktur = {
+  it("uses netIncome (already net of pph23)", () => {
+    const f: FakturTerminRow = {
       ...mkFaktur("F4", "2026-06-25"),
-      pph23Aktif: true, pph23Persen: 2,
+      pph23: 2_000_000, netIncome: 98_000_000,
     };
     const result = forecastInflows([f], TODAY, 90);
-    // nilaiTermin = 100_000_000, pph23 = 2% of 100_000_000 = 2_000_000
     expect(result[0].jumlah).toBe(98_000_000);
   });
 });
 
 describe("forecastOutflows", () => {
-  it("includes belum_setor kewajiban within horizon", () => {
+  it("includes belum_disetor kewajiban within horizon", () => {
     const kewajiban = [
-      mkKewajiban("K1", "2026-06-30"),         // within horizon
-      mkKewajiban("K2", "2026-10-30"),         // outside horizon
-      mkKewajiban("K3", "2026-06-30", "disetor"), // already paid
+      mkKewajiban("K1", "2026-06-30"),                    // within horizon
+      mkKewajiban("K2", "2026-10-30"),                    // outside horizon
+      mkKewajiban("K3", "2026-06-30", "sudah_disetor"),    // already paid
     ];
     const result = forecastOutflows(kewajiban, [], TODAY, 90);
     expect(result).toHaveLength(1);

@@ -1,5 +1,5 @@
-import type { Faktur } from "@/lib/schemas/faktur";
-import type { KewajibanPajak } from "@/lib/schemas/kewajiban-pajak";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
+import type { TaxEntry } from "@/lib/schemas/tax-entries";
 import type { Proyek } from "@/lib/schemas/proyek";
 import type { AlertItem, AlertJenis, AlertPrioritas, ProyekProfit } from "@/lib/dasbor/types";
 
@@ -33,10 +33,10 @@ function makeItem(
   return { id, jenis, prioritas, judul, detail, refId, refType, ...(tanggal !== undefined && { tanggal }) };
 }
 
-export function alertsFaktur(fakturs: Faktur[], today: string): AlertItem[] {
+export function alertsFaktur(fakturs: FakturTerminRow[], today: string): AlertItem[] {
   const items: AlertItem[] = [];
   for (const f of fakturs) {
-    if (f.status !== "terkirim") continue;
+    if (f.statusSystemRole !== null || !f.jatuhTempo) continue; // only unpaid, uncancelled termins can be overdue
     const diff = daysDiff(today, f.jatuhTempo);
     if (diff < 0) {
       items.push(makeItem(
@@ -57,33 +57,33 @@ export function alertsFaktur(fakturs: Faktur[], today: string): AlertItem[] {
   return items;
 }
 
-export function alertsPajak(kewajiban: KewajibanPajak[], today: string): AlertItem[] {
+export function alertsPajak(kewajiban: TaxEntry[], today: string): AlertItem[] {
   const items: AlertItem[] = [];
   for (const k of kewajiban) {
-    if (k.status === "belum_setor") {
-      const diff = daysDiff(today, k.jatuhTempo);
+    if (k.settlementStatus !== "sudah_disetor" && k.dueDate) {
+      const diff = daysDiff(today, k.dueDate);
       if (diff < 0) {
         items.push(makeItem(
           "pajak-terlambat-" + k.id, "pajak_terlambat", "tinggi",
-          "Pajak Terlambat: " + k.jenis.toUpperCase() + " " + k.periode,
-          "Jatuh tempo " + k.jatuhTempo + ", belum disetor",
-          k.id, "pajak", k.jatuhTempo,
+          "Pajak Terlambat: " + k.taxType.toUpperCase() + " " + k.taxPeriod.slice(0, 7),
+          "Jatuh tempo " + k.dueDate + ", belum disetor",
+          k.id, "pajak", k.dueDate,
         ));
       } else if (diff <= PAJAK_DUE_SOON_DAYS) {
         items.push(makeItem(
           "pajak-jatuh-tempo-" + k.id, "pajak_jatuh_tempo", "sedang",
-          "Pajak Jatuh Tempo: " + k.jenis.toUpperCase() + " " + k.periode,
-          "Jatuh tempo " + k.jatuhTempo,
-          k.id, "pajak", k.jatuhTempo,
+          "Pajak Jatuh Tempo: " + k.taxType.toUpperCase() + " " + k.taxPeriod.slice(0, 7),
+          "Jatuh tempo " + k.dueDate,
+          k.id, "pajak", k.dueDate,
         ));
       }
     }
-    if (k.jenis === "pph23" && !k.buktiPotongDiterima) {
+    if (k.taxType === "pph23_dipotong" && !k.buktiPotongReceived) {
       items.push(makeItem(
         "bukti-potong-" + k.id, "bukti_potong_belum", "sedang",
         "Bukti Potong PPh 23 Belum Diterima",
-        "Periode " + k.periode + " – PPh 23 credit berisiko",
-        k.id, "pajak", k.jatuhTempo,
+        "Periode " + k.taxPeriod.slice(0, 7) + " – PPh 23 credit berisiko",
+        k.id, "pajak", k.dueDate ?? undefined,
       ));
     }
   }
@@ -137,8 +137,8 @@ export function alertsProyekMangkrak(proyeks: Proyek[], today: string, ambangHar
 }
 
 export function computeAlerts(args: {
-  fakturs: Faktur[];
-  kewajiban: KewajibanPajak[];
+  fakturs: FakturTerminRow[];
+  kewajiban: TaxEntry[];
   proyek: ProyekProfit[];
   proyeks: Proyek[];
   today: string;

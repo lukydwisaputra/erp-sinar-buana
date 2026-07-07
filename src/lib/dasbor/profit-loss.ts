@@ -1,4 +1,4 @@
-import type { Faktur } from "@/lib/schemas/faktur";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
 import type { RealisasiRab } from "@/lib/schemas/realisasi-rab";
 import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
 import type { SifatBeban } from "@/lib/schemas/expense-nature";
@@ -20,7 +20,7 @@ export function bebanOperasionalPeriode(
   periode: Periode,
 ): number {
   return arusKas.reduce((s, e) => {
-    if (!dalamPeriode(e.tanggal, periode)) return s;
+    if (e.isCancelled || !dalamPeriode(e.tanggal, periode)) return s;
     return natureOf(e.kategori) === "operasional" ? s + e.jumlah : s;
   }, 0);
 }
@@ -28,7 +28,7 @@ export function bebanOperasionalPeriode(
 const pct = (num: number, den: number): number => (den === 0 ? 0 : (num / den) * 100);
 
 export function computeLabaRugi(args: {
-  fakturs: Faktur[];
+  fakturs: FakturTerminRow[];
   realisasi: RealisasiRab[];
   arusKas: ArusKasEntry[];
   natureOf: (kategori: string) => SifatBeban;

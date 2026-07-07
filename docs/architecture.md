@@ -317,6 +317,78 @@ creation, and recurring Laporan Semester auto-generation are all deferred
 (PRD-described, unimplemented in the mock, and out of scope for this pass).
 See `planning/prd/06-manajemen-proyek.md` for the reconciled Proyek shape.
 
+Faktur (the seventh module wired) needed the largest *conceptual* gap of any
+module so far — not missing columns, but a mock that modeled the whole
+domain flat (one `Faktur` row per termin, keyed only by `sphId`, the entire
+proposed term scheme duplicated onto every row) where the DB had already
+normalized it correctly as **Proyek → Faktur Induk (`master_invoices`) →
+Invoice Termin (`installment_invoices`)**:
+
+- **Adopted the DB's 3-level hierarchy** rather than flattening it to match
+  the mock — a genuine from-scratch build, since the mock's own "create
+  faktur" flow was dead code (`createFakturSetFromSph` had zero call sites,
+  `FakturBuilder`'s new-faktur path was a no-op toast stub). Faktur Induk is
+  now created explicitly from a Proyek (pick services + a term scheme), and
+  Invoice Termin are generated **one at a time, in order** — not all upfront
+  like the mock did.
+- **Trust the DB triggers entirely**, the same precedent Penawaran
+  (numbering) and Proyek (`fn_project_status_log`) established: numbering
+  (`assign_document_number('INV')`), the over-billing guard
+  (`fn_installment_validate`, Σ termin ≤ Total Biaya), and payment automation
+  (`fn_installment_after_change` — on LUNAS, creates the 3 locked
+  `cashflow_entries` rows [jasa/PPN Keluaran/PPh23 dipotong] + `tax_entries`
+  rows and rolls the master invoice up once fully paid; on BATAL, reverses
+  them) are never duplicated app-side. One real bug this surfaced during
+  curl verification: postgres-js/drizzle wrap a raised exception's message
+  under `error.cause`, not the top-level `Error.message` — the guard's 409
+  mapping in `src/lib/faktur/service.ts` was matching the wrong field and
+  silently falling through to a 500 until fixed.
+- **Tax is a snapshot, not live.** The mock recomputed PPN/PPh23 at render
+  time from toggles on the flat row; the DB stores it once, at
+  termin-generation time (`dpp`/`ppn`/`pph23`/`total_after_tax` columns) —
+  correct per the PRD, and immutable even if rates change later.
+  `resolveTaxDefaults` inherits ppn/pph23 settings from the project's linked
+  quotation when one exists, falling back to Penawaran's own schema defaults.
+- **Milestone → Faktur Induk linkage** (`milestones.linked_master_invoice_id`,
+  already declared in the schema from the Proyek pass but never given an app
+  FK or any UI) is wired now: a picker in the milestone modal, plus a
+  suggestion banner/button when a `triggersTerm` milestone reaches a
+  `SELESAI`-system-role status — a UI nudge only, never automatic, matching
+  the PRD's "sistem menyarankan, bukan otomatis."
+- **Arus Kas and Pajak got a scoped read-only pass**, not a full wiring —
+  since marking a termin Lunas writes real `cashflow_entries`/`tax_entries`
+  rows regardless of whether those modules are "wired," both list pages now
+  read real data (`src/lib/arus-kas/service.ts`, `src/lib/tax/service.ts`).
+  Explicitly out of scope and dropped from both pages: manual-entry CRUD
+  ("Tambah Transaksi"/"Tambah Kewajiban"), the settlement workflow
+  (bukti-potong upload, NTPN, settle actions), forecast, and Tax Center
+  config (`pajak-config` stays mock, unrelated to this pass). RLS already
+  matched exactly: `cashflow_sel` includes viewer, `tax_sel` doesn't — the
+  first read route in the app gated stricter than admin/keuangan/sales/tim_teknis/viewer.
+- **Ripple fixes**, same "Dasbor rides along" precedent as every prior
+  module: Perusahaan's `piutang` metric is a real sum of unpaid termin totals
+  per company (`sumPiutangByCompanies`) instead of re-implementing the tax
+  math over a frozen fixture array; Dasbor's revenue/forecast/alerts/
+  profitability pure functions now take a flat `FakturTerminRow` (a
+  `flattenTermins` adapter over `FakturInduk[]`) instead of the old mock
+  `Faktur[]`, and `pendapatanPerSph` became `pendapatanPerProyek` (keyed by
+  `proyekId`, which also works for manually-created projects with no linked
+  SPH) — a genuine improvement, not just a rename. `getForekast` now depends
+  on real service calls (DB access), so it moved behind
+  `/api/dasbor/forecast` the same way `getAlerts`/`getProfitabilitas` already
+  had to.
+
+Dropped without replacement (documented, not silently lost): the mock's
+draft/terkirim distinction on invoices doesn't exist anymore — generating a
+termin at all creates a real, numbered invoice row, so "issued" now just
+means "not cancelled." The two divergent id-generation schemes
+(`src/lib/id-generator.ts`'s Hashids-based encoder, `src/lib/faktur-id.ts`'s
+string-parsing `sphIdToInvBase`/`terminFakturId`, the latter already broken
+against real UUID `sphId` values) are gone — real `masterInvoiceId`/
+`installmentInvoiceId` lookups replace both, which also fixes a live bug
+(`proyek/page.tsx`'s "Lihat Faktur" link previously produced a garbage id).
+See `planning/prd/05-dokumen-bisnis.md` for the reconciled Faktur shape.
+
 ## 10. Open / deferred
 
 - **Realtime:** deferred. TanStack Query refetch-on-focus + polling covers

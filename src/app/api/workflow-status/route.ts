@@ -5,11 +5,11 @@ import { withUserTransaction } from "@/lib/db/tx";
 import { listWorkflowStatuses, type WorkflowStatusEntity } from "@/lib/workflow-status";
 import { errorResponse } from "@/lib/api-error";
 
-const VALID_ENTITIES: WorkflowStatusEntity[] = ["proyek", "milestone"];
+const VALID_ENTITIES: WorkflowStatusEntity[] = ["proyek", "milestone", "faktur"];
 
-/** Shared status-list lookup for any config-driven entity (currently Proyek
- * and Milestone) — lets a status dropdown list live options without each
- * module needing its own copy of this query. */
+/** Shared status-list lookup for any config-driven entity (Proyek/Milestone/
+ * Faktur) — lets a status dropdown list live options without each module
+ * needing its own copy of this query. */
 export async function GET(request: NextRequest) {
   try {
     const session = requireRole(
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     );
     const entity = request.nextUrl.searchParams.get("entity");
     if (!entity || !VALID_ENTITIES.includes(entity as WorkflowStatusEntity)) {
-      return NextResponse.json({ error: "entity wajib salah satu dari: proyek, milestone." }, { status: 400 });
+      return NextResponse.json({ error: "entity wajib salah satu dari: proyek, milestone, faktur." }, { status: 400 });
     }
     const rows = await withUserTransaction(session.id, (tx) => listWorkflowStatuses(tx, entity as WorkflowStatusEntity));
     return NextResponse.json(rows.map((r) => ({ id: r.id, label: r.label, color: r.color, systemRole: r.systemRole })));

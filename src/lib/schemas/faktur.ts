@@ -1,50 +1,101 @@
 import { z } from "zod";
-import { sphTerminSchema } from "@/lib/schemas/penawaran";
 
-export const fakturStatus = z.enum(["draft", "terkirim", "lunas", "dibatalkan"]);
-export type FakturStatus = z.infer<typeof fakturStatus>;
-
-export const fakturItemSchema = z.object({
-  uraian: z.string(),
-  volume: z.coerce.number(),
-  harga: z.coerce.number(),
-  satuan: z.string(),
-});
-
-export const fakturFormSchema = z.object({
-  // A faktur may only be issued from a converted (deal) Penawaran.
-  sphId: z.string().min(1, "Pilih Penawaran (deal) sebagai sumber faktur."),
-  perusahaanId: z.string().min(1, "Perusahaan wajib dipilih."),
-  perusahaanNama: z.string(),
-  alamat: z.string(),
-  kota: z.string(),
-  npwp: z.string(),
-  tanggal: z.string().min(1, "Tanggal wajib diisi."),
-  jatuhTempo: z.string().min(1, "Tanggal jatuh tempo wajib diisi."),
-  items: z.array(fakturItemSchema).min(1, "Tambahkan minimal satu baris."),
-  terminList: z.array(sphTerminSchema).min(1, "Skema termin tidak boleh kosong."),
-  terminIndex: z.coerce.number().min(0),
-  ppnAktif: z.boolean(),
-  ppnPersen: z.coerce.number(),
-  pph23Aktif: z.boolean(),
-  pph23Persen: z.coerce.number(),
-  catatan: z.array(z.string()),
-  status: fakturStatus,
-  tanggalBayar: z.string(),
-  bankNama: z.string().default(""),
-  bankAtasNama: z.string().default(""),
-  bankNoRekening: z.string().default(""),
-  jabatanPenerima: z.string().default("Direktur"),
-  picAktif: z.boolean().default(false),
-  picNama: z.string().default(""),
-  picJabatan: z.string().default(""),
-});
-export type FakturFormValues = z.infer<typeof fakturFormSchema>;
-
-/** Stored/persisted shape — tanggal/jatuhTempo may be empty for drafts. */
-export const fakturSchema = fakturFormSchema.extend({
+/** Real, DB-assigned status label (workflow_statuses, entity='faktur': Belum
+ * Lunas/Lunas/Batal) — shared between Faktur Induk and each Invoice Termin,
+ * same free-dropdown pattern as Penawaran/Proyek. */
+export const invoiceTerminSchema = z.object({
   id: z.string(),
+  number: z.string().nullable(), // e.g. INV/002/05.2026 — null until assigned
+  masterInvoiceId: z.string(),
+  termId: z.string().nullable(),
+  label: z.string(),
   tanggal: z.string(),
-  jatuhTempo: z.string(),
+  jatuhTempo: z.string().nullable(),
+  bankAccountId: z.string().nullable(),
+  bankNama: z.string(),
+  bankAtasNama: z.string(),
+  bankNoRekening: z.string(),
+  statusId: z.string().nullable(),
+  status: z.string(),
+  statusSystemRole: z.string().nullable(),
+  paidDate: z.string().nullable(),
+  nilaiTermin: z.number(),
+  dpp: z.number(),
+  ppn: z.number(),
+  pph23: z.number(),
+  totalSetelahPajak: z.number(),
+  grossIncome: z.number(),
+  netIncome: z.number(),
+  // Derived read-side from earlier sibling installments — never stored.
+  previousTermins: z.array(z.object({ label: z.string(), nilai: z.number() })),
+  catatan: z.string(),
 });
-export type Faktur = z.infer<typeof fakturSchema>;
+export type InvoiceTermin = z.infer<typeof invoiceTerminSchema>;
+
+export const fakturLayananSchema = z.object({
+  serviceId: z.string().nullable(),
+  nama: z.string(),
+});
+
+export const fakturTermSchemeItemSchema = z.object({
+  label: z.string(),
+  persen: z.coerce.number(),
+});
+export type FakturTermSchemeItem = z.infer<typeof fakturTermSchemeItemSchema>;
+
+export const fakturIndukSchema = z.object({
+  id: z.string(),
+  proyekId: z.string(),
+  proyekNama: z.string(),
+  perusahaanId: z.string(),
+  perusahaanNama: z.string(),
+  layanan: z.array(fakturLayananSchema),
+  totalBiaya: z.number(),
+  statusId: z.string().nullable(),
+  status: z.string(),
+  statusSystemRole: z.string().nullable(),
+  notes: z.string(),
+  terminScheme: z.array(fakturTermSchemeItemSchema),
+  termins: z.array(invoiceTerminSchema),
+  createdAt: z.string(),
+});
+export type FakturInduk = z.infer<typeof fakturIndukSchema>;
+
+/** Create a Faktur Induk from a Proyek — pick which of the project's services
+ * this induk bills (a project may have several Faktur Induk over different
+ * service subsets) plus the proposed term scheme. */
+export const createFakturIndukSchema = z.object({
+  proyekId: z.string().min(1, "Proyek wajib dipilih."),
+  serviceIds: z.array(z.string()).default([]),
+  totalBiaya: z.coerce.number().positive("Total biaya harus > 0."),
+  notes: z.string().optional(),
+  terminScheme: z.array(fakturTermSchemeItemSchema).min(1, "Skema termin tidak boleh kosong."),
+});
+export type CreateFakturIndukInput = z.infer<typeof createFakturIndukSchema>;
+
+/** Generate the next Invoice Termin in sequence — the DB trigger
+ * (fn_installment_validate) enforces the sum-vs-total-biaya guard; the app
+ * doesn't duplicate that check. */
+export const generateTerminSchema = z.object({
+  tanggal: z.string().min(1, "Tanggal wajib diisi."),
+  jatuhTempo: z.string().optional(),
+  bankAccountId: z.string().optional(),
+  ppnAktif: z.boolean().optional(),
+  ppnPersen: z.coerce.number().optional(),
+  pph23Aktif: z.boolean().optional(),
+  pph23Persen: z.coerce.number().optional(),
+  catatan: z.string().optional(),
+});
+export type GenerateTerminInput = z.infer<typeof generateTerminSchema>;
+
+/** Explicit bare-`.optional()` fields, no `.default()` — see the Penawaran
+ * status-PATCH lesson (Zod resolves `.default()` for absent keys even under
+ * `.partial()`). */
+export const updateTerminSchema = z.object({
+  statusId: z.string().optional(),
+  paidDate: z.string().nullable().optional(),
+  jatuhTempo: z.string().nullable().optional(),
+  bankAccountId: z.string().nullable().optional(),
+  catatan: z.string().optional(),
+});
+export type UpdateTerminInput = z.infer<typeof updateTerminSchema>;

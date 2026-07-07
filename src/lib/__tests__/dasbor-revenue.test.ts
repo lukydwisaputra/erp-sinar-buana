@@ -2,82 +2,73 @@ import { describe, it, expect } from "vitest";
 import {
   fakturDiterbitkan,
   pendapatanPeriode,
-  pendapatanPerSph,
+  pendapatanPerProyek,
   pph23KreditPeriode,
 } from "@/lib/dasbor/revenue";
-import type { Faktur } from "@/lib/schemas/faktur";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
 
-// Minimal faktur factory — only fields the engine reads.
-function mk(partial: Partial<Faktur>): Faktur {
+// Minimal termin factory — only fields the engine reads.
+function mk(partial: Partial<FakturTerminRow>): FakturTerminRow {
   return {
-    sphId: "SPH-1", perusahaanId: "C1", perusahaanNama: "PT A", alamat: "", kota: "", npwp: "",
-    tanggal: "2026-06-10", jatuhTempo: "2026-07-10",
-    items: [{ uraian: "Jasa", volume: 1, harga: 100_000_000, satuan: "ls" }],
-    terminList: [{ label: "Termin I", persen: 100, pemicu: "" }],
-    terminIndex: 0,
-    ppnAktif: true, ppnPersen: 11, pph23Aktif: true, pph23Persen: 2,
-    catatan: [], status: "terkirim", tanggalBayar: "",
-    bankNama: "", bankAtasNama: "", bankNoRekening: "",
-    jabatanPenerima: "Direktur", picAktif: false, picNama: "", picJabatan: "",
-    id: "INV/1-T1",
+    id: "INV-1", proyekId: "P1", perusahaanNama: "PT A",
+    tanggal: "2026-06-10", jatuhTempo: "2026-07-10", statusSystemRole: null,
+    nilaiTermin: 100_000_000, pph23: 2_000_000, netIncome: 98_000_000, totalSetelahPajak: 109_000_000,
     ...partial,
-  } as Faktur;
+  };
 }
 
 const juni = { mulai: "2026-06-01", selesai: "2026-06-30" };
 
 describe("fakturDiterbitkan", () => {
-  it("treats terkirim and lunas as issued", () => {
-    expect(fakturDiterbitkan(mk({ status: "terkirim" }))).toBe(true);
-    expect(fakturDiterbitkan(mk({ status: "lunas" }))).toBe(true);
+  it("treats unpaid and lunas termins as issued", () => {
+    expect(fakturDiterbitkan(mk({ statusSystemRole: null }))).toBe(true);
+    expect(fakturDiterbitkan(mk({ statusSystemRole: "LUNAS" }))).toBe(true);
   });
-  it("treats draft and dibatalkan as not issued", () => {
-    expect(fakturDiterbitkan(mk({ status: "draft" }))).toBe(false);
-    expect(fakturDiterbitkan(mk({ status: "dibatalkan" }))).toBe(false);
+  it("treats cancelled termins as not issued", () => {
+    expect(fakturDiterbitkan(mk({ statusSystemRole: "BATAL" }))).toBe(false);
   });
 });
 
 describe("pendapatanPeriode", () => {
-  it("sums nilaiTermin (ex-PPN, pre-PPh23) of issued fakturs in period", () => {
-    // single 100% termin of 100jt -> nilaiTermin = 100jt
-    const rev = pendapatanPeriode([mk({ status: "terkirim", tanggal: "2026-06-10" })], juni);
+  it("sums nilaiTermin (ex-PPN, pre-PPh23) of issued termins in period", () => {
+    const rev = pendapatanPeriode([mk({ tanggal: "2026-06-10" })], juni);
     expect(rev).toBe(100_000_000);
   });
-  it("excludes drafts and out-of-period fakturs", () => {
+  it("excludes cancelled and out-of-period termins", () => {
     const rev = pendapatanPeriode(
       [
-        mk({ status: "draft", tanggal: "", id: "d" }),
-        mk({ status: "terkirim", tanggal: "2026-05-10", id: "may" }),
-        mk({ status: "lunas", tanggal: "2026-06-15", id: "jun" }),
+        mk({ statusSystemRole: "BATAL", tanggal: "2026-06-05", id: "cancelled" }),
+        mk({ tanggal: "2026-05-10", id: "may" }),
+        mk({ statusSystemRole: "LUNAS", tanggal: "2026-06-15", id: "jun" }),
       ],
       juni,
     );
     expect(rev).toBe(100_000_000); // only the June one
   });
   it("does NOT subtract PPh 23 from revenue (BR-14)", () => {
-    const withPph = pendapatanPeriode([mk({ pph23Aktif: true, pph23Persen: 2 })], juni);
-    const withoutPph = pendapatanPeriode([mk({ pph23Aktif: false, pph23Persen: 2 })], juni);
+    const withPph = pendapatanPeriode([mk({ pph23: 2_000_000 })], juni);
+    const withoutPph = pendapatanPeriode([mk({ pph23: 0 })], juni);
     expect(withPph).toBe(100_000_000);
     expect(withPph).toBe(withoutPph); // PPh 23 flag must not affect revenue
   });
 });
 
-describe("pendapatanPerSph", () => {
-  it("groups recognized revenue by sphId across periods", () => {
-    const map = pendapatanPerSph([
-      mk({ sphId: "SPH-1", status: "lunas", tanggal: "2026-01-10", id: "a" }),
-      mk({ sphId: "SPH-1", status: "terkirim", tanggal: "2026-06-10", id: "b" }),
-      mk({ sphId: "SPH-2", status: "lunas", tanggal: "2026-06-10", id: "c" }),
-      mk({ sphId: "SPH-2", status: "draft", tanggal: "", id: "d" }),
+describe("pendapatanPerProyek", () => {
+  it("groups recognized revenue by proyekId across periods", () => {
+    const map = pendapatanPerProyek([
+      mk({ proyekId: "P1", statusSystemRole: "LUNAS", tanggal: "2026-01-10", id: "a" }),
+      mk({ proyekId: "P1", statusSystemRole: null, tanggal: "2026-06-10", id: "b" }),
+      mk({ proyekId: "P2", statusSystemRole: "LUNAS", tanggal: "2026-06-10", id: "c" }),
+      mk({ proyekId: "P2", statusSystemRole: "BATAL", tanggal: "2026-06-11", id: "d" }),
     ]);
-    expect(map.get("SPH-1")).toBe(200_000_000);
-    expect(map.get("SPH-2")).toBe(100_000_000);
+    expect(map.get("P1")).toBe(200_000_000);
+    expect(map.get("P2")).toBe(100_000_000);
   });
 });
 
 describe("pph23KreditPeriode", () => {
-  it("sums pph23 of issued fakturs in period", () => {
-    const credit = pph23KreditPeriode([mk({ pph23Aktif: true, pph23Persen: 2 })], juni);
-    expect(credit).toBe(2_000_000); // 2% of 100jt nilaiTermin
+  it("sums pph23 of issued termins in period", () => {
+    const credit = pph23KreditPeriode([mk({ pph23: 2_000_000 })], juni);
+    expect(credit).toBe(2_000_000);
   });
 });

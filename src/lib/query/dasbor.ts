@@ -1,15 +1,14 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { getForekast } from "@/lib/dasbor/forecast-view";
 import type { Periode } from "@/lib/dasbor/types";
 import type { ProfitabilitasView } from "@/lib/dasbor/profitability";
-import type { AlertItem } from "@/lib/dasbor/types";
+import type { ForecastView, AlertItem } from "@/lib/dasbor/types";
 
-// profitabilitas/alerts now go through a real API route — getProfitabilitas/
-// getAlerts transitively call real Proyek/Realisasi RAB service functions
-// (DB access), which can't run client-side anymore like the rest of this
-// still-mock dashboard (see src/app/api/dasbor/*/route.ts).
+// profitabilitas/alerts/forekast now all go through real API routes —
+// getProfitabilitas/getAlerts/getForekast transitively call real
+// Proyek/Realisasi RAB/Faktur/Arus Kas/Pajak service functions (DB access),
+// which can't run client-side (see src/app/api/dasbor/*/route.ts).
 export function useProfitabilitas(periode: Periode) {
   return useQuery({
     queryKey: ["dasbor", "profitabilitas", periode.mulai, periode.selesai],
@@ -20,7 +19,7 @@ export function useProfitabilitas(periode: Periode) {
 export function useForekast(horizonDays?: number) {
   return useQuery({
     queryKey: ["dasbor", "forekast", horizonDays ?? 90],
-    queryFn: () => getForekast(horizonDays),
+    queryFn: () => apiClient.get<ForecastView>(`/api/dasbor/forecast${horizonDays ? `?horizonDays=${horizonDays}` : ""}`),
   });
 }
 

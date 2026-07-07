@@ -6,6 +6,14 @@
 
 Diturunkan dari invoice nyata; **tarif dapat dikonfigurasi** di [Bab 9.5](09-konfigurasi.md#95-tarif--penomoran).
 
+> **Status implementasi:** Sebatas **visibilitas baca-saja** ke database
+> sungguhan (entri PPN Keluaran/PPh 23 dipotong otomatis dari pelunasan
+> Invoice Termin — lihat [Bab 5](05-dokumen-bisnis.md)). Belum tersedia: alur
+> penyetoran (upload bukti setor/NTPN, tandai disetor), upload bukti potong,
+> dan Tax Center (konfigurasi metode PPh Badan) — semuanya menunggu giliran
+> wiring modul Pajak secara penuh. RLS sudah sesuai PRD: hanya Admin/Keuangan
+> yang dapat membaca maupun menulis (tidak ada akses Viewer).
+
 ### 10.1 Rumus
 - **DPP (nilai lain)** = nilai × **11/12**
 - **PPN** = **12%** × DPP (≈ 11% efektif terhadap nilai)

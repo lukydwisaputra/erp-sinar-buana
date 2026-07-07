@@ -23,8 +23,11 @@ fitur kolaborasi bergaya ClickUp (assignee + komentar ber-timeline).
 >   Semester berulang otomatis** (Bab 6.6) belum berjalan — keduanya
 >   menunggu giliran wiring modul Konfigurasi > Template dan mekanisme
 >   penjadwalan (worker) yang belum dibangun.
-> - **Buat Faktur Induk** dari milestone pemicu termin masih simulasi (data
->   contoh) — menunggu modul Faktur tersambung ke database.
+> - **Tautan milestone ke Faktur Induk** kini nyata (`linkedMasterInvoiceId`,
+>   Bab 6.5) — milestone dengan "Menagih termin saat selesai" dapat ditautkan
+>   ke Faktur Induk proyek tersebut; saat milestone tersebut mencapai status
+>   Selesai, sistem menampilkan saran (tombol ke Faktur Induk), bukan
+>   membuat Invoice Termin secara otomatis.
 
 ### 6.1 Field Proyek
 | Field | Keterangan |
