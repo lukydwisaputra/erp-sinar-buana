@@ -9,7 +9,7 @@ import { NotFoundError } from "@/lib/api-error";
  * STATUS_LABEL_BY_ENUM) — status IS whatever's configured in Konfigurasi.
  */
 
-export type WorkflowStatusEntity = "proyek" | "milestone" | "faktur";
+export type WorkflowStatusEntity = "proyek" | "milestone" | "faktur" | "penggajian";
 
 export async function listWorkflowStatuses(tx: Tx, entity: WorkflowStatusEntity) {
   return tx

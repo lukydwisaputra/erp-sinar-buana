@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Document numbering (PRD Bab 9.5).
---   * Separate counters per doc type (SPH / INV).
+--   * Separate counters per doc type (SPH / INV / GAJ).
 --   * Reset each month.
 --   * Assigned once on insert; immutable on edit (we only set when NULL).
 -- ============================================================================
@@ -9,9 +9,9 @@ create or replace function assign_document_number()
 returns trigger language plpgsql
 security definer set search_path = public as $$
 declare
-  v_doc     text := TG_ARGV[0];          -- 'SPH' | 'INV'
-  v_year    int  := extract(year  from new.date)::int;
-  v_month   int  := extract(month from new.date)::int;
+  v_doc     text := TG_ARGV[0];          -- 'SPH' | 'INV' | 'GAJ'
+  v_year    int;
+  v_month   int;
   v_seq     int;
   v_format  text;
   v_padding int;
@@ -21,7 +21,17 @@ begin
     return new;
   end if;
 
-  select case when v_doc = 'SPH' then sph_format else inv_format end,
+  -- payslips has no `date` column (period_start/period_end/paid_date instead)
+  -- — branch so each doc type only ever accesses a column its own row has.
+  if v_doc = 'GAJ' then
+    v_year  := extract(year  from new.period_end)::int;
+    v_month := extract(month from new.period_end)::int;
+  else
+    v_year  := extract(year  from new.date)::int;
+    v_month := extract(month from new.date)::int;
+  end if;
+
+  select case v_doc when 'SPH' then sph_format when 'INV' then inv_format else gaj_format end,
          seq_padding
     into v_format, v_padding
   from public.numbering_settings
@@ -60,3 +70,8 @@ drop trigger if exists trg_installments_number on installment_invoices;
 create trigger trg_installments_number
   before insert on installment_invoices
   for each row execute function assign_document_number('INV');
+
+drop trigger if exists trg_payslips_number on payslips;
+create trigger trg_payslips_number
+  before insert on payslips
+  for each row execute function assign_document_number('GAJ');

@@ -10,19 +10,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DataTable } from "@/components/shared/data-table";
 import { SectionLabel } from "@/components/shared/detail-drawer";
+import { ComponentsEditor } from "@/components/penggajian/components-editor";
 import { formatRupiah, formatIntIDR, parseRupiah } from "@/lib/format";
-import { calcSlip } from "@/lib/schemas/penggajian";
+import { calcSlip, type CreateComponentInput } from "@/lib/schemas/penggajian";
 import { useCreateBatch } from "@/lib/query/penggajian";
 import { useKaryawanList } from "@/lib/query/karyawan";
+import { apiClient } from "@/lib/api-client";
 import type { Karyawan } from "@/lib/schemas/karyawan";
 
 type SlipRow = {
   karyawanId: string;
-  tunjangan: number;
+  components: CreateComponentInput[];
   lembur: number;
   bonus: number;
-  pph21Pct: number;
-  bpjsPotongan: number;
+  pph21: number;
 };
 
 const statusFilterOptions = [
@@ -83,6 +84,7 @@ export function PenggajianCreate() {
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
   const [step, setStep] = React.useState<1 | 2>(1);
   const [rows, setRows] = React.useState<SlipRow[]>([]);
+  const [loadingDefaults, setLoadingDefaults] = React.useState(false);
 
   const findKaryawan = React.useCallback(
     (id: string) => activeKaryawan.find((k) => k.id === id)!,
@@ -127,11 +129,7 @@ export function PenggajianCreate() {
       meta: { className: "w-[20%]" },
       cell: ({ row }) => {
         const s = row.original.statusKepegawaian;
-        return (
-          <Badge variant={s === "tetap" ? "success" : s === "kontrak" ? "info" : "warning"} className="text-xs">
-            {s.charAt(0).toUpperCase() + s.slice(1)}
-          </Badge>
-        );
+        return <Badge variant="secondary" className="text-xs">{s}</Badge>;
       },
     },
     {
@@ -141,50 +139,38 @@ export function PenggajianCreate() {
     },
   ], [selectedIds, activeKaryawan]);
 
-  const handleLanjut = () => {
-    setRows(selectedIds.map((id) => {
-      const k = findKaryawan(id);
-      return { karyawanId: id, tunjangan: k.tunjangan, lembur: 0, bonus: 0, pph21Pct: 0, bpjsPotongan: 0 };
-    }));
-    setStep(2);
+  const handleLanjut = async () => {
+    setLoadingDefaults(true);
+    try {
+      const defaultsPerEmployee = await Promise.all(
+        selectedIds.map((id) => apiClient.get<CreateComponentInput[]>(`/api/penggajian/defaults/${id}`)),
+      );
+      setRows(selectedIds.map((id, i) => ({
+        karyawanId: id, components: defaultsPerEmployee[i], lembur: 0, bonus: 0, pph21: 0,
+      })));
+      setStep(2);
+    } finally {
+      setLoadingDefaults(false);
+    }
   };
 
   const updateRow = (idx: number, patch: Partial<SlipRow>) =>
     setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
 
-  const moneyInput = (val: number, onChange: (v: number) => void) => (
-    <InlineMoneyInput value={val} onChange={onChange} />
-  );
-
-  function pph21Idr(row: SlipRow) {
-    const k = findKaryawan(row.karyawanId);
-    const kotor = k.gajiPokok * k.pengali + row.tunjangan + row.lembur + row.bonus;
-    return Math.round(kotor * row.pph21Pct / 100);
-  }
-
   const rowsValid = rows.every((row) => {
     const k = findKaryawan(row.karyawanId);
-    const { penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Idr(row) });
+    const { penggajianBersih } = calcSlip({ gajiPokok: k.gajiPokok, pengali: k.pengali, ...row });
     return penggajianBersih >= 0;
   });
 
   const handleSimpan = async () => {
-    const slips = rows.map((row) => {
-      const k = findKaryawan(row.karyawanId);
-      return {
-        karyawanId: k.id, karyawanNama: k.nama, jabatan: k.jabatan,
-        // Penggajian's slip schema still uses the historical tetap/kontrak/
-        // probation literal union; Karyawan's statusKepegawaian widened to
-        // `string` once status_kepegawaian became a Daftar Pilihan list.
-        statusKepegawaian: k.statusKepegawaian as "tetap" | "kontrak" | "probation",
-        pengali: k.pengali, gajiPokok: k.gajiPokok,
-        tunjangan: row.tunjangan, lembur: row.lembur, bonus: row.bonus,
-        pph21: pph21Idr(row), bpjsPotongan: row.bpjsPotongan,
-        bankNama: k.bank.nama ?? "", bankNomor: k.bank.nomor ?? "", bankAtasNama: k.bank.atasNama ?? "",
-      };
-    });
+    const slips = rows.map((row) => ({
+      karyawanId: row.karyawanId,
+      components: row.components,
+      lembur: row.lembur, bonus: row.bonus, pph21: row.pph21,
+    }));
     const batch = await createBatch.mutateAsync({ periode: { mulai: mulaiStr, selesai: selesaiStr }, tanggalBayar: tanggalBayarStr, slips });
-    router.push(`/penggajian/${batch.id}`);
+    router.push(`/penggajian/${encodeURIComponent(batch.id)}`);
   };
 
   const periodeValid = mulaiStr && selesaiStr && mulaiStr <= selesaiStr && !!tanggalBayarStr;
@@ -224,7 +210,7 @@ export function PenggajianCreate() {
                 <DatePicker value={tanggalBayar} onChange={setTanggalBayar} placeholder="Pilih tanggal" className="w-40" />
               </div>
             </div>
-            <Button disabled={!canLanjut} onClick={handleLanjut}>
+            <Button disabled={!canLanjut} loading={loadingDefaults} onClick={handleLanjut}>
               Atur Komponen Gaji {selectedIds.length > 0 && `(${selectedIds.length} karyawan)`} <ChevronRight className="size-4 ml-1" />
             </Button>
           </div>
@@ -275,107 +261,69 @@ export function PenggajianCreate() {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full table-fixed text-xs">
-              <colgroup>
-                {/* Nama  GajiEf  Tunj   Lembur Bonus  PPh21  BPJS   Kotor  Bersih = 100% */}
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "12%" }} />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase divide-x divide-border">
-                  <th className="px-2 py-2 text-center">Nama</th>
-                  <th className="px-2 py-2 text-center">Gaji Efektif</th>
-                  <th className="px-2 py-2 text-center">Tunjangan</th>
-                  <th className="px-2 py-2 text-center">Lembur</th>
-                  <th className="px-2 py-2 text-center">Bonus</th>
-                  <th className="px-2 py-2 text-center">PPh 21</th>
-                  <th className="px-2 py-2 text-center">BPJS</th>
-                  <th className="px-2 py-2 text-center">Kotor</th>
-                  <th className="px-2 py-2 text-center">Bersih</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, idx) => {
-                  const k = findKaryawan(row.karyawanId);
-                  const pph21Amount = pph21Idr(row);
-                  const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Amount });
-                  return (
-                    <tr key={row.karyawanId} className="border-b border-border last:border-0 divide-x divide-border">
-                      <td className="px-2 py-1.5">
-                        <p className="font-medium truncate">{k.nama}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{k.jabatan}</p>
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiah(gajiPokokEfektif)}</td>
-                      <td className="px-1 py-1">{moneyInput(row.tunjangan, (v) => updateRow(idx, { tunjangan: v }))}</td>
-                      <td className="px-1 py-1">{moneyInput(row.lembur, (v) => updateRow(idx, { lembur: v }))}</td>
-                      <td className="px-1 py-1">{moneyInput(row.bonus, (v) => updateRow(idx, { bonus: v }))}</td>
-                      <td className="px-1 py-1">
-                        <div className="flex items-center gap-0.5">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={0.1}
-                            value={row.pph21Pct === 0 ? "" : row.pph21Pct}
-                            placeholder="0"
-                            onChange={(e) => updateRow(idx, { pph21Pct: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })}
-                            className={inputCls}
-                          />
-                          <span className="text-xs text-muted-foreground shrink-0">%</span>
-                        </div>
-                      </td>
-                      <td className="px-1 py-1">{moneyInput(row.bpjsPotongan, (v) => updateRow(idx, { bpjsPotongan: v }))}</td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums">{formatRupiah(penggajianKotor)}</td>
-                      <td className={`px-3 py-2 text-right font-mono tabular-nums font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>
-                        {formatRupiah(penggajianBersih)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              {rows.length > 0 && (() => {
-                const totals = rows.reduce((acc, row) => {
-                  const k = findKaryawan(row.karyawanId);
-                  const pph21Amount = pph21Idr(row);
-                  const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({ ...k, ...row, pph21: pph21Amount });
-                  return {
-                    gajiEfektif: acc.gajiEfektif + gajiPokokEfektif,
-                    tunjangan: acc.tunjangan + row.tunjangan,
-                    lembur: acc.lembur + row.lembur,
-                    bonus: acc.bonus + row.bonus,
-                    pph21: acc.pph21 + pph21Amount,
-                    bpjs: acc.bpjs + row.bpjsPotongan,
-                    kotor: acc.kotor + penggajianKotor,
-                    bersih: acc.bersih + penggajianBersih,
-                  };
-                }, { gajiEfektif: 0, tunjangan: 0, lembur: 0, bonus: 0, pph21: 0, bpjs: 0, kotor: 0, bersih: 0 });
-                const tc = "px-1 py-2 text-right font-mono tabular-nums whitespace-nowrap";
-                return (
-                  <tfoot>
-                    <tr className="border-t-2 border-border bg-muted/50 font-semibold divide-x divide-border">
-                      <td className="px-2 py-2">Total</td>
-                      <td className={tc}>{formatRupiah(totals.gajiEfektif)}</td>
-                      <td className={tc}>{formatRupiah(totals.tunjangan)}</td>
-                      <td className={tc}>{formatRupiah(totals.lembur)}</td>
-                      <td className={tc}>{formatRupiah(totals.bonus)}</td>
-                      <td className={tc}>{formatRupiah(totals.pph21)}</td>
-                      <td className={tc}>{formatRupiah(totals.bpjs)}</td>
-                      <td className={tc}>{formatRupiah(totals.kotor)}</td>
-                      <td className={`${tc} ${totals.bersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(totals.bersih)}</td>
-                    </tr>
-                  </tfoot>
-                );
-              })()}
-            </table>
+          <div className="space-y-3">
+            {rows.map((row, idx) => {
+              const k = findKaryawan(row.karyawanId);
+              const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip({
+                gajiPokok: k.gajiPokok, pengali: k.pengali, ...row,
+              });
+              return (
+                <div key={row.karyawanId} className="rounded-lg border border-border p-3">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{k.nama}</p>
+                      <p className="text-xs text-muted-foreground">{k.jabatan} &middot; Gaji Efektif {formatRupiah(gajiPokokEfektif)}</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-right text-xs">
+                      <div>
+                        <p className="text-muted-foreground">Kotor</p>
+                        <p className="font-mono font-medium">{formatRupiah(penggajianKotor)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Bersih</p>
+                        <p className={`font-mono font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(penggajianBersih)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                    <div>
+                      <p className="mb-1 text-xs font-medium text-muted-foreground">Komponen (Tunjangan/Potongan)</p>
+                      <ComponentsEditor components={row.components} onChange={(v) => updateRow(idx, { components: v })} />
+                    </div>
+                    <div className="flex gap-3 sm:flex-col">
+                      <div className="w-28">
+                        <label className="text-[10px] text-muted-foreground">Lembur</label>
+                        <InlineMoneyInput value={row.lembur} onChange={(v) => updateRow(idx, { lembur: v })} />
+                      </div>
+                      <div className="w-28">
+                        <label className="text-[10px] text-muted-foreground">Bonus</label>
+                        <InlineMoneyInput value={row.bonus} onChange={(v) => updateRow(idx, { bonus: v })} />
+                      </div>
+                      <div className="w-28">
+                        <label className="text-[10px] text-muted-foreground">PPh 21</label>
+                        <InlineMoneyInput value={row.pph21} onChange={(v) => updateRow(idx, { pph21: v })} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {rows.length > 0 && (() => {
+            const totals = rows.reduce((acc, row) => {
+              const k = findKaryawan(row.karyawanId);
+              const { penggajianKotor, penggajianBersih } = calcSlip({ gajiPokok: k.gajiPokok, pengali: k.pengali, ...row });
+              return { kotor: acc.kotor + penggajianKotor, bersih: acc.bersih + penggajianBersih };
+            }, { kotor: 0, bersih: 0 });
+            return (
+              <div className="flex items-center justify-end gap-6 rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm">
+                <span className="text-muted-foreground">Total Kotor <span className="font-mono font-semibold text-foreground">{formatRupiah(totals.kotor)}</span></span>
+                <span className="text-muted-foreground">Total Bersih <span className={`font-mono font-semibold ${totals.bersih < 0 ? "text-destructive" : "text-foreground"}`}>{formatRupiah(totals.bersih)}</span></span>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

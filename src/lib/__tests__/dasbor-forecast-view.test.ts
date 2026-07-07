@@ -11,8 +11,8 @@ vi.mock("@/lib/faktur/service", () => ({
 vi.mock("@/lib/tax/service", () => ({
   listTaxEntries: vi.fn(async () => []),
 }));
-vi.mock("@/lib/data/penggajian", () => ({
-  listBatch: vi.fn(async () => []),
+vi.mock("@/lib/penggajian/service", () => ({
+  listBatches: vi.fn(async () => []),
 }));
 
 import { getForekast } from "@/lib/dasbor/forecast-view";

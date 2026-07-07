@@ -2,7 +2,6 @@ import type { PengirimanLog } from "@/lib/schemas/pengiriman";
 import { encodeSph, encodeInvTermin } from "@/lib/id-generator";
 import { seedSphId } from "@/lib/penawaran-seed-ids";
 import { perusahaanFixtures } from "@/lib/fixtures/perusahaan";
-import { penggajianFixtures } from "@/lib/fixtures/penggajian";
 import { karyawanFixtures } from "@/lib/fixtures/karyawan";
 
 let seq = 0;
@@ -13,7 +12,9 @@ export function nextPengirimanId(): string {
 const picMaju = perusahaanFixtures[0].pic[0]; // Andi Wijaya — PT Maju Bersama Industri
 const picKaryaLogam = perusahaanFixtures[2].pic[0]; // Budi Santoso — PT Karya Logam Nusantara
 
-const slipBudi = penggajianFixtures[0].slips.find((s) => s.karyawanId === karyawanFixtures[0].id)!;
+// Penggajian is wired to the real backend now (payslips have no fixed mock
+// id to reference) — this demo log entry just uses a plausible slip number.
+const slipBudiId = "GAJ/001/4.2026";
 const karyawanBudi = karyawanFixtures[0];
 
 export const pengirimanFixtures: PengirimanLog[] = [
@@ -50,8 +51,8 @@ export const pengirimanFixtures: PengirimanLog[] = [
   {
     id: nextPengirimanId(),
     jenisDokumen: "slip",
-    dokumenId: slipBudi.id,
-    dokumenNomor: slipBudi.id,
+    dokumenId: slipBudiId,
+    dokumenNomor: slipBudiId,
     tujuanNama: karyawanBudi.nama,
     tujuanKontak: karyawanBudi.telepon ?? "",
     channel: "whatsapp",

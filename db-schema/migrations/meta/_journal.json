@@ -64,6 +64,13 @@
       "when": 1783190805293,
       "tag": "0008_add_milestone_nesting_comment_scope_and_rab_line_label",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1783446239541,
+      "tag": "0009_payslip_numbering_and_planned_pay_date",
+      "breakpoints": true
     }
   ]
 }

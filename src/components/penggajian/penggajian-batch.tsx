@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { toast } from "sonner";
-import { Wallet, EllipsisIcon, ExternalLink, CircleDollarSign } from "lucide-react";
+import { Wallet, EllipsisIcon, ExternalLink, CircleDollarSign, Ban } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,112 +12,107 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { formatRupiah, formatIntIDR, formatTanggalPanjang, parseRupiah } from "@/lib/format";
+import { ComponentsEditor } from "@/components/penggajian/components-editor";
+import { formatRupiah, formatTanggalPanjang } from "@/lib/format";
 import { calcSlip, type PenggajianBatch, type SlipGaji } from "@/lib/schemas/penggajian";
-import { useBatch, useUpdateSlip, useMarkSlipDibayar } from "@/lib/query/penggajian";
+import { useBatch, useUpdateSlip, useMarkSlipDibayar, useCancelSlip } from "@/lib/query/penggajian";
 
 function periodStr(p: PenggajianBatch["periode"]) {
   return `${formatTanggalPanjang(p.mulai)} – ${formatTanggalPanjang(p.selesai)}`;
 }
 
-const inputCls =
-  "w-full rounded px-1 py-0.5 text-right text-xs font-mono bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
+const STATUS_BADGE: Record<SlipGaji["status"], { label: string; variant: "success" | "warning" | "secondary" }> = {
+  sudah_dibayar: { label: "Dibayar", variant: "success" },
+  menunggu_pembayaran: { label: "Menunggu", variant: "warning" },
+  batal: { label: "Dibatalkan", variant: "secondary" },
+};
 
-function InlineMoneyCell({
-  value, disabled, onSave,
-}: {
-  value: number; disabled: boolean; onSave: (v: number) => void;
-}) {
-  const [focused, setFocused] = React.useState(false);
-  const [text, setText] = React.useState(value ? formatIntIDR(value) : "");
-
-  React.useEffect(() => {
-    if (!focused) setText(value ? formatIntIDR(value) : "");
-  }, [value, focused]);
-
-  return (
-    <div className="flex items-center gap-0.5">
-      <span className="text-[10px] text-muted-foreground shrink-0">Rp</span>
-      <input
-        inputMode="numeric"
-        disabled={disabled}
-        value={focused ? text : (value ? formatIntIDR(value) : "")}
-        placeholder="0"
-        onFocus={() => setFocused(true)}
-        onChange={(e) => {
-          setText(e.target.value);
-        }}
-        onBlur={() => {
-          setFocused(false);
-          const v = parseRupiah(text);
-          setText(v ? formatIntIDR(v) : "");
-          if (v !== value) onSave(v);
-        }}
-        className={inputCls}
-      />
-    </div>
-  );
-}
-
-function SlipRow({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
+function SlipCard({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
   const updateSlip = useUpdateSlip();
   const markDibayar = useMarkSlipDibayar();
-  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const cancelSlip = useCancelSlip();
+  const [confirmDibayar, setConfirmDibayar] = React.useState(false);
+  const [confirmBatal, setConfirmBatal] = React.useState(false);
 
-  const locked = slip.status === "sudah_dibayar";
+  const locked = slip.status !== "menunggu_pembayaran";
   const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip(slip);
-
-  const save = (patch: Parameters<typeof updateSlip.mutate>[0]["patch"]) =>
-    updateSlip.mutate({ batchId, slipId: slip.id, patch });
-
-  const rc = "px-1 py-1.5 text-right font-mono tabular-nums whitespace-nowrap";
+  const badge = STATUS_BADGE[slip.status];
 
   return (
     <>
-      <tr className="border-b border-border last:border-0 divide-x divide-border">
-        <td className="px-2 py-1.5">
-          <p className="font-medium truncate">{slip.karyawanNama}</p>
-          <p className="text-[10px] text-muted-foreground truncate">{slip.jabatan}</p>
-        </td>
-        <td className={rc}>{formatRupiah(gajiPokokEfektif)}</td>
-        <td className="px-1 py-1"><InlineMoneyCell value={slip.tunjangan} disabled={locked} onSave={(v) => save({ tunjangan: v })} /></td>
-        <td className="px-1 py-1"><InlineMoneyCell value={slip.lembur} disabled={locked} onSave={(v) => save({ lembur: v })} /></td>
-        <td className="px-1 py-1"><InlineMoneyCell value={slip.bonus} disabled={locked} onSave={(v) => save({ bonus: v })} /></td>
-        <td className="px-1 py-1"><InlineMoneyCell value={slip.pph21} disabled={locked} onSave={(v) => save({ pph21: v })} /></td>
-        <td className="px-1 py-1"><InlineMoneyCell value={slip.bpjsPotongan} disabled={locked} onSave={(v) => save({ bpjsPotongan: v })} /></td>
-        <td className={rc}>{formatRupiah(penggajianKotor)}</td>
-        <td className={`${rc} font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>
-          {formatRupiah(penggajianBersih)}
-        </td>
-        <td className="px-1 py-1.5 text-center">
-          {locked
-            ? <Badge variant="success" className="text-[10px]">Dibayar</Badge>
-            : <Badge variant="warning" className="text-[10px]">Menunggu</Badge>}
-        </td>
-        <td className="px-1 py-1.5 text-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-6">
-                <EllipsisIcon className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36 text-xs">
-              <DropdownMenuItem asChild className="text-xs py-1">
-                <Link href={`/penggajian/${batchId}/${slip.id}`}>
-                  <ExternalLink className="mr-1.5 size-3" /> Lihat Slip
-                </Link>
-              </DropdownMenuItem>
-              {!locked && (
-                <DropdownMenuItem onSelect={() => setConfirmOpen(true)} className="text-xs py-1">
-                  <CircleDollarSign className="mr-1.5 size-3" /> Tandai Dibayar
+      <div className="rounded-lg border border-border p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{slip.karyawanNama}</p>
+              <Badge variant={badge.variant} className="text-xs">{badge.label}</Badge>
+              {slip.number && <span className="font-mono text-xs text-muted-foreground">{slip.number}</span>}
+            </div>
+            <p className="text-xs text-muted-foreground">{slip.jabatan} &middot; Gaji Efektif {formatRupiah(gajiPokokEfektif)}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right text-xs">
+              <p className="text-muted-foreground">Kotor</p>
+              <p className="font-mono font-medium">{formatRupiah(penggajianKotor)}</p>
+            </div>
+            <div className="text-right text-xs">
+              <p className="text-muted-foreground">Bersih</p>
+              <p className={`font-mono font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(penggajianBersih)}</p>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-7">
+                  <EllipsisIcon className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="text-xs">
+                <DropdownMenuItem asChild className="text-xs">
+                  <Link href={`/penggajian/${encodeURIComponent(batchId)}/${slip.id}`}>
+                    <ExternalLink className="mr-1.5 size-3" /> Lihat Slip
+                  </Link>
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </td>
-      </tr>
+                {!locked && (
+                  <>
+                    <DropdownMenuItem onSelect={() => setConfirmDibayar(true)} className="text-xs">
+                      <CircleDollarSign className="mr-1.5 size-3" /> Tandai Dibayar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onSelect={() => setConfirmBatal(true)} className="text-xs">
+                      <Ban className="mr-1.5 size-3" /> Batalkan
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <div>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Komponen (Tunjangan/Potongan)</p>
+            <ComponentsEditor
+              components={slip.components}
+              disabled={locked}
+              onChange={(v) => updateSlip.mutate({ batchId, slipId: slip.id, patch: { components: v } })}
+            />
+          </div>
+          <div className="flex gap-3 text-xs sm:flex-col">
+            <div className="w-28">
+              <p className="text-muted-foreground">Lembur</p>
+              <p className="font-mono">{formatRupiah(slip.lembur)}</p>
+            </div>
+            <div className="w-28">
+              <p className="text-muted-foreground">Bonus</p>
+              <p className="font-mono">{formatRupiah(slip.bonus)}</p>
+            </div>
+            <div className="w-28">
+              <p className="text-muted-foreground">PPh 21</p>
+              <p className="font-mono">{formatRupiah(slip.pph21)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <AlertDialog open={confirmDibayar} onOpenChange={setConfirmDibayar}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Tandai sudah dibayar?</AlertDialogTitle>
@@ -131,55 +125,35 @@ function SlipRow({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
             <AlertDialogCancel>Batal</AlertDialogCancel>
             <AlertDialogAction
               disabled={markDibayar.isPending}
-              onClick={() => {
-                markDibayar.mutate({ batchId, slipId: slip.id }, {
-                  onSuccess: () => {
-                    toast.success(`${slip.karyawanNama} — slip ditandai sudah dibayar.`);
-                    setConfirmOpen(false);
-                  },
-                });
-              }}
+              onClick={() => markDibayar.mutate({ batchId, slipId: slip.id }, { onSuccess: () => setConfirmDibayar(false) })}
             >
               Tandai Dibayar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={confirmBatal} onOpenChange={setConfirmBatal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan slip ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Slip gaji <strong>{slip.karyawanNama}</strong> akan dibatalkan. Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={cancelSlip.isPending}
+              onClick={() => cancelSlip.mutate({ batchId, slipId: slip.id }, { onSuccess: () => setConfirmBatal(false) })}
+            >
+              Ya, Batalkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
-  );
-}
-
-function TotalsRow({ slips }: { slips: SlipGaji[] }) {
-  const totals = slips.reduce((acc, slip) => {
-    const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip(slip);
-    return {
-      gajiEfektif: acc.gajiEfektif + gajiPokokEfektif,
-      tunjangan: acc.tunjangan + slip.tunjangan,
-      lembur: acc.lembur + slip.lembur,
-      bonus: acc.bonus + slip.bonus,
-      pph21: acc.pph21 + slip.pph21,
-      bpjs: acc.bpjs + slip.bpjsPotongan,
-      kotor: acc.kotor + penggajianKotor,
-      bersih: acc.bersih + penggajianBersih,
-    };
-  }, { gajiEfektif: 0, tunjangan: 0, lembur: 0, bonus: 0, pph21: 0, bpjs: 0, kotor: 0, bersih: 0 });
-
-  const tc = "px-1 py-2 text-right font-mono tabular-nums whitespace-nowrap";
-
-  return (
-    <tr className="border-t-2 border-border bg-muted/50 font-semibold divide-x divide-border">
-      <td className="px-2 py-2">Total</td>
-      <td className={tc}>{formatRupiah(totals.gajiEfektif)}</td>
-      <td className={tc}>{formatRupiah(totals.tunjangan)}</td>
-      <td className={tc}>{formatRupiah(totals.lembur)}</td>
-      <td className={tc}>{formatRupiah(totals.bonus)}</td>
-      <td className={tc}>{formatRupiah(totals.pph21)}</td>
-      <td className={tc}>{formatRupiah(totals.bpjs)}</td>
-      <td className={tc}>{formatRupiah(totals.kotor)}</td>
-      <td className={`${tc} ${totals.bersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(totals.bersih)}</td>
-      <td />
-      <td />
-    </tr>
   );
 }
 
@@ -209,6 +183,10 @@ export function PenggajianBatchDetail({ batchId }: { batchId: string }) {
 
   const paid = batch.slips.filter((s) => s.status === "sudah_dibayar").length;
   const total = batch.slips.length;
+  const totals = batch.slips.reduce((acc, s) => {
+    const { penggajianKotor, penggajianBersih } = calcSlip(s);
+    return { kotor: acc.kotor + penggajianKotor, bersih: acc.bersih + penggajianBersih };
+  }, { kotor: 0, bersih: 0 });
 
   return (
     <div className="space-y-4">
@@ -216,57 +194,29 @@ export function PenggajianBatchDetail({ batchId }: { batchId: string }) {
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <Wallet className="size-5 text-muted-foreground" />
-            <h1 className="text-xl font-semibold tracking-tight">{batch.id}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{periodStr(batch.periode)}</h1>
             <Badge variant={paid === total ? "success" : paid > 0 ? "warning" : "secondary"}>
               {paid}/{total} Dibayar
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">{periodStr(batch.periode)}</p>
+          <p className="text-sm text-muted-foreground">Tanggal Bayar {formatTanggalPanjang(batch.tanggalBayar)}</p>
+        </div>
+        <div className="flex items-center gap-4 text-right text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground">Total Kotor</p>
+            <p className="font-mono font-semibold">{formatRupiah(totals.kotor)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Bersih</p>
+            <p className={`font-mono font-semibold ${totals.bersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(totals.bersih)}</p>
+          </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full table-fixed text-xs">
-          <colgroup>
-            {/* Nama  GajiEf  Tunj   Lembur Bonus  PPh21  BPJS   Kotor  Bersih Status Actions = 100% */}
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "11%" }} />
-            <col style={{ width: "11%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "3%" }} />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground uppercase divide-x divide-border">
-              <th className="px-2 py-2 text-center">Nama</th>
-              <th className="px-2 py-2 text-center">Gaji Efektif</th>
-              <th className="px-2 py-2 text-center">Tunjangan</th>
-              <th className="px-2 py-2 text-center">Lembur</th>
-              <th className="px-2 py-2 text-center">Bonus</th>
-              <th className="px-2 py-2 text-center">PPh 21</th>
-              <th className="px-2 py-2 text-center">BPJS</th>
-              <th className="px-2 py-2 text-center">Kotor</th>
-              <th className="px-2 py-2 text-center">Bersih</th>
-              <th className="px-2 py-2 text-center">Status</th>
-              <th className="px-2 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {batch.slips.map((slip) => (
-              <SlipRow key={slip.id} slip={slip} batchId={batch.id} />
-            ))}
-          </tbody>
-          {batch.slips.length > 0 && (
-            <tfoot>
-              <TotalsRow slips={batch.slips} />
-            </tfoot>
-          )}
-        </table>
+      <div className="space-y-3">
+        {batch.slips.map((slip) => (
+          <SlipCard key={slip.id} slip={slip} batchId={batch.id} />
+        ))}
       </div>
     </div>
   );
