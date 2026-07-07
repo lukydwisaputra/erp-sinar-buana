@@ -11,32 +11,32 @@ const manualEntries: ArusKasEntry[] = [
   {
     id: nextId(), jenis: "debit", tanggal: "2026-04-05", jumlah: 8_500_000,
     kategori: "Sewa Kantor", sumber: "manual",
-    keterangan: "Sewa kantor bulan April", locked: false,
+    keterangan: "Sewa kantor bulan April", proyekId: null, locked: false, isCancelled: false,
   },
   {
     id: nextId(), jenis: "debit", tanggal: "2026-04-10", jumlah: 2_750_000,
     kategori: "Utilitas", sumber: "manual",
-    keterangan: "Listrik & internet bulan April", locked: false,
+    keterangan: "Listrik & internet bulan April", proyekId: null, locked: false, isCancelled: false,
   },
   {
     id: nextId(), jenis: "debit", tanggal: "2026-04-18", jumlah: 1_200_000,
     kategori: "Transport", sumber: "manual",
-    keterangan: "Transport operasional", locked: false,
+    keterangan: "Transport operasional", proyekId: null, locked: false, isCancelled: false,
   },
   {
     id: nextId(), jenis: "debit", tanggal: "2026-05-03", jumlah: 850_000,
     kategori: "ATK", sumber: "manual",
-    keterangan: "ATK & perlengkapan kantor", locked: false,
+    keterangan: "ATK & perlengkapan kantor", proyekId: null, locked: false, isCancelled: false,
   },
   {
     id: nextId(), jenis: "debit", tanggal: "2026-05-12", jumlah: 3_500_000,
     kategori: "Administrasi", sumber: "manual",
-    keterangan: "Biaya notaris akta perusahaan", locked: false,
+    keterangan: "Biaya notaris akta perusahaan", proyekId: null, locked: false, isCancelled: false,
   },
   {
     id: nextId(), jenis: "kredit", tanggal: "2026-05-20", jumlah: 5_000_000,
     kategori: "Deposit", sumber: "manual",
-    keterangan: "Pengembalian deposit sewa alat", locked: false,
+    keterangan: "Pengembalian deposit sewa alat", proyekId: null, locked: false, isCancelled: false,
   },
 ];
 

@@ -199,7 +199,7 @@ export function useRemoveScheduleRow() {
 
 export type WorkflowStatusOption = { id: string; label: string; color: string | null; systemRole: string | null };
 
-export function useWorkflowStatuses(entity: "proyek" | "milestone") {
+export function useWorkflowStatuses(entity: "proyek" | "milestone" | "faktur") {
   return useQuery({
     queryKey: ["workflow-status", entity],
     queryFn: () => apiClient.get<WorkflowStatusOption[]>(`/api/workflow-status?entity=${entity}`),

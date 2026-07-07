@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   FolderKanban, Building2, MapPin, CalendarDays, Check,
@@ -216,6 +217,7 @@ function MilestoneRow({
   personOptions: PersonOption[];
   statusOptions: WorkflowStatusOption[];
 }) {
+  const router = useRouter();
   const updateMilestone = useUpdateMilestone();
   const moveMilestone   = useMoveMilestone();
   const deleteMilestone = useDeleteMilestone();
@@ -343,12 +345,21 @@ function MilestoneRow({
           </DropdownMenu>
         </div>
 
-        {/* Tagih termin */}
+        {/* Tagih termin — a suggestion only (PRD Bab 6.5), never automatic;
+            clickable straight to the linked Faktur Induk when one exists. */}
         <div className="flex items-center">
           {currentStatus?.systemRole === "SELESAI" && m.triggersTerm && (
-            <Badge variant="warning" className="text-xs whitespace-nowrap">
-              Tagih Termin
-            </Badge>
+            m.linkedMasterInvoiceId ? (
+              <button type="button" onClick={() => router.push(`/faktur/${encodeURIComponent(m.linkedMasterInvoiceId!)}`)}>
+                <Badge variant="warning" className="text-xs whitespace-nowrap hover:underline">
+                  Tagih Termin
+                </Badge>
+              </button>
+            ) : (
+              <Badge variant="warning" className="text-xs whitespace-nowrap">
+                Tagih Termin
+              </Badge>
+            )
           )}
         </div>
 

@@ -1,17 +1,21 @@
 "use client";
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
   ChevronDown, ChevronUp, CalendarIcon, X,
-  Pencil, Check, Plus,
+  Pencil, Check, Plus, ReceiptText,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -21,6 +25,7 @@ import {
   type WorkflowStatusOption,
 } from "@/lib/query/proyek";
 import { useKaryawanList } from "@/lib/query/karyawan";
+import { useFakturList } from "@/lib/query/faktur";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Milestone, Proyek } from "@/lib/schemas/proyek";
 
@@ -262,12 +267,14 @@ export function MilestoneModal({
   milestone: Milestone | null;
   proyek: Proyek;
 }) {
+  const router = useRouter();
   const updateMilestone = useUpdateMilestone();
   const { data: karyawanList = [] } = useKaryawanList();
   const personOptions: PersonOption[] = karyawanList
     .filter((k) => k.status === "aktif")
     .map((k) => ({ id: k.id, nama: k.nama, jabatan: k.jabatan }));
   const { data: statusOptions = [] } = useWorkflowStatuses("milestone");
+  const { data: fakturIndukList = [] } = useFakturList(proyek.id);
 
   const [nama, setNama] = React.useState("");
   const [editingTitle, setEditingTitle] = React.useState(false);
@@ -322,9 +329,12 @@ export function MilestoneModal({
     actualDate?: string | null;
     statusId?: string;
     triggersTerm?: boolean;
+    linkedMasterInvoiceId?: string | null;
   }) => updateMilestone.mutate({ proyekId: proyek.id, milestoneId: milestone.id, patch });
 
   const currentStatus = statusOptions.find((s) => s.id === milestone.statusId);
+  const linkedFaktur = fakturIndukList.find((f) => f.id === milestone.linkedMasterInvoiceId);
+  const showSuggestion = currentStatus?.systemRole === "SELESAI" && milestone.triggersTerm;
 
   const commitTitle = () => {
     setEditingTitle(false);
@@ -427,13 +437,47 @@ export function MilestoneModal({
                 </DetailCell>
               </div>
 
-              {/* Termin — full width. No linked Faktur yet (module unwired); this
-                  is a UI suggestion only, never automatic (PRD Bab 6.5). */}
-              {milestone.triggersTerm && (
-                <DetailCell label="Termin" className="col-span-2 mt-0 border-t border-border">
-                  <Badge variant="warning" className="text-xs">Akan menagih termin saat selesai</Badge>
-                </DetailCell>
-              )}
+              {/* Termin — full width. A UI suggestion only, never automatic
+                  (PRD Bab 6.5) — completing this milestone never generates an
+                  Invoice Termin by itself. */}
+              <DetailCell label="Termin" className="col-span-2 mt-0 border-t border-border">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={milestone.triggersTerm}
+                      onCheckedChange={(c) => save({ triggersTerm: c === true })}
+                    />
+                    Menagih termin saat selesai
+                  </label>
+                  {milestone.triggersTerm && (
+                    <Select
+                      value={milestone.linkedMasterInvoiceId ?? "none"}
+                      onValueChange={(v) => save({ linkedMasterInvoiceId: v === "none" ? null : v })}
+                    >
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Tautkan Faktur Induk…" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">— Tidak ditautkan —</SelectItem>
+                        {fakturIndukList.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>{f.layanan.map((l) => l.nama).join(", ") || "Faktur Induk"}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {showSuggestion && (
+                    <Badge variant="warning" className="text-xs">
+                      Milestone selesai — saatnya menagih termin
+                    </Badge>
+                  )}
+                  {showSuggestion && linkedFaktur && (
+                    <Button
+                      size="sm" variant="outline" className="w-full"
+                      onClick={() => router.push(`/faktur/${encodeURIComponent(linkedFaktur.id)}`)}
+                    >
+                      <ReceiptText className="size-3.5" /> Buka Faktur Induk untuk Buat Termin
+                    </Button>
+                  )}
+                </div>
+              </DetailCell>
             </div>
 
             {/* Description */}

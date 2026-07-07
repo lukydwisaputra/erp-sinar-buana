@@ -1,12 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/data/faktur", () => ({
-  listFaktur: vi.fn(async () => [
+vi.mock("@/lib/faktur/service", () => ({
+  listAll: vi.fn(async () => [
     {
-      sphId: "SPH-1", status: "lunas", tanggal: "2026-06-10", terminIndex: 0,
-      terminList: [{ label: "I", persen: 100, pemicu: "" }],
-      items: [{ uraian: "j", volume: 1, harga: 100_000_000, satuan: "ls" }],
-      ppnAktif: false, ppnPersen: 11, pph23Aktif: false, pph23Persen: 2, id: "INV-1",
+      id: "MI-1", proyekId: "P1", proyekNama: "Proyek Satu", perusahaanId: "C1", perusahaanNama: "PT Klien",
+      layanan: [], totalBiaya: 100_000_000, statusId: null, status: "Belum Lunas", statusSystemRole: null, notes: "",
+      terminScheme: [{ label: "I", persen: 100 }],
+      termins: [{
+        id: "INV-1", number: "INV/001/06.2026", masterInvoiceId: "MI-1", termId: "T1", label: "Termin I",
+        tanggal: "2026-06-10", jatuhTempo: "2026-06-24", bankAccountId: null,
+        bankNama: "", bankAtasNama: "", bankNoRekening: "",
+        statusId: null, status: "Belum Lunas", statusSystemRole: null, paidDate: null,
+        nilaiTermin: 100_000_000, dpp: 91_666_667, ppn: 0, pph23: 0,
+        totalSetelahPajak: 100_000_000, grossIncome: 100_000_000, netIncome: 100_000_000,
+        previousTermins: [], catatan: "",
+      }],
+      createdAt: "2026-06-01T00:00:00.000Z",
     },
   ]),
 }));
@@ -23,9 +32,9 @@ vi.mock("@/lib/realisasi-rab/service", () => ({
     { id: "r1", proyekId: "P1", kategori: "personil", rabLineLabel: "x", jumlah: 20_000_000, tanggal: "2026-06-05", keterangan: "" },
   ]),
 }));
-vi.mock("@/lib/data/arus-kas", () => ({
+vi.mock("@/lib/arus-kas/service", () => ({
   listArusKas: vi.fn(async () => [
-    { id: "a1", jenis: "debit", tanggal: "2026-06-03", jumlah: 5_000_000, kategori: "Sewa Kantor", sumber: "manual", keterangan: "", locked: false },
+    { id: "a1", jenis: "debit", tanggal: "2026-06-03", jumlah: 5_000_000, kategori: "Sewa Kantor", sumber: "manual", keterangan: "", proyekId: null, locked: false, isCancelled: false },
   ]),
 }));
 vi.mock("@/lib/data/expense-nature", () => ({

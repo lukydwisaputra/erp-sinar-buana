@@ -4,6 +4,14 @@
 
 ## 7. Modul Arus Kas (Cashflow)
 
+> **Status implementasi:** Sebatas **visibilitas baca-saja** ke database
+> sungguhan (entri otomatis dari pelunasan Invoice Termin di modul Faktur
+> — lihat [Bab 5](05-dokumen-bisnis.md)). Belum tersedia: entri manual
+> ("Tambah Transaksi"), forecast, dan penguncian/pembatalan manual —
+> semuanya menunggu giliran wiring modul Arus Kas secara penuh. RLS sudah
+> sesuai PRD: Viewer dapat membaca, hanya Admin/Keuangan yang dapat menulis
+> (dan hanya pada entri yang belum terkunci).
+
 ### 7.1 Jenis Pencatatan
 - **Pemasukan (Kredit)** — semua pemasukan; kategori dapat dikustomisasi.
 - **Pengeluaran (Debit)** — semua pengeluaran; kategori dapat dikustomisasi.

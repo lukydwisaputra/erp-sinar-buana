@@ -1,9 +1,8 @@
 import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
-import type { Faktur } from "@/lib/schemas/faktur";
-import type { KewajibanPajak } from "@/lib/schemas/kewajiban-pajak";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
+import type { TaxEntry } from "@/lib/schemas/tax-entries";
 import type { PenggajianBatch } from "@/lib/schemas/penggajian";
 import { calcSlip } from "@/lib/schemas/penggajian";
-import { computeFaktur } from "@/lib/faktur";
 import type { ForecastEntry, WeeklyProjection, ForecastView } from "@/lib/dasbor/types";
 
 function addDays(dateStr: string, n: number): string {
@@ -33,34 +32,32 @@ function nextOccurrence(tanggalBayar: string, today: string): string {
 
 export function saldoArusKas(entries: ArusKasEntry[]): number {
   return entries.reduce(
-    (s, e) => s + (e.jenis === "kredit" ? e.jumlah : -e.jumlah),
+    (s, e) => (e.isCancelled ? s : s + (e.jenis === "kredit" ? e.jumlah : -e.jumlah)),
     0,
   );
 }
 
 export function forecastInflows(
-  fakturs: Faktur[],
+  fakturs: FakturTerminRow[],
   today: string,
   horizonDays: number,
 ): ForecastEntry[] {
   const horizon = addDays(today, horizonDays);
   return fakturs
-    .filter((f) => f.status === "terkirim" && f.jatuhTempo >= today && f.jatuhTempo <= horizon)
-    .map((f) => {
-      const totals = computeFaktur(f);
-      return {
-        tanggal: f.jatuhTempo,
-        label: f.perusahaanNama + " – " + f.id,
-        jumlah: Math.round(totals.nilaiTermin - totals.pph23),
-        jenis: "masuk" as const,
-        sumber: "faktur" as const,
-        refId: f.id,
-      };
-    });
+    .filter((f): f is FakturTerminRow & { jatuhTempo: string } =>
+      f.statusSystemRole === null && f.jatuhTempo !== null && f.jatuhTempo >= today && f.jatuhTempo <= horizon)
+    .map((f) => ({
+      tanggal: f.jatuhTempo,
+      label: f.perusahaanNama + " – " + f.id,
+      jumlah: Math.round(f.netIncome),
+      jenis: "masuk" as const,
+      sumber: "faktur" as const,
+      refId: f.id,
+    }));
 }
 
 export function forecastOutflows(
-  kewajiban: KewajibanPajak[],
+  kewajiban: TaxEntry[],
   batches: PenggajianBatch[],
   today: string,
   horizonDays: number,
@@ -69,10 +66,10 @@ export function forecastOutflows(
   const entries: ForecastEntry[] = [];
 
   for (const k of kewajiban) {
-    if (k.status === "belum_setor" && k.jatuhTempo >= today && k.jatuhTempo <= horizon) {
+    if (k.settlementStatus !== "sudah_disetor" && k.dueDate && k.dueDate >= today && k.dueDate <= horizon) {
       entries.push({
-        tanggal: k.jatuhTempo,
-        label: k.jenis.toUpperCase() + " " + k.periode,
+        tanggal: k.dueDate,
+        label: k.taxType.toUpperCase() + " " + k.taxPeriod.slice(0, 7),
         jumlah: k.jumlah,
         jenis: "keluar",
         sumber: "pajak",
@@ -138,8 +135,8 @@ export function computeWeeklyProjections(
 
 export function computeForekast(args: {
   arusKas: ArusKasEntry[];
-  fakturs: Faktur[];
-  kewajiban: KewajibanPajak[];
+  fakturs: FakturTerminRow[];
+  kewajiban: TaxEntry[];
   batches: PenggajianBatch[];
   today: string;
   horizonDays?: number;

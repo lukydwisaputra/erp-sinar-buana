@@ -1,8 +1,9 @@
-import { listFaktur } from "@/lib/data/faktur";
+import { listAll as listFaktur } from "@/lib/faktur/service";
+import { flattenTermins } from "@/lib/faktur/mapping";
 import { listProyek } from "@/lib/proyek/service";
 import { listPenawaran } from "@/lib/data/penawaran";
 import { listAll as listRealisasiRab } from "@/lib/realisasi-rab/service";
-import { listArusKas } from "@/lib/data/arus-kas";
+import { listArusKas } from "@/lib/arus-kas/service";
 import { listExpenseNature } from "@/lib/data/expense-nature";
 import { getPajakConfig } from "@/lib/data/pajak-config";
 import { getDashboardParams } from "@/lib/data/dashboard-params";
@@ -16,16 +17,17 @@ import { computeProjectProfitability } from "@/lib/dasbor/project-profit";
 export type ProfitabilitasView = { labaRugi: LabaRugi; proyek: ProyekProfit[] };
 
 export async function getProfitabilitas(userId: string, periode: Periode): Promise<ProfitabilitasView> {
-  const [fakturs, proyeks, penawarans, realisasi, arusKas, natureRows, config, params] = await Promise.all([
-    listFaktur(),
+  const [induks, proyeks, penawarans, realisasi, arusKas, natureRows, config, params] = await Promise.all([
+    listFaktur(userId),
     listProyek(userId),
     listPenawaran(),
     listRealisasiRab(userId),
-    listArusKas(),
+    listArusKas(userId),
     listExpenseNature(),
     getPajakConfig(),
     getDashboardParams(),
   ]);
+  const fakturs = flattenTermins(induks);
 
   const natureMap = new Map<string, SifatBeban>(natureRows.map((n) => [n.kategori, n.sifat]));
   const natureOf = (kategori: string): SifatBeban => natureMap.get(kategori) ?? DEFAULT_SIFAT;

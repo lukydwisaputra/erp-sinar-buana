@@ -3,6 +3,7 @@ import { withUserTransaction, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/api-error";
 import { toPerusahaan, toContactRows, type ContactRow } from "@/lib/perusahaan/mapping";
+import { sumPiutangByCompanies } from "@/lib/faktur/service";
 import type {
   Perusahaan,
   CreatePerusahaanInput,
@@ -73,13 +74,14 @@ export async function listCompanies(userId: string): Promise<Perusahaan[]> {
       contactsByCompany.set(c.companyId, list);
     }
     const companyIds = companies.map((c) => c.id);
-    const [penawaranCounts, projectStats] = await Promise.all([
+    const [penawaranCounts, projectStats, piutangByCompany] = await Promise.all([
       countPenawaranByCompany(tx, companyIds),
       countActiveProjectsByCompany(tx, companyIds),
+      sumPiutangByCompanies(tx, companyIds),
     ]);
     return companies.map((c) => {
       const stats = projectStats.get(c.id);
-      return toPerusahaan(c, contactsByCompany.get(c.id) ?? [], penawaranCounts.get(c.id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0);
+      return toPerusahaan(c, contactsByCompany.get(c.id) ?? [], penawaranCounts.get(c.id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0, piutangByCompany.get(c.id) ?? 0);
     });
   });
 }
@@ -93,12 +95,13 @@ export async function getCompany(userId: string, id: string): Promise<Perusahaan
       .limit(1);
     if (!company) throw new NotFoundError("Perusahaan tidak ditemukan.");
     const contacts = await loadContacts(tx, id);
-    const [penawaranCounts, projectStats] = await Promise.all([
+    const [penawaranCounts, projectStats, piutangByCompany] = await Promise.all([
       countPenawaranByCompany(tx, [id]),
       countActiveProjectsByCompany(tx, [id]),
+      sumPiutangByCompanies(tx, [id]),
     ]);
     const stats = projectStats.get(id);
-    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0);
+    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0, piutangByCompany.get(id) ?? 0);
   });
 }
 
@@ -126,7 +129,7 @@ export async function createCompany(
           .values(toContactRows(input.pic, company.id))
           .returning()
       : [];
-    return toPerusahaan(company, contacts, 0, 0, 0);
+    return toPerusahaan(company, contacts, 0, 0, 0, 0);
   });
 }
 
@@ -166,12 +169,13 @@ export async function updateCompany(
     }
 
     const contacts = await loadContacts(tx, id);
-    const [penawaranCounts, projectStats] = await Promise.all([
+    const [penawaranCounts, projectStats, piutangByCompany] = await Promise.all([
       countPenawaranByCompany(tx, [id]),
       countActiveProjectsByCompany(tx, [id]),
+      sumPiutangByCompanies(tx, [id]),
     ]);
     const stats = projectStats.get(id);
-    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0);
+    return toPerusahaan(company, contacts, penawaranCounts.get(id) ?? 0, stats?.proyekAktif ?? 0, stats?.nilaiKontrak ?? 0, piutangByCompany.get(id) ?? 0);
   });
 }
 

@@ -3,9 +3,8 @@ import { useState, useMemo } from "react";
 import { LayoutDashboard } from "lucide-react";
 import { useProfitabilitas, useForekast, useAlerts } from "@/lib/query/dasbor";
 import { useFakturList } from "@/lib/query/faktur";
-import { useKewajibanPajakList } from "@/lib/query/kewajiban-pajak";
+import { useTaxEntryList } from "@/lib/query/tax-entries";
 import { useDashboardParams } from "@/lib/query/dashboard-params";
-import { computeFaktur } from "@/lib/faktur";
 import { periodePreset } from "@/lib/dasbor/periode-utils";
 import { PeriodPicker } from "@/components/dasbor/period-picker";
 import { KpiStrip } from "@/components/dasbor/kpi-strip";
@@ -22,20 +21,21 @@ export default function DasborPage() {
   const { data: forecastView } = useForekast(dashboardParams?.horizonProyeksiHari ?? 90);
   const { data: alerts = [], isLoading: alertsLoading } = useAlerts();
   const { data: fakturs = [] } = useFakturList();
-  const { data: kewajiban = [] } = useKewajibanPajakList();
+  const { data: kewajiban = [] } = useTaxEntryList();
 
   const arOutstanding = useMemo(
     () =>
       fakturs
-        .filter((f) => f.status === "terkirim")
-        .reduce((s, f) => s + computeFaktur(f).nilaiTermin, 0),
+        .flatMap((f) => f.termins)
+        .filter((t) => t.statusSystemRole === null)
+        .reduce((s, t) => s + t.nilaiTermin, 0),
     [fakturs],
   );
 
   const taxDue = useMemo(
     () =>
       kewajiban
-        .filter((k) => k.status === "belum_setor")
+        .filter((k) => k.settlementStatus !== "sudah_disetor")
         .reduce((s, k) => s + k.jumlah, 0),
     [kewajiban],
   );

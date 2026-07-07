@@ -26,10 +26,11 @@ export const milestoneSchema = z.object({
   statusId: z.string().nullable(),
   status: z.string(), // resolved workflow_statuses.label (entity='milestone')
   // Whether completing this milestone should suggest generating an Invoice
-  // Termin (PRD Bab 6.5) — a UI suggestion only, never automatic. The mock's
-  // `{fakturId, persen}` payload has no DB equivalent until Faktur is wired
-  // (percen/fakturId would come from the linked master_invoice_terms row).
+  // Termin (PRD Bab 6.5) — a UI suggestion only, never automatic.
   triggersTerm: z.boolean(),
+  // Which Faktur Induk this milestone's termin-completion suggestion points
+  // at — null until the user links one via the milestone modal's picker.
+  linkedMasterInvoiceId: z.string().nullable(),
 });
 export type Milestone = z.infer<typeof milestoneSchema>;
 
@@ -103,6 +104,7 @@ export const updateMilestoneSchema = z.object({
   actualDate: z.string().nullable().optional(),
   statusId: z.string().optional(),
   triggersTerm: z.boolean().optional(),
+  linkedMasterInvoiceId: z.string().nullable().optional(),
 });
 export type UpdateMilestoneInput = z.infer<typeof updateMilestoneSchema>;
 

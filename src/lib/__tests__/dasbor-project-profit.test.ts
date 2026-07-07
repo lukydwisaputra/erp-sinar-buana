@@ -3,7 +3,7 @@ import { kesehatanProyek, computeProjectProfitability } from "@/lib/dasbor/proje
 import type { Proyek } from "@/lib/schemas/proyek";
 import type { Sph } from "@/lib/schemas/penawaran";
 import type { RealisasiRab } from "@/lib/schemas/realisasi-rab";
-import type { Faktur } from "@/lib/schemas/faktur";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
 
 describe("kesehatanProyek", () => {
   it("merah when realisasi exceeds RAB plan", () => {
@@ -39,12 +39,11 @@ describe("computeProjectProfitability", () => {
   const proyek: Proyek = {
     id: "P1", nama: "Proyek Satu", sphId: "SPH-1", nilaiKontrak: 100_000_000,
   } as unknown as Proyek;
-  const faktur = {
-    sphId: "SPH-1", status: "lunas", tanggal: "2026-06-10", terminIndex: 0,
-    terminList: [{ label: "I", persen: 100, pemicu: "" }],
-    items: [{ uraian: "j", volume: 1, harga: 100_000_000, satuan: "ls" }],
-    ppnAktif: false, ppnPersen: 11, pph23Aktif: false, pph23Persen: 2, id: "INV-1",
-  } as unknown as Faktur;
+  const faktur: FakturTerminRow = {
+    id: "INV-1", proyekId: "P1", perusahaanNama: "PT Klien",
+    tanggal: "2026-06-10", jatuhTempo: "2026-06-24", statusSystemRole: "LUNAS",
+    nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
+  };
 
   it("computes plan margin, actual margin, and % budget used", () => {
     const rows = computeProjectProfitability({

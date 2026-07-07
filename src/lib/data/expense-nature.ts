@@ -5,10 +5,11 @@ import {
   type ExpenseNatureEntry,
   type SifatBeban,
 } from "@/lib/schemas/expense-nature";
-import { arusKasKategori } from "@/lib/schemas/arus-kas";
-
-/** The 4 cashflow categories driven by automation — cannot be renamed or deleted. */
-export const LOCKED_KATEGORI = new Set<string>(arusKasKategori.options);
+/** The 4 cashflow categories driven by automation — cannot be renamed or
+ * deleted. Kept as its own literal list (not derived from
+ * schemas/arus-kas.ts's real `sumber` enum) since this Konfigurasi screen's
+ * locked-category concept is independent of Arus Kas's real read wiring. */
+export const LOCKED_KATEGORI = new Set<string>(["faktur", "penggajian", "pajak", "bonus"]);
 
 export type ExpenseNatureRow = ExpenseNatureEntry & { locked: boolean };
 

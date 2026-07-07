@@ -3,7 +3,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { FolderKanban, MoreHorizontal, FileText, Receipt, SlidersHorizontal } from "lucide-react";
-import { sphIdToInvBase } from "@/lib/faktur-id";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
@@ -67,15 +66,10 @@ function RowActions({ proyek }: { proyek: Proyek }) {
             Lihat SPH
           </DropdownMenuItem>
         )}
-        {proyek.sphId && (
-          <DropdownMenuItem onSelect={() => {
-            const fakturId = `${sphIdToInvBase(proyek.sphId!)}-T1`;
-            router.push(`/faktur/${encodeURIComponent(fakturId)}`);
-          }}>
-            <Receipt className="size-3.5" />
-            Lihat Faktur
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem onSelect={() => router.push(`/faktur?proyekId=${encodeURIComponent(proyek.id)}`)}>
+          <Receipt className="size-3.5" />
+          Lihat Faktur
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

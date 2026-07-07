@@ -1,10 +1,10 @@
 import type { Proyek } from "@/lib/schemas/proyek";
 import type { Sph } from "@/lib/schemas/penawaran";
 import type { RealisasiRab } from "@/lib/schemas/realisasi-rab";
-import type { Faktur } from "@/lib/schemas/faktur";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
 import type { ProyekProfit, KesehatanProyek } from "@/lib/dasbor/types";
 import { sumRabPlan } from "@/lib/dasbor/rab-plan";
-import { pendapatanPerSph } from "@/lib/dasbor/revenue";
+import { pendapatanPerProyek } from "@/lib/dasbor/revenue";
 
 /**
  * Health flag for a project row.
@@ -30,17 +30,17 @@ export function kesehatanProyek(args: {
 export function computeProjectProfitability(args: {
   proyeks: Proyek[];
   sphById: Map<string, Sph>;
-  fakturs: Faktur[];
+  fakturs: FakturTerminRow[];
   realisasi: RealisasiRab[];
   ambang?: number;
 }): ProyekProfit[] {
   const { proyeks, sphById, fakturs, realisasi, ambang } = args;
-  const revBySph = pendapatanPerSph(fakturs);
+  const revByProyek = pendapatanPerProyek(fakturs);
 
   return proyeks.map((p) => {
     const sph = p.sphId ? sphById.get(p.sphId) : undefined;
     const rabRencana = sph ? sumRabPlan(sph).total : 0;
-    const pendapatanDiakui = p.sphId ? revBySph.get(p.sphId) ?? 0 : 0;
+    const pendapatanDiakui = revByProyek.get(p.id) ?? 0;
 
     const realisasiRows = realisasi.filter((r) => r.proyekId === p.id);
     const realisasiTotal = realisasiRows.length > 0

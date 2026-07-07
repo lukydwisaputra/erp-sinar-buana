@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { hppPeriode, bebanOperasionalPeriode, computeLabaRugi } from "@/lib/dasbor/profit-loss";
-import type { Faktur } from "@/lib/schemas/faktur";
+import type { FakturTerminRow } from "@/lib/faktur/mapping";
 import type { RealisasiRab } from "@/lib/schemas/realisasi-rab";
 import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
 import type { SifatBeban } from "@/lib/schemas/expense-nature";
@@ -9,24 +9,19 @@ import type { PajakConfig } from "@/lib/schemas/pajak-config";
 const juni = { mulai: "2026-06-01", selesai: "2026-06-30" };
 const finalCfg: PajakConfig = { metode: "final_05", tarifFinalPersen: 0.5, tarifBadanPersen: 22, ambangOmzet: 4_800_000_000 };
 
-function mkFaktur(p: Partial<Faktur>): Faktur {
+function mkFaktur(p: Partial<FakturTerminRow>): FakturTerminRow {
   return {
-    sphId: "SPH-1", perusahaanId: "C1", perusahaanNama: "PT A", alamat: "", kota: "", npwp: "",
-    tanggal: "2026-06-10", jatuhTempo: "2026-07-10",
-    items: [{ uraian: "Jasa", volume: 1, harga: 100_000_000, satuan: "ls" }],
-    terminList: [{ label: "Termin I", persen: 100, pemicu: "" }],
-    terminIndex: 0, ppnAktif: false, ppnPersen: 11, pph23Aktif: false, pph23Persen: 2,
-    catatan: [], status: "terkirim", tanggalBayar: "",
-    bankNama: "", bankAtasNama: "", bankNoRekening: "",
-    jabatanPenerima: "Direktur", picAktif: false, picNama: "", picJabatan: "", id: "INV/1-T1",
+    id: "INV-1", proyekId: "P1", perusahaanNama: "PT A",
+    tanggal: "2026-06-10", jatuhTempo: "2026-07-10", statusSystemRole: null,
+    nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
     ...p,
-  } as Faktur;
+  };
 }
 const rr = (jumlah: number, tanggal: string): RealisasiRab => ({
   id: "RRB-1", proyekId: "P1", kategori: "personil", rabLineLabel: "x", jumlah, tanggal, keterangan: "",
 });
 const ak = (jumlah: number, kategori: string, tanggal: string): ArusKasEntry => ({
-  id: "AKS-1", jenis: "debit", tanggal, jumlah, kategori, sumber: "manual", keterangan: "", locked: false,
+  id: "AKS-1", jenis: "debit", tanggal, jumlah, kategori, sumber: "manual", keterangan: "", proyekId: null, locked: false, isCancelled: false,
 });
 // All categories Opex except "pajak" which is non-P&L.
 const natureOf = (k: string): SifatBeban => (k === "pajak" ? "non_laba_rugi" : "operasional");

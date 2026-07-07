@@ -4,6 +4,21 @@
 
 ## 5. Modul Dokumen Bisnis
 
+> **Status implementasi:** Faktur sudah tersambung ke database sungguhan
+> (Faktur Induk, skema termin, generate Invoice Termin satu per satu,
+> dokumen cetak/kirim). Beberapa catatan penting:
+> - **Nomor invoice, guard over-billing (Σ termin ≤ Total Biaya), dan
+>   otomasi pembayaran saat Lunas/Batal** seluruhnya ditangani trigger
+>   database (`assign_document_number`, `fn_installment_validate`,
+>   `fn_installment_after_change`) — aplikasi hanya melakukan
+>   INSERT/UPDATE biasa, tidak menduplikasi logikanya.
+> - **Pajak dihitung sebagai snapshot** saat Invoice Termin dibuat (bukan
+>   dihitung ulang setiap render) — mengikuti pengaturan PPN/PPh23 dari SPH
+>   sumber proyek jika ada, atau default 12%/2% jika proyek dibuat manual.
+> - **Arus Kas dan Pajak** kini menampilkan data nyata (baca-saja) hasil
+>   otomasi pelunasan termin — lihat catatan status implementasi masing-masing
+>   di Bab 7 dan Bab 10 untuk batasan cakupannya.
+
 ### 5.1 Faktur Induk & Invoice Termin
 
 **Hierarki penagihan:** `Proyek → Faktur Induk → Invoice Termin`.

@@ -43,6 +43,7 @@ function toMilestones(
     statusId: m.statusId,
     status: (m.statusId && statusLabelsById.get(m.statusId)) || "—",
     triggersTerm: m.triggersTerm,
+    linkedMasterInvoiceId: m.linkedMasterInvoiceId,
   }));
 }
 

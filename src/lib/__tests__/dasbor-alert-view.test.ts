@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@/lib/data/faktur", () => ({
-  listFaktur: vi.fn(async () => []),
+vi.mock("@/lib/faktur/service", () => ({
+  listAll: vi.fn(async () => []),
 }));
-vi.mock("@/lib/data/kewajiban-pajak", () => ({
-  listKewajibanPajak: vi.fn(async () => [
-    { id: "K1", jenis: "ppn", periode: "2026-05", jumlah: 5_000_000,
-      jatuhTempo: "2026-05-30", status: "belum_setor", buktiPotongDiterima: true, keterangan: "" },
+vi.mock("@/lib/tax/service", () => ({
+  listTaxEntries: vi.fn(async () => [
+    { id: "K1", taxType: "ppn_keluaran", nature: "kewajiban", taxPeriod: "2020-01-01", jumlah: 5_000_000,
+      dueDate: "2020-01-30", settlementStatus: "belum_disetor", settledDate: null, ntpn: null,
+      buktiPotongReceived: true, notes: "", companyId: null, employeeId: null },
   ]),
 }));
 vi.mock("@/lib/proyek/service", () => ({

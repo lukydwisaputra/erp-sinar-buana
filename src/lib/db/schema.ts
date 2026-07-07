@@ -431,7 +431,7 @@ export const milestones = pgTable("milestones", {
   sortOrder: integer("sort_order").notNull().default(0),
   triggersTerm: boolean("triggers_term").notNull().default(false),
   linkedProjectServiceId: uuid("linked_project_service_id").references(() => projectServices.id, { onDelete: "set null" }),
-  linkedMasterInvoiceId: uuid("linked_master_invoice_id"),
+  linkedMasterInvoiceId: uuid("linked_master_invoice_id").references((): AnyPgColumn => masterInvoices.id, { onDelete: "set null" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -494,5 +494,135 @@ export const rabActuals = pgTable("rab_actuals", {
   amount: money("amount").notNull().default("0"),
   date: date("date").notNull(),
   note: text("note"),
+  ...bookkeeping,
+});
+
+// ── Faktur — Faktur Induk / Invoice Termin (db-schema/src/schema/billing.ts) ──
+// Billing hierarchy: Proyek → Faktur Induk (master_invoices) → Invoice Termin
+// (installment_invoices). Numbering ('INV') uses the same assign_document_number
+// trigger as Penawaran's 'SPH' numbering. Payment automation (LUNAS -> cashflow
+// + tax entries, master-invoice roll-up; BATAL -> cancel/cleanup) is handled
+// entirely by DB triggers (fn_installment_validate/fn_installment_after_change)
+// — the app only ever UPDATEs installment_invoices.status_id.
+
+export const masterInvoices = pgTable("master_invoices", {
+  id: pk(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "restrict" }),
+  totalCost: money("total_cost").notNull().default("0"),
+  statusId: uuid("status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  ...bookkeeping,
+});
+
+export const masterInvoiceServices = pgTable("master_invoice_services", {
+  id: pk(),
+  masterInvoiceId: uuid("master_invoice_id").notNull().references(() => masterInvoices.id, { onDelete: "cascade" }),
+  serviceId: uuid("service_id").references(() => serviceCatalog.id, { onDelete: "set null" }),
+  description: text("description"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const masterInvoiceTerms = pgTable("master_invoice_terms", {
+  id: pk(),
+  masterInvoiceId: uuid("master_invoice_id").notNull().references(() => masterInvoices.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  percentage: rate("percentage").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const installmentInvoices = pgTable("installment_invoices", {
+  id: pk(),
+  number: text("number"), // assigned by trg_installments_number — never set from the app
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
+  masterInvoiceId: uuid("master_invoice_id").notNull().references(() => masterInvoices.id, { onDelete: "cascade" }),
+  termId: uuid("term_id").references(() => masterInvoiceTerms.id, { onDelete: "set null" }),
+  label: text("label").notNull(),
+  date: date("date").notNull(),
+  dueDate: date("due_date"),
+  bankAccountId: uuid("bank_account_id").references(() => bankAccounts.id, { onDelete: "set null" }),
+  statusId: uuid("status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
+  paidDate: date("paid_date"),
+  currentTermValue: money("current_term_value").notNull().default("0"),
+  dpp: money("dpp").notNull().default("0"),
+  ppn: money("ppn").notNull().default("0"),
+  pph23: money("pph23").notNull().default("0"),
+  totalAfterTax: money("total_after_tax").notNull().default("0"),
+  grossIncome: money("gross_income").notNull().default("0"),
+  netIncome: money("net_income").notNull().default("0"),
+  notes: text("notes"),
+  ...bookkeeping,
+});
+
+// ── Arus Kas — read-only visibility (db-schema/src/schema/cashflow.ts) ───────
+// Only wired enough to list real rows (incl. those the Faktur/payroll triggers
+// generate) — manual-entry CRUD/forecast stay out of scope for this pass.
+
+export const cashflowType = pgEnum("cashflow_type", ["kredit", "debit"]);
+export const cashflowSource = pgEnum("cashflow_source", ["manual", "faktur", "penggajian", "pajak"]);
+export const cashflowTaxComponent = pgEnum("cashflow_tax_component", [
+  "jasa", "ppn_keluaran", "pph23_dipotong", "pph21", "bpjs", "bonus",
+]);
+export const cashflowCategorySystemKey = pgEnum("cashflow_category_system_key", [
+  "FAKTUR", "PENGGAJIAN", "PAJAK", "BPJS", "BONUS",
+]);
+export const expenseNature = pgEnum("expense_nature", ["HPP", "OPERASIONAL", "NON_LABA_RUGI"]);
+
+export const cashflowCategories = pgTable("cashflow_categories", {
+  ...lookup,
+  systemKey: cashflowCategorySystemKey("system_key"),
+  expenseNature: expenseNature("expense_nature").notNull().default("OPERASIONAL"),
+  isSystem: boolean("is_system").notNull().default(false),
+});
+
+export const cashflowEntries = pgTable("cashflow_entries", {
+  id: pk(),
+  type: cashflowType("type").notNull(),
+  date: date("date").notNull(),
+  amount: money("amount").notNull().default("0"),
+  categoryId: uuid("category_id").references(() => cashflowCategories.id, { onDelete: "restrict" }),
+  source: cashflowSource("source").notNull().default("manual"),
+  taxComponent: cashflowTaxComponent("tax_component"),
+  description: text("description"),
+  isLocked: boolean("is_locked").notNull().default(false),
+  isCancelled: boolean("is_cancelled").notNull().default(false),
+  installmentInvoiceId: uuid("installment_invoice_id").references(() => installmentInvoices.id, { onDelete: "set null" }),
+  payslipId: uuid("payslip_id"),
+  taxEntryId: uuid("tax_entry_id").references((): AnyPgColumn => taxEntries.id, { onDelete: "set null" }),
+  projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+  ...bookkeeping,
+});
+
+// ── Pajak — read-only visibility (db-schema/src/schema/tax.ts) ──────────────
+// Admin/Keuangan only (tax_sel has no viewer read, unlike cashflow_sel).
+
+export const taxType = pgEnum("tax_type", [
+  "ppn_keluaran", "ppn_masukan", "pph23_dipotong", "pph21", "bpjs_kesehatan", "bpjs_ketenagakerjaan",
+]);
+export const taxNature = pgEnum("tax_nature", ["kewajiban", "kredit"]);
+export const taxSettlementStatus = pgEnum("tax_settlement_status", ["belum_disetor", "terlambat", "sudah_disetor"]);
+
+export const taxEntries = pgTable("tax_entries", {
+  id: pk(),
+  taxType: taxType("tax_type").notNull(),
+  nature: taxNature("nature").notNull(),
+  taxPeriod: date("tax_period").notNull(),
+  amount: money("amount").notNull().default("0"),
+  installmentInvoiceId: uuid("installment_invoice_id").references(() => installmentInvoices.id, { onDelete: "set null" }),
+  payslipId: uuid("payslip_id"),
+  companyId: uuid("company_id").references(() => companies.id, { onDelete: "set null" }),
+  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "set null" }),
+  dueDate: date("due_date"),
+  settlementStatus: taxSettlementStatus("settlement_status").notNull().default("belum_disetor"),
+  settledDate: date("settled_date"),
+  ntpn: text("ntpn"),
+  proofAttachmentUrl: text("proof_attachment_url"),
+  buktiPotongReceived: boolean("bukti_potong_received").notNull().default(false),
+  buktiPotongAttachmentUrl: text("bukti_potong_attachment_url"),
+  notes: text("notes"),
   ...bookkeeping,
 });
