@@ -4,5 +4,5 @@ import { PenggajianBatchDetail } from "@/components/penggajian/penggajian-batch"
 
 export default function Page() {
   const { batchId } = useParams<{ batchId: string }>();
-  return <PenggajianBatchDetail batchId={batchId} />;
+  return <PenggajianBatchDetail batchId={decodeURIComponent(batchId)} />;
 }

@@ -43,9 +43,12 @@ semua dapat dibuat, **diduplikasi**, dan diedit.
 ### 9.5 Tarif & Penomoran
 Tarif PPN/PPh, **jatuh tempo pajak (PPN/PPh/BPJS)**, **jatuh tempo pembayaran faktur (N
 hari)**, **status PKP perusahaan**, pengali probation, masa berlaku penawaran, dan **format
-nomor** SPH/INV
+nomor** SPH/INV/Slip Gaji
 (mis. `SPH/{urut}/{bulan}.{tahun}` → `SPH/001/5.2026`; `INV/{urut}/{bulan}.{tahun}` →
-`INV/002/05.2026`).
+`INV/002/05.2026`; `GAJ/{urut}/{bulan}.{tahun}` → `GAJ/001/6.2026`). *(Status implementasi:
+format GAJ sudah ada di database dengan mekanisme penomoran yang sama seperti SPH/INV, tapi
+tab Konfigurasi ini sendiri — termasuk pengaturan format SPH/INV yang sudah lebih dulu ada —
+masih belum tersambung ke pengaturan nyata.)*
 
 **Profitabilitas & Dasbor** (dipakai Laba-Rugi/proyeksi di [Bab 8](08-dasbor.md#8-modul-dasbor-dashboard)):
 - **PPh Badan:** metode (**Final 0,5% omzet** / **22% atas laba**), tarif, dan **ambang omzet

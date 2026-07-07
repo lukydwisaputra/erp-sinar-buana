@@ -12,10 +12,6 @@ function rupiah(v: number) {
   return v === 0 ? "–" : formatRupiah(v);
 }
 
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 const cell = "px-4 py-1 text-[11px]";
 const cellR = `${cell} text-right font-mono tabular-nums`;
 const divider = "border-t border-[var(--doc-rule)]";
@@ -28,9 +24,11 @@ export function SlipDocument({
   periode: { mulai: string; selesai: string };
 }) {
   const companyProfile = companyProfileFixture.current;
-  const { gajiPokokEfektif, penggajianKotor, penggajianBersih } = calcSlip(slip);
-  const totalPotongan = slip.pph21 + slip.bpjsPotongan;
+  const { gajiPokokEfektif, potonganTotal, penggajianKotor, penggajianBersih } = calcSlip(slip);
+  const totalPotongan = slip.pph21 + potonganTotal;
   const tglPaid = slip.paidAt ? tglPanjang(slip.paidAt) : tglPanjang(new Date().toISOString());
+  const tunjanganLines = slip.components.filter((c) => c.kind === "tunjangan");
+  const potonganLines = slip.components.filter((c) => c.kind === "potongan");
 
   return (
     <DocumentPage header={<DocumentLetterhead />}>
@@ -46,10 +44,10 @@ export function SlipDocument({
           <div className="space-y-0.5">
             <div className="flex gap-2"><span className="w-20 text-muted-foreground">Nama</span><span>: {slip.karyawanNama}</span></div>
             <div className="flex gap-2"><span className="w-20 text-muted-foreground">Jabatan</span><span>: {slip.jabatan}</span></div>
-            <div className="flex gap-2"><span className="w-20 text-muted-foreground">Status</span><span>: {capitalize(slip.statusKepegawaian)}</span></div>
+            <div className="flex gap-2"><span className="w-20 text-muted-foreground">Status</span><span>: {slip.statusKepegawaian}</span></div>
           </div>
           <div className="space-y-0.5 text-right">
-            <div><span className="text-muted-foreground">No. Slip </span><span className="font-mono">{slip.id}</span></div>
+            <div><span className="text-muted-foreground">No. Slip </span><span className="font-mono">{slip.number ?? "—"}</span></div>
             <div><span className="text-muted-foreground">ID Karyawan </span><span className="font-mono">{slip.karyawanId}</span></div>
           </div>
         </div>
@@ -66,7 +64,7 @@ export function SlipDocument({
             {slip.pengali !== 1 && (
               <>
                 <tr className="text-muted-foreground">
-                  <td className={cell}>Pengali ({capitalize(slip.statusKepegawaian)})</td>
+                  <td className={cell}>Pengali ({slip.statusKepegawaian})</td>
                   <td className={cellR}>{slip.pengali}</td>
                 </tr>
                 <tr className="font-bold">
@@ -75,7 +73,9 @@ export function SlipDocument({
                 </tr>
               </>
             )}
-            <tr><td className={cell}>Tunjangan</td><td className={cellR}>{formatRupiah(slip.tunjangan)}</td></tr>
+            {tunjanganLines.map((c) => (
+              <tr key={c.id}><td className={cell}>{c.name}</td><td className={cellR}>{formatRupiah(c.amount)}</td></tr>
+            ))}
             <tr><td className={cell}>Lembur</td><td className={cellR}>{rupiah(slip.lembur)}</td></tr>
             <tr><td className={cell}>Bonus</td><td className={cellR}>{rupiah(slip.bonus)}</td></tr>
             <tr className={`${divider} font-bold bg-[var(--doc-blue-soft)]`}>
@@ -94,7 +94,12 @@ export function SlipDocument({
           </thead>
           <tbody>
             <tr><td className={cell}>PPh 21</td><td className={cellR}>{formatRupiah(slip.pph21)}</td></tr>
-            <tr><td className={cell}>BPJS</td><td className={cellR}>{formatRupiah(slip.bpjsPotongan)}</td></tr>
+            {potonganLines.map((c) => (
+              <tr key={c.id}>
+                <td className={cell}>{c.name}{c.isEmployerPortion ? " (Perusahaan)" : ""}</td>
+                <td className={cellR}>{c.isEmployerPortion ? "–" : formatRupiah(c.amount)}</td>
+              </tr>
+            ))}
             <tr className={`${divider} font-bold bg-[var(--doc-blue-soft)]`}>
               <td className={cell}>TOTAL POTONGAN</td>
               <td className={cellR}>{formatRupiah(totalPotongan)}</td>

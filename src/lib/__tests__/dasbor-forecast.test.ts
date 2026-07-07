@@ -33,12 +33,11 @@ const mkBatch = (id: string, netPerSlip: number): PenggajianBatch => ({
   tanggalBayar: "2026-05-25",
   createdAt: "2026-06-22T00:00:00.000Z",
   slips: [{
-    id: "s1", batchId: id, karyawanId: "K1", karyawanNama: "Budi",
-    jabatan: "Staff", statusKepegawaian: "tetap",
-    pengali: 1, gajiPokok: netPerSlip, tunjangan: 0, lembur: 0, bonus: 0,
-    pph21: 0, bpjsPotongan: 0,
-    bankNama: "BCA", bankNomor: "123", bankAtasNama: "Budi",
-    status: "sudah_dibayar", paidAt: null,
+    id: "s1", batchId: id, number: "GAJ/001/6.2026", karyawanId: "K1", karyawanNama: "Budi",
+    jabatan: "Staff", statusKepegawaian: "Tetap",
+    pengali: 1, gajiPokok: netPerSlip, components: [], lembur: 0, bonus: 0, pph21: 0,
+    bankNama: "BCA", bankNomor: "123", bankAtasNama: "Budi", telepon: "", email: "",
+    statusId: null, status: "sudah_dibayar", statusSystemRole: "DIBAYAR", paidAt: null,
   }],
 });
 

@@ -119,6 +119,29 @@ sistem mengurangi termin sebelumnya & menghitung pajak otomatis. 4) Pilih rekeni
 Faktur Induk menjadi **Lunas**.
 
 ### 5.2 Penggajian (Payroll) / Slip Gaji
+
+> **Status implementasi:** Penggajian sudah tersambung ke database
+> sungguhan (buat slip per karyawan dengan komponen tunjangan/potongan
+> nyata, tandai Sudah Dibayar/Batal, cetak/kirim slip). Beberapa catatan
+> penting:
+> - **"Batch" tidak memiliki tabel sendiri di database** — slip yang
+>   berbagi periode yang sama (tanggal mulai/selesai) dikelompokkan saat
+>   dibaca, bukan disimpan sebagai satu entitas batch. Menghapus "batch"
+>   secara utuh tidak lagi tersedia — digantikan aksi Batalkan per slip
+>   (status Batal), yang justru lebih sesuai dibanding mock lama yang sama
+>   sekali tidak punya status batal.
+> - **Siklus Draf & pratinjau sebelum pembayaran** (paragraf di bawah)
+>   belum diimplementasikan — baik versi mock lama maupun versi nyata saat
+>   ini hanya mengenal 3 status (Menunggu Pembayaran/Sudah Dibayar/Batal),
+>   tanpa status Draf terpisah. Slip yang dibuat langsung berstatus
+>   Menunggu Pembayaran dan sudah bernomor resmi.
+> - **Komponen tunjangan/potongan** kini berupa daftar baris nyata
+>   (`payslip_components`), diisi otomatis dari komponen gaji yang
+>   dikonfigurasi per karyawan (Bab 3) tapi tetap bisa diedit/ditambah/
+>   dihapus bebas saat membuat slip.
+> - **Kerahasiaan slip** sudah ditegakkan di level database (RLS) — karyawan
+>   non-Keuangan/Admin hanya dapat membaca slip miliknya sendiri.
+
 Mengikuti format slip nyata.
 | Kolom | Keterangan |
 | --- | --- |

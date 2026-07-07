@@ -2,23 +2,18 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
-import { CalendarIcon, ChevronLeft, ChevronRight, Wallet, Plus, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
+import { CalendarIcon, ChevronLeft, ChevronRight, Wallet, Plus, X } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { formatRupiah } from "@/lib/format";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useBatchList, useDeleteBatch } from "@/lib/query/penggajian";
+import { formatRupiah } from "@/lib/format";
+import { useBatchList } from "@/lib/query/penggajian";
 import { calcSlip, type PenggajianBatch } from "@/lib/schemas/penggajian";
 
 function periodStr(p: PenggajianBatch["periode"]) {
@@ -110,9 +105,7 @@ function MonthPicker({
 export default function PenggajianPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useBatchList();
-  const deleteBatch = useDeleteBatch();
   const [filterMonth, setFilterMonth] = React.useState<Date | undefined>();
-  const [deleteTarget, setDeleteTarget] = React.useState<PenggajianBatch | null>(null);
 
   const filterKey = filterMonth
     ? `${filterMonth.getFullYear()}-${String(filterMonth.getMonth() + 1).padStart(2, "0")}`
@@ -126,19 +119,15 @@ export default function PenggajianPage() {
 
   const columns: ColumnDef<PenggajianBatch & { bulan: string }>[] = [
     {
-      accessorKey: "id", header: "ID", meta: { mono: true },
-      cell: ({ row }) => (
-        <button type="button"
-          onClick={() => router.push(`/penggajian/${row.original.id}`)}
-          className="rounded-sm font-mono text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-          {row.original.id}
-        </button>
-      ),
-    },
-    {
       id: "periode", header: "Periode",
       accessorFn: (row) => row.periode.mulai,
-      cell: ({ row }) => periodStr(row.original.periode),
+      cell: ({ row }) => (
+        <button type="button"
+          onClick={() => router.push(`/penggajian/${encodeURIComponent(row.original.id)}`)}
+          className="rounded-sm text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+          {periodStr(row.original.periode)}
+        </button>
+      ),
     },
     {
       accessorKey: "bulan", header: "Bulan",
@@ -177,22 +166,6 @@ export default function PenggajianPage() {
         );
       },
     },
-    {
-      id: "actions", header: "", enableSorting: false, meta: { collapse: true },
-      cell: ({ row }) => (
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            aria-label="Hapus penggajian"
-            onClick={() => setDeleteTarget(row.original)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
-      ),
-    },
   ];
 
   return (
@@ -214,43 +187,12 @@ export default function PenggajianPage() {
           columns={columns}
           data={rows}
           loading={isLoading}
-          searchColumn="id"
-          searchPlaceholder="Cari ID penggajian…"
           toolbarActions={<MonthPicker value={filterMonth} onChange={setFilterMonth} />}
           emptyMessage="Belum ada penggajian"
-          defaultSorting={[{ id: "id", desc: true }]}
+          defaultSorting={[{ id: "periode", desc: true }]}
           rowActions={false}
         />
       )}
-
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus {deleteTarget?.id}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Penggajian beserta seluruh slip gajinya akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleteBatch.isPending}
-              onClick={() => {
-                if (!deleteTarget) return;
-                deleteBatch.mutate(deleteTarget.id, {
-                  onSuccess: () => {
-                    toast.success(`${deleteTarget.id} dihapus.`);
-                    setDeleteTarget(null);
-                  },
-                });
-              }}
-            >
-              Hapus
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

@@ -16,7 +16,9 @@ import { salaryComponents, workflowStatuses } from "./config";
 /** A payslip for one employee over a custom date range (PRD Bab 5.2). */
 export const payslips = pgTable("payslips", {
   id: pk(),
-  number: text("number"), // auto-generated ID
+  number: text("number"), // e.g. GAJ/001/6.2026 — set on create, immutable on edit
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   employeeId: uuid("employee_id")
     .notNull()
     .references(() => employees.id, { onDelete: "restrict" }),
@@ -27,9 +29,10 @@ export const payslips = pgTable("payslips", {
 
   periodStart: date("period_start").notNull(),
   periodEnd: date("period_end").notNull(),
+  plannedPayDate: date("planned_pay_date"), // target pay date, set at batch creation
   statusId: uuid("status_id").references(() => workflowStatuses.id, {
     onDelete: "set null",
-  }), // Menunggu Pembayaran / Sudah Dibayar (entity = 'penggajian')
+  }), // Menunggu Pembayaran / Sudah Dibayar / Batal (entity = 'penggajian')
   paidDate: date("paid_date"),
 
   baseSalary: money("base_salary").notNull().default("0"), // gaji pokok

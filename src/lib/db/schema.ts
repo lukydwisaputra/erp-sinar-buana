@@ -558,6 +558,51 @@ export const installmentInvoices = pgTable("installment_invoices", {
   ...bookkeeping,
 });
 
+// ── Penggajian — Payslip (db-schema/src/schema/payroll.ts) ──────────────────
+// Numbering ('GAJ') uses the same assign_document_number trigger as SPH/INV.
+// Payment automation (DIBAYAR -> cashflow + tax entries; BATAL -> cancel/
+// cleanup) is handled entirely by fn_payslip_after_change — the app only
+// ever UPDATEs payslips.status_id. "Batch" has no DB table of its own —
+// payslips sharing (period_start, period_end) are grouped at read time.
+
+export const payslips = pgTable("payslips", {
+  id: pk(),
+  number: text("number"), // assigned by trg_payslips_number — never set from the app
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
+  employeeId: uuid("employee_id").notNull().references(() => employees.id, { onDelete: "restrict" }),
+  positionSnapshot: text("position_snapshot"),
+  employmentStatusSnapshot: text("employment_status_snapshot"),
+  multiplierSnapshot: rate("multiplier_snapshot").notNull().default("1"),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  plannedPayDate: date("planned_pay_date"),
+  statusId: uuid("status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
+  paidDate: date("paid_date"),
+  baseSalary: money("base_salary").notNull().default("0"),
+  baseEffective: money("base_effective").notNull().default("0"),
+  overtimeAmount: money("overtime_amount").notNull().default("0"),
+  bonusAmount: money("bonus_amount").notNull().default("0"),
+  pph21Amount: money("pph21_amount").notNull().default("0"),
+  grossPay: money("gross_pay").notNull().default("0"),
+  netPay: money("net_pay").notNull().default("0"),
+  notes: text("notes"),
+  ...bookkeeping,
+});
+
+export const payslipComponents = pgTable("payslip_components", {
+  id: pk(),
+  payslipId: uuid("payslip_id").notNull().references(() => payslips.id, { onDelete: "cascade" }),
+  salaryComponentId: uuid("salary_component_id").references(() => salaryComponents.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  kind: salaryComponentKind("kind").notNull(),
+  amount: money("amount").notNull().default("0"),
+  isEmployerPortion: boolean("is_employer_portion").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 // ── Arus Kas — read-only visibility (db-schema/src/schema/cashflow.ts) ───────
 // Only wired enough to list real rows (incl. those the Faktur/payroll triggers
 // generate) — manual-entry CRUD/forecast stay out of scope for this pass.
@@ -591,7 +636,7 @@ export const cashflowEntries = pgTable("cashflow_entries", {
   isLocked: boolean("is_locked").notNull().default(false),
   isCancelled: boolean("is_cancelled").notNull().default(false),
   installmentInvoiceId: uuid("installment_invoice_id").references(() => installmentInvoices.id, { onDelete: "set null" }),
-  payslipId: uuid("payslip_id"),
+  payslipId: uuid("payslip_id").references(() => payslips.id, { onDelete: "set null" }),
   taxEntryId: uuid("tax_entry_id").references((): AnyPgColumn => taxEntries.id, { onDelete: "set null" }),
   projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
   ...bookkeeping,
@@ -613,7 +658,7 @@ export const taxEntries = pgTable("tax_entries", {
   taxPeriod: date("tax_period").notNull(),
   amount: money("amount").notNull().default("0"),
   installmentInvoiceId: uuid("installment_invoice_id").references(() => installmentInvoices.id, { onDelete: "set null" }),
-  payslipId: uuid("payslip_id"),
+  payslipId: uuid("payslip_id").references(() => payslips.id, { onDelete: "set null" }),
   companyId: uuid("company_id").references(() => companies.id, { onDelete: "set null" }),
   employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "set null" }),
   dueDate: date("due_date"),

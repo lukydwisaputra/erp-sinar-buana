@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Send, Wallet } from "lucide-react";
+import { ArrowLeft, Ban, Download, Send, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,14 +15,15 @@ import { SlipDocument } from "@/components/penggajian/slip-document";
 import { KirimDokumenDialog } from "@/components/shared/document/kirim-dokumen-dialog";
 import { calcSlip } from "@/lib/schemas/penggajian";
 import { formatRupiah } from "@/lib/format";
-import { karyawanFixtures } from "@/lib/fixtures/karyawan";
-import { useSlip, useBatch, useMarkSlipDibayar } from "@/lib/query/penggajian";
+import { useSlip, useBatch, useMarkSlipDibayar, useCancelSlip } from "@/lib/query/penggajian";
 
 export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: string }) {
   const { data: batch } = useBatch(batchId);
   const { data: slip, isLoading } = useSlip(batchId, slipId);
   const markDibayar = useMarkSlipDibayar();
+  const cancelSlip = useCancelSlip();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmBatal, setConfirmBatal] = React.useState(false);
   const [kirimOpen, setKirimOpen] = React.useState(false);
 
   if (isLoading) {
@@ -45,15 +46,13 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
 
   const { penggajianBersih } = calcSlip(slip);
   const locked = slip.status === "sudah_dibayar";
-  const karyawan = karyawanFixtures.find((k) => k.id === slip.karyawanId);
-  const tujuanOptions = karyawan
-    ? [{ nama: slip.karyawanNama, telepon: karyawan.telepon ?? "", email: karyawan.email ?? "" }]
-    : [];
+  const editable = slip.status === "menunggu_pembayaran";
+  const tujuanOptions = [{ nama: slip.karyawanNama, telepon: slip.telepon, email: slip.email }];
 
   return (
     <>
       <div className="space-y-4">
-        <Link href={`/penggajian/${batchId}`} className="print:hidden">
+        <Link href={`/penggajian/${encodeURIComponent(batchId)}`} className="print:hidden">
           <Button variant="ghost" size="sm" className="gap-1.5 mb-4">
             <ArrowLeft className="size-4" /> Kembali ke Batch
           </Button>
@@ -62,16 +61,21 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
         <div className="overflow-hidden rounded-lg border border-border print:border-0">
           <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2.5 print:hidden">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">{slip.id}</span>
-              <Badge variant={locked ? "success" : "warning"}>
-                {locked ? "Sudah Dibayar" : "Menunggu Pembayaran"}
+              {slip.number && <span className="font-mono text-sm font-semibold">{slip.number}</span>}
+              <Badge variant={locked ? "success" : slip.status === "batal" ? "secondary" : "warning"}>
+                {locked ? "Sudah Dibayar" : slip.status === "batal" ? "Dibatalkan" : "Menunggu Pembayaran"}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              {!locked && (
-                <Button variant="outline" size="sm" onClick={() => setConfirmOpen(true)}>
-                  Tandai Dibayar
-                </Button>
+              {editable && (
+                <>
+                  <Button variant="destructive" size="sm" onClick={() => setConfirmBatal(true)}>
+                    <Ban className="size-4" /> Batalkan
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setConfirmOpen(true)}>
+                    Tandai Dibayar
+                  </Button>
+                </>
               )}
               <Button variant="outline" size="sm" onClick={() => window.print()}>
                 <Download className="size-4" /> Unduh
@@ -100,7 +104,7 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
         onOpenChange={setKirimOpen}
         jenisDokumen="slip"
         dokumenId={slip.id}
-        dokumenNomor={slip.id}
+        dokumenNomor={slip.number ?? slip.id}
         tujuanOptions={tujuanOptions}
       />
 
@@ -127,6 +131,34 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
               }}
             >
               Tandai Dibayar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmBatal} onOpenChange={setConfirmBatal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan slip ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Slip gaji <strong>{slip.karyawanNama}</strong> akan dibatalkan. Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={cancelSlip.isPending}
+              onClick={() => {
+                cancelSlip.mutate({ batchId, slipId }, {
+                  onSuccess: () => {
+                    toast.success("Slip dibatalkan.");
+                    setConfirmBatal(false);
+                  },
+                });
+              }}
+            >
+              Ya, Batalkan
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

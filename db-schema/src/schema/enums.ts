@@ -39,7 +39,7 @@ export const workflowEntity = pgEnum("workflow_entity", [
 ]);
 
 /** Document types that get an auto-generated, monthly-reset number (PRD Bab 9.5). */
-export const numberedDocType = pgEnum("numbered_doc_type", ["SPH", "INV"]);
+export const numberedDocType = pgEnum("numbered_doc_type", ["SPH", "INV", "GAJ"]);
 
 /** Project assignment roles (PRD Bab 6.1). */
 export const projectRole = pgEnum("project_role", [

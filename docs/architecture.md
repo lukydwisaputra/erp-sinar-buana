@@ -389,6 +389,75 @@ against real UUID `sphId` values) are gone — real `masterInvoiceId`/
 (`proyek/page.tsx`'s "Lihat Faktur" link previously produced a garbage id).
 See `planning/prd/05-dokumen-bisnis.md` for the reconciled Faktur shape.
 
+Penggajian (the eighth module wired) was the first pass where the DB side
+was already fully built and correct from the very first migration —
+`payslips`/`payslip_components`, the `fn_payslip_after_change()` trigger,
+RLS (including a self-scoped read policy no prior module needed), and seed
+data (3 `workflow_statuses` for `entity='penggajian'`, 5 `salary_components`
+incl. BPJS) all pre-dated this pass. The work was concentrated almost
+entirely in the app layer, plus one deliberate schema addition and one
+deliberate scope expansion, both confirmed with the user up front:
+
+- **"Batch" has no DB table** — the mock's `PenggajianBatch` grouping
+  concept doesn't exist in the real schema (each `payslip` is the unit of
+  record, no parent/batch FK anywhere). Rather than add one, batches are
+  derived at read time by grouping live payslips on `(period_start,
+  period_end)`, with a synthetic id (`GAJ-{periodStart}_{periodEnd}`) stable
+  enough to use as a query key and URL segment. One small additive column,
+  `payslips.planned_pay_date`, gives the mock's "Tanggal Bayar" a real home
+  (`paid_date` only gets set once a slip is *actually* paid).
+- **Payslip numbering was a genuine gap** — unlike SPH/Faktur,
+  `payslips.number` existed but no trigger assigned it. Extended
+  `assign_document_number()` to a 3rd doc type (`'GAJ'`, migration `0009`) —
+  the function previously hardcoded `new.date` for its year/month
+  extraction, which `payslips` doesn't have (only
+  `period_start`/`period_end`/`paid_date`); it now branches per doc type so
+  each table only ever touches a column its own row actually has, with
+  SPH/Faktur's numbering behavior left byte-identical (curl-regression-
+  tested after the edit).
+- **Real line-item allowances/deductions** — the mock had 5 flat scalar
+  fields (`tunjangan`/`lembur`/`bonus`/`pph21`/`bpjsPotongan`); the DB
+  normalizes allowances/deductions as `payslip_components` rows. Rather than
+  collapse them back to an aggregate (the Faktur precedent), this pass built
+  a genuine editable line-item list (`ComponentsEditor`), prefilled from
+  each employee's configured `employeeSalaryComponents` (percentage-type
+  components computed against `baseEffective`) but fully add/remove/edit-
+  able. `lembur`/`bonus`/`pph21` stayed as direct scalar inputs — they map
+  straight to dedicated `payslips` columns, only allowances/deductions
+  beyond those live as component rows.
+- **Trust the DB trigger, taken to a new RBAC shape**: marking a slip
+  Dibayar/Batal is a pure status `UPDATE`, `fn_payslip_after_change` handles
+  all cashflow/tax-entry automation. RLS's non-Finance "read only your own
+  payslip" policy is enforced entirely at the Postgres layer — the API
+  route just widens `requireRole`'s allowed list (admin/keuangan/sales/
+  tim_teknis) and lets Postgres filter the rows; no manual `employeeId`
+  comparison anywhere in route code (curl-verified: a `tim_teknis` session
+  linked to a specific employee saw only that employee's payslips, across
+  every batch).
+- **A real nested-transaction bug, caught during curl verification**:
+  `markSlipDibayar`/`updateSlip`/`cancelSlip` each ran inside their own
+  `withUserTransaction`, then called the *public* `getSlip` at the end to
+  return the fresh state — but `getSlip` opens its own new transaction,
+  which (on a separate connection) couldn't see the outer transaction's
+  not-yet-committed `UPDATE`, so the returned payload showed stale
+  pre-update state even though the DB itself (and the trigger) had already
+  applied the change correctly. Fixed by extracting a tx-scoped
+  `getSlipWithinTx(tx, ...)` helper and using it from inside every writer
+  instead of the public, transaction-opening `getSlip`. Worth checking for
+  the same shape (`return getX(userId, ...)` called from inside an
+  already-open transaction) if any future module's writer needs to return
+  freshly-mutated state.
+
+Dropped without replacement: the mock's whole-batch "Hapus Batch" delete has
+no real analog (the schema models cancellation per-payslip, not per-batch)
+— replaced by a per-slip "Batalkan" action instead, which is more correct
+than the mock ever was (the mock had no cancelled state at all).
+`slip-builder.tsx`'s direct `fixtures/karyawan.ts` import (a live bug
+bypassing the real data layer entirely for contact info) is gone —
+`telepon`/`email` are now resolved server-side from the employee row at
+read time, same precedent as Faktur's bank-account resolution. See
+`planning/prd/05-dokumen-bisnis.md` for the reconciled Penggajian shape.
+
 ## 10. Open / deferred
 
 - **Realtime:** deferred. TanStack Query refetch-on-focus + polling covers

@@ -1,11 +1,11 @@
 /**
  * Fixed uuids for the 20 demo employees, shared by `fixtures/karyawan.ts`, the
  * fixtures that reference an employee by id (`fixtures/proyek.ts`'s assignees,
- * `fixtures/penggajian.ts`/`fixtures/pengiriman.ts`'s payslips), and
- * `scripts/seed-karyawan.ts` (which inserts these same ids into the real
- * `employees` table). Karyawan is now backed by Postgres — Proyek/Penggajian/
- * Pengiriman aren't wired yet, so their mock `karyawanId` values must point at
- * real employee rows for cross-references to keep resolving.
+ * `fixtures/pengiriman.ts`'s demo log entries), and `scripts/seed-karyawan.ts`
+ * (which inserts these same ids into the real `employees` table). Karyawan
+ * and Penggajian are now backed by Postgres — Pengiriman isn't wired yet, so
+ * its mock `karyawanId` values must point at real employee rows for
+ * cross-references to keep resolving.
  *
  * Generated once with `crypto.randomUUID()` — do not regenerate, or every
  * fixture that references an employee by number goes stale against the seeded
