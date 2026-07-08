@@ -11,12 +11,15 @@ import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Switch } from "@/components/ui/switch";
 import { onFormInvalid } from "@/lib/form-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTarifConfig, useUpdateTarifConfig } from "@/lib/query/tarif-config";
 import { usePenomoranConfig, useUpdatePenomoranFormat } from "@/lib/query/penomoran";
 import { useDashboardParams, useUpdateDashboardParams } from "@/lib/query/dashboard-params";
+import { usePajakConfig, useUpdatePajakConfig } from "@/lib/query/pajak-config";
 import type { TarifConfig } from "@/lib/schemas/tarif-config";
 import type { DocTypePenomoran } from "@/lib/schemas/penomoran-config";
 import type { DashboardParams } from "@/lib/schemas/dashboard-params";
+import type { PajakConfig, PphBadanMetode } from "@/lib/schemas/pajak-config";
 
 // ── Tarif Pajak & Jatuh Tempo ───────────────────────────────────────────────
 
@@ -234,6 +237,123 @@ function PenomoranCard({ formats }: { formats: { docType: DocTypePenomoran; form
   );
 }
 
+// ── PPh Badan ────────────────────────────────────────────────────────────
+
+const METODE_LABEL: Record<PphBadanMetode, string> = {
+  final_05: "Final 0,5% Omzet (PP 55/2022)",
+  badan_22: "22% atas Laba",
+};
+
+const pphBadanFormSchema = z.object({
+  metode: z.enum(["final_05", "badan_22"]),
+  tarifFinalPersen: z.coerce.number().nonnegative(),
+  tarifBadanPersen: z.coerce.number().nonnegative(),
+  ambangOmzet: z.coerce.number().nonnegative(),
+});
+type PphBadanForm = z.input<typeof pphBadanFormSchema>;
+
+function PphBadanCard({ config }: { config: PajakConfig }) {
+  const [open, setOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
+  const { mutateAsync, isPending } = useUpdatePajakConfig();
+
+  const form = useForm<PphBadanForm>({ resolver: zodResolver(pphBadanFormSchema), defaultValues: config });
+  const { register, handleSubmit, control, reset, formState: { errors } } = form;
+
+  React.useEffect(() => { reset(config); }, [config, reset]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    await mutateAsync({
+      metode: values.metode,
+      tarifFinalPersen: Number(values.tarifFinalPersen),
+      tarifBadanPersen: Number(values.tarifBadanPersen),
+      ambangOmzet: Number(values.ambangOmzet),
+    });
+    setEditing(false);
+  }, onFormInvalid);
+
+  return (
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle className="text-sm">PPh Badan</CardTitle>
+        <CardAction className="flex items-center gap-1">
+          {!editing && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setEditing(true); setOpen(true); }}>
+              Ubah
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen((o) => !o)}>
+            {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          </Button>
+        </CardAction>
+      </CardHeader>
+      {open && (
+        <CardContent className="pt-0">
+          {!editing ? (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+              <div><p className="text-xs text-muted-foreground">Metode</p><p className="font-medium">{METODE_LABEL[config.metode]}</p></div>
+              <div><p className="text-xs text-muted-foreground">Tarif Final</p><p className="font-mono font-medium">{config.tarifFinalPersen}%</p></div>
+              <div><p className="text-xs text-muted-foreground">Tarif Badan</p><p className="font-mono font-medium">{config.tarifBadanPersen}%</p></div>
+              <div><p className="text-xs text-muted-foreground">Ambang Omzet</p><p className="font-mono font-medium">Rp {(config.ambangOmzet / 1_000_000_000).toFixed(1)}M</p></div>
+            </div>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-4">
+              <Field>
+                <FieldLabel>Metode</FieldLabel>
+                <Controller
+                  name="metode"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(METODE_LABEL) as PphBadanMetode[]).map((m) => (
+                          <SelectItem key={m} value={m}>{METODE_LABEL[m]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <FieldDescription>Menentukan estimasi PPh Badan pada Laba-Rugi Dasbor (Bab 10.8).</FieldDescription>
+              </Field>
+              <div className="grid grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel>Tarif Final (%)</FieldLabel>
+                  <InputGroup>
+                    <InputGroupInput type="number" step="0.1" {...register("tarifFinalPersen")} />
+                    <InputGroupAddon align="inline-end"><InputGroupText>%</InputGroupText></InputGroupAddon>
+                  </InputGroup>
+                  {errors.tarifFinalPersen && <FieldError>{errors.tarifFinalPersen.message}</FieldError>}
+                </Field>
+                <Field>
+                  <FieldLabel>Tarif Badan (%)</FieldLabel>
+                  <InputGroup>
+                    <InputGroupInput type="number" step="0.1" {...register("tarifBadanPersen")} />
+                    <InputGroupAddon align="inline-end"><InputGroupText>%</InputGroupText></InputGroupAddon>
+                  </InputGroup>
+                  {errors.tarifBadanPersen && <FieldError>{errors.tarifBadanPersen.message}</FieldError>}
+                </Field>
+              </div>
+              <Field>
+                <FieldLabel>Ambang Omzet (Rp)</FieldLabel>
+                <Input type="number" {...register("ambangOmzet")} />
+                <FieldDescription>Default Rp 4,8 M/tahun (PP 55/2022).</FieldDescription>
+                {errors.ambangOmzet && <FieldError>{errors.ambangOmzet.message}</FieldError>}
+              </Field>
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" disabled={isPending}>{isPending ? "Menyimpan…" : "Simpan"}</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setEditing(false); reset(config); }}>Batal</Button>
+              </div>
+            </form>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 // ── Parameter Dasbor ─────────────────────────────────────────────────────
 
 const dashboardFormSchema = z.object({
@@ -323,8 +443,12 @@ export function TarifPenomoranTab() {
   const { data: tarif, isLoading: tarifLoading } = useTarifConfig();
   const { data: penomoran, isLoading: penomoranLoading } = usePenomoranConfig();
   const { data: dashboardParams, isLoading: paramsLoading } = useDashboardParams();
+  const { data: pajakConfig, isLoading: pajakLoading } = usePajakConfig();
 
-  if (tarifLoading || penomoranLoading || paramsLoading || !tarif || !penomoran || !dashboardParams) {
+  if (
+    tarifLoading || penomoranLoading || paramsLoading || pajakLoading ||
+    !tarif || !penomoran || !dashboardParams || !pajakConfig
+  ) {
     return <p className="text-sm text-muted-foreground">Memuat…</p>;
   }
 
@@ -332,6 +456,7 @@ export function TarifPenomoranTab() {
     <div className="space-y-4">
       <TarifCard config={tarif} />
       <PenomoranCard formats={penomoran.formats} />
+      <PphBadanCard config={pajakConfig} />
       <DashboardParamsCard params={dashboardParams} />
     </div>
   );

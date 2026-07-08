@@ -7,9 +7,11 @@ import type { TaxEntry } from "@/lib/schemas/tax-entries";
  * settlement workflow, and Tax Center config are out of scope this pass, see
  * the Faktur plan. Query key stays "tax-entries" — query/faktur.ts's
  * useUpdateTermin already invalidates it when a termin is marked Lunas/Batal. */
-export function useTaxEntryList() {
+export function useTaxEntryList(enabled = true) {
   return useQuery({
     queryKey: ["tax-entries"],
     queryFn: () => apiClient.get<TaxEntry[]>("/api/tax-entries"),
+    enabled,
+    retry: false,
   });
 }

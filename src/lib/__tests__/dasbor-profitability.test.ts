@@ -22,8 +22,8 @@ vi.mock("@/lib/faktur/service", () => ({
 vi.mock("@/lib/proyek/service", () => ({
   listProyek: vi.fn(async () => [{ id: "P1", nama: "Proyek Satu", sphId: "SPH-1", nilaiKontrak: 100_000_000 }]),
 }));
-vi.mock("@/lib/data/penawaran", () => ({
-  listPenawaran: vi.fn(async () => [
+vi.mock("@/lib/penawaran/service", () => ({
+  listQuotations: vi.fn(async () => [
     { id: "SPH-1", items: [{ rab: { personil: [{ uraian: "A", vol: 1, satuan: "x", hargaSatuan: 30_000_000 }], langsung: [] } }] },
   ]),
 }));
@@ -36,12 +36,17 @@ vi.mock("@/lib/arus-kas/service", () => ({
   listArusKas: vi.fn(async () => [
     { id: "a1", jenis: "debit", tanggal: "2026-06-03", jumlah: 5_000_000, kategori: "Sewa Kantor", sumber: "manual", keterangan: "", proyekId: null, locked: false, isCancelled: false },
   ]),
+  listCashflowCategories: vi.fn(async () => [
+    { id: "cat-1", kategori: "Sewa Kantor", sifat: "operasional", locked: false },
+  ]),
 }));
-vi.mock("@/lib/data/expense-nature", () => ({
-  listExpenseNature: vi.fn(async () => [{ kategori: "Sewa Kantor", sifat: "operasional" }]),
-}));
-vi.mock("@/lib/data/pajak-config", () => ({
+vi.mock("@/lib/dasbor/pajak-config-service", () => ({
   getPajakConfig: vi.fn(async () => ({ metode: "final_05", tarifFinalPersen: 0.5, tarifBadanPersen: 22, ambangOmzet: 4_800_000_000 })),
+}));
+vi.mock("@/lib/dasbor/settings-service", () => ({
+  getDashboardSettings: vi.fn(async () => ({
+    horizonProyeksiHari: 90, ambangMarginProyek: 0.1, ambangMangkrakHari: 30,
+  })),
 }));
 
 import { getProfitabilitas } from "@/lib/dasbor/profitability";

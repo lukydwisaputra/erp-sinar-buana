@@ -729,3 +729,39 @@ export const documentDeliveries = pgTable("document_deliveries", {
     sql`num_nonnulls(${t.quotationId}, ${t.installmentInvoiceId}, ${t.payslipId}) = 1`,
   ),
 }));
+
+// ── Dasbor / Tarif config (db-schema/src/schema/settings.ts) ────────────────
+// Both tables already existed pre-migrated (0001_profitability_dashboard.sql)
+// but had no Drizzle mirror at all until Dasbor's wiring pass needed them.
+
+export const corpTaxMethod = pgEnum("corp_tax_method", ["final_0_5", "badan_22"]);
+
+export const taxSettings = pgTable("tax_settings", {
+  singleton: boolean("singleton").notNull().default(true).primaryKey(),
+  ppnRate: rate("ppn_rate").notNull().default("12"),
+  ppnDppNumerator: integer("ppn_dpp_numerator").notNull().default(11),
+  ppnDppDenominator: integer("ppn_dpp_denominator").notNull().default(12),
+  pph23Rate: rate("pph23_rate").notNull().default("2"),
+  pph21SetorDay: smallint("pph21_setor_day").notNull().default(10),
+  pph21LaporDay: smallint("pph21_lapor_day").notNull().default(20),
+  pph23SetorDay: smallint("pph23_setor_day").notNull().default(10),
+  pph23LaporDay: smallint("pph23_lapor_day").notNull().default(20),
+  ppnSetorDay: smallint("ppn_setor_day").notNull().default(31),
+  bpjsSetorDay: smallint("bpjs_setor_day").notNull().default(10),
+  invoiceDueDays: integer("invoice_due_days").notNull().default(14),
+  quotationValidityDays: integer("quotation_validity_days").notNull().default(30),
+  corpTaxMethod: corpTaxMethod("corp_tax_method").notNull().default("final_0_5"),
+  corpTaxRate: rate("corp_tax_rate").notNull().default("0.5"),
+  umkmThreshold: money("umkm_threshold").notNull().default("4800000000"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const dashboardSettings = pgTable("dashboard_settings", {
+  singleton: boolean("singleton").notNull().default(true).primaryKey(),
+  projectMarginThreshold: rate("project_margin_threshold").notNull().default("0.8"),
+  forecastHorizonDays: integer("forecast_horizon_days").notNull().default(90),
+  stalledProjectDays: integer("stalled_project_days").notNull().default(30),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});

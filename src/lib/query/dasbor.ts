@@ -9,17 +9,26 @@ import type { ForecastView, AlertItem } from "@/lib/dasbor/types";
 // getProfitabilitas/getAlerts/getForekast transitively call real
 // Proyek/Realisasi RAB/Faktur/Arus Kas/Pajak service functions (DB access),
 // which can't run client-side (see src/app/api/dasbor/*/route.ts).
-export function useProfitabilitas(periode: Periode) {
+/**
+ * `enabled` defaults to true (Admin/Keuangan) — pass `false` for non-finance
+ * sessions so the request isn't even issued (belt-and-suspenders with the
+ * route's own `requireFinance` 403; see src/app/api/dasbor/profitabilitas).
+ */
+export function useProfitabilitas(periode: Periode, enabled = true) {
   return useQuery({
     queryKey: ["dasbor", "profitabilitas", periode.mulai, periode.selesai],
     queryFn: () => apiClient.get<ProfitabilitasView>(`/api/dasbor/profitabilitas?mulai=${periode.mulai}&selesai=${periode.selesai}`),
+    enabled,
+    retry: false,
   });
 }
 
-export function useForekast(horizonDays?: number) {
+export function useForekast(horizonDays?: number, enabled = true) {
   return useQuery({
     queryKey: ["dasbor", "forekast", horizonDays ?? 90],
     queryFn: () => apiClient.get<ForecastView>(`/api/dasbor/forecast${horizonDays ? `?horizonDays=${horizonDays}` : ""}`),
+    enabled,
+    retry: false,
   });
 }
 

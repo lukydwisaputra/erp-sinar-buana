@@ -25,8 +25,7 @@ import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
   useKategoriArusKasList, useCreateKategoriArusKas, useDeleteKategoriArusKas, useSetSifatBeban,
 } from "@/lib/query/expense-nature";
-import type { ExpenseNatureRow } from "@/lib/data/expense-nature";
-import type { SifatBeban } from "@/lib/schemas/expense-nature";
+import type { CashflowCategoryRow, SifatBeban } from "@/lib/schemas/expense-nature";
 
 /** HPP is intentionally excluded — it's never read by the P&L waterfall for Arus Kas
  * categories (HPP comes exclusively from Realisasi RAB), so offering it here would
@@ -43,11 +42,11 @@ const SIFAT_LABEL: Record<SifatBeban, string> = {
 };
 
 function makeColumns(
-  onEditSifat: (row: ExpenseNatureRow) => void,
-  onDelete: (row: ExpenseNatureRow) => void,
-): ColumnDef<ExpenseNatureRow>[] {
+  onEditSifat: (row: CashflowCategoryRow) => void,
+  onDelete: (row: CashflowCategoryRow) => void,
+): ColumnDef<CashflowCategoryRow>[] {
   return [
-    rowNumberColumn<ExpenseNatureRow>(),
+    rowNumberColumn<CashflowCategoryRow>(),
     { accessorKey: "kategori", header: "Kategori", enableSorting: false, meta: { className: "min-w-40" } },
     {
       accessorKey: "sifat", header: "Sifat Beban", enableSorting: false, meta: { className: "text-center" },
@@ -148,7 +147,7 @@ function CreateForm({ open, onOpenChange }: { open: boolean; onOpenChange: (open
 function EditSifatDialog({
   row, onOpenChange,
 }: {
-  row: ExpenseNatureRow | null;
+  row: CashflowCategoryRow | null;
   onOpenChange: (open: boolean) => void;
 }) {
   const { mutate, isPending } = useSetSifatBeban();
@@ -184,7 +183,7 @@ function EditSifatDialog({
             disabled={isPending}
             onClick={() => {
               if (!row) return;
-              mutate({ kategori: row.kategori, sifat }, { onSuccess: () => onOpenChange(false) });
+              mutate({ id: row.id, sifat }, { onSuccess: () => onOpenChange(false) });
             }}
           >
             {isPending ? "Menyimpan…" : "Simpan"}
@@ -199,8 +198,8 @@ export function KategoriArusKasTab() {
   const { data, isLoading } = useKategoriArusKasList();
   const { mutate: deleteKategori, isPending: isDeleting } = useDeleteKategoriArusKas();
   const [createOpen, setCreateOpen] = React.useState(false);
-  const [editTarget, setEditTarget] = React.useState<ExpenseNatureRow | null>(null);
-  const [deleteTarget, setDeleteTarget] = React.useState<ExpenseNatureRow | null>(null);
+  const [editTarget, setEditTarget] = React.useState<CashflowCategoryRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<CashflowCategoryRow | null>(null);
 
   const columns = makeColumns(setEditTarget, setDeleteTarget);
 
@@ -230,7 +229,7 @@ export function KategoriArusKasTab() {
               disabled={isDeleting}
               onClick={() => {
                 if (!deleteTarget) return;
-                deleteKategori(deleteTarget.kategori, { onSuccess: () => setDeleteTarget(null) });
+                deleteKategori(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
               }}
             >
               Hapus

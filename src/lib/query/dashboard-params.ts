@@ -1,19 +1,24 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getDashboardParams, updateDashboardParams } from "@/lib/data/dashboard-params";
+import { apiClient } from "@/lib/api-client";
 import type { DashboardParams } from "@/lib/schemas/dashboard-params";
 
+const KEY = ["dashboard-params"];
+
 export function useDashboardParams() {
-  return useQuery({ queryKey: ["dashboard-params"], queryFn: getDashboardParams });
+  return useQuery({
+    queryKey: KEY,
+    queryFn: () => apiClient.get<DashboardParams>("/api/dasbor/settings"),
+  });
 }
 
 export function useUpdateDashboardParams() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: DashboardParams) => updateDashboardParams(input),
+    mutationFn: (input: DashboardParams) => apiClient.patch<DashboardParams>("/api/dasbor/settings", input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["dashboard-params"] });
+      qc.invalidateQueries({ queryKey: KEY });
       toast.success("Parameter dasbor diperbarui.");
     },
     onError: () => {

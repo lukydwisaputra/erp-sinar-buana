@@ -1,13 +1,12 @@
 import { listAll as listFaktur } from "@/lib/faktur/service";
 import { flattenTermins } from "@/lib/faktur/mapping";
 import { listProyek } from "@/lib/proyek/service";
-import { listPenawaran } from "@/lib/data/penawaran";
+import { listQuotations } from "@/lib/penawaran/service";
 import { listAll as listRealisasiRab } from "@/lib/realisasi-rab/service";
-import { listArusKas } from "@/lib/arus-kas/service";
-import { listExpenseNature } from "@/lib/data/expense-nature";
-import { getPajakConfig } from "@/lib/data/pajak-config";
-import { getDashboardParams } from "@/lib/data/dashboard-params";
-import { DEFAULT_SIFAT } from "@/lib/fixtures/expense-nature";
+import { listArusKas, listCashflowCategories } from "@/lib/arus-kas/service";
+import { getPajakConfig } from "@/lib/dasbor/pajak-config-service";
+import { getDashboardSettings } from "@/lib/dasbor/settings-service";
+import { DEFAULT_SIFAT } from "@/lib/schemas/expense-nature";
 import type { SifatBeban } from "@/lib/schemas/expense-nature";
 import type { Sph } from "@/lib/schemas/penawaran";
 import type { LabaRugi, Periode, ProyekProfit } from "@/lib/dasbor/types";
@@ -20,12 +19,12 @@ export async function getProfitabilitas(userId: string, periode: Periode): Promi
   const [induks, proyeks, penawarans, realisasi, arusKas, natureRows, config, params] = await Promise.all([
     listFaktur(userId),
     listProyek(userId),
-    listPenawaran(),
+    listQuotations(userId),
     listRealisasiRab(userId),
     listArusKas(userId),
-    listExpenseNature(),
-    getPajakConfig(),
-    getDashboardParams(),
+    listCashflowCategories(userId),
+    getPajakConfig(userId),
+    getDashboardSettings(userId),
   ]);
   const fakturs = flattenTermins(induks);
 
