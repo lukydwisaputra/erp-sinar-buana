@@ -47,6 +47,7 @@ import { cashflowEntries } from "./cashflow";
 import { rabActuals } from "./profitability";
 import { taxEntries } from "./tax";
 import { attachments } from "./attachments";
+import { documentDeliveries } from "./deliveries";
 
 // ── Identity ──────────────────────────────────────────────────────────────────
 export const userProfilesRelations = relations(userProfiles, ({ one, many }) => ({
@@ -149,6 +150,7 @@ export const quotationsRelations = relations(quotations, ({ one, many }) => ({
   rabPersonnel: many(quotationRabPersonnel),
   rabDirectCosts: many(quotationRabDirectCosts),
   schedules: many(activitySchedules),
+  deliveries: many(documentDeliveries),
 }));
 
 export const quotationItemsRelations = relations(quotationItems, ({ one }) => ({
@@ -415,6 +417,7 @@ export const installmentInvoicesRelations = relations(
     cashflowEntries: many(cashflowEntries),
     taxEntries: many(taxEntries),
     attachments: many(attachments),
+    deliveries: many(documentDeliveries),
   }),
 );
 
@@ -428,6 +431,7 @@ export const payslipsRelations = relations(payslips, ({ one, many }) => ({
   cashflowEntries: many(cashflowEntries),
   taxEntries: many(taxEntries),
   attachments: many(attachments),
+  deliveries: many(documentDeliveries),
 }));
 
 export const payslipComponentsRelations = relations(
@@ -506,3 +510,26 @@ export const attachmentsRelations = relations(attachments, ({ one }) => ({
     references: [payslips.id],
   }),
 }));
+
+// ── Pengiriman Dokumen ────────────────────────────────────────────────────────
+export const documentDeliveriesRelations = relations(
+  documentDeliveries,
+  ({ one }) => ({
+    quotation: one(quotations, {
+      fields: [documentDeliveries.quotationId],
+      references: [quotations.id],
+    }),
+    installmentInvoice: one(installmentInvoices, {
+      fields: [documentDeliveries.installmentInvoiceId],
+      references: [installmentInvoices.id],
+    }),
+    payslip: one(payslips, {
+      fields: [documentDeliveries.payslipId],
+      references: [payslips.id],
+    }),
+    createdByUser: one(userProfiles, {
+      fields: [documentDeliveries.createdBy],
+      references: [userProfiles.id],
+    }),
+  }),
+);

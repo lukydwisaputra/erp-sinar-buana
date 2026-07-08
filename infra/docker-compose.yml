@@ -1,9 +1,10 @@
-# SBMJ ERP — reference stack (4 services). Mirrors docs/architecture.md §2.
+# SBMJ ERP — reference stack (5 services). Mirrors docs/architecture.md §2.
 #
-# Local dev: `docker compose up -d postgres minio` boots the data plane today.
-# The `app` and `worker` services are wired but commented until their
-# Dockerfiles exist (no app code yet). On Coolify, deploy each as its own
-# resource and put Cloudflare (Tunnel) in front of `app` only.
+# Local dev: `docker compose up -d postgres minio maildev` boots the data
+# plane + a dev SMTP catcher today. The `app` and `worker` services are wired
+# but commented until their Dockerfiles exist (no app code yet). On Coolify,
+# deploy each as its own resource and put Cloudflare (Tunnel) in front of
+# `app` only — `maildev` is dev-only, never deployed.
 
 services:
   postgres:
@@ -54,6 +55,18 @@ services:
       timeout: 5s
       retries: 5
 
+  # Dev-only SMTP catcher — Pengiriman's "Akun Email/SMTP" points here in
+  # local dev (host=localhost, port=1025, any username/password) so the full
+  # pg-boss → nodemailer pipeline (scripts/worker.ts) can be exercised
+  # end-to-end without real-world SMTP credentials. Web UI at :1080 shows
+  # every caught email. Never deployed — production points at a real SMTP
+  # account instead (see email_accounts, configured via Konfigurasi).
+  maildev:
+    image: maildev/maildev:latest
+    ports:
+      - "1080:1080" # web UI
+      - "1025:1025" # SMTP endpoint
+
   # app:
   #   build: ../app            # Next.js (UI + API + auth)
   #   environment:
@@ -61,7 +74,7 @@ services:
   #     S3_ENDPOINT: http://minio:9000
   #     S3_ACCESS_KEY: ${MINIO_ROOT_USER}
   #     S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-  #     RESEND_API_KEY: ${RESEND_API_KEY}
+  #     ENCRYPTION_KEY: ${ENCRYPTION_KEY}
   #     SENTRY_DSN: ${SENTRY_DSN}
   #   depends_on: { postgres: { condition: service_healthy }, minio: { condition: service_healthy } }
   #   ports: ["3000:3000"]
@@ -71,8 +84,10 @@ services:
   #   command: ["node", "dist/worker.js"]
   #   environment:
   #     DATABASE_URL: postgres://app:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-sbmj_erp}
-  #     RESEND_API_KEY: ${RESEND_API_KEY}
+  #     ENCRYPTION_KEY: ${ENCRYPTION_KEY}
   #   depends_on: { postgres: { condition: service_healthy } }
+  #   # SMTP credentials are app-managed data (email_accounts, admin-configured
+  #   # via Konfigurasi), not container env — the worker reads them from Postgres.
 
 volumes:
   pg_data:

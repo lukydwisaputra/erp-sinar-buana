@@ -162,6 +162,13 @@ export const auditAction = pgEnum("audit_action", [
   "hard_delete",
 ]);
 
+/** Delivery status of a queued email send (PRD Bab 9.5 / 11.2). WhatsApp sends go straight to "sent" — this only tracks the async email pipeline. */
+export const documentDeliveryStatus = pgEnum("document_delivery_status", [
+  "queued",
+  "sent",
+  "failed",
+]);
+
 /** In-app / email notification categories (PRD Bab 13 / Dasbor Pusat Perhatian 8.5). */
 export const notificationType = pgEnum("notification_type", [
   "tax_due", // H-3 tax due reminder

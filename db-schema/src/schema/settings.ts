@@ -105,6 +105,24 @@ export const numberingSettings = pgTable("numbering_settings", {
 });
 
 /**
+ * SMTP account used to send documents by email (PRD Bab 9.5). Singleton —
+ * `passwordEncrypted` is AES-256-GCM ciphertext (src/lib/crypto.ts in the app),
+ * never stored or returned in plaintext. `isConfigured` flips true only after a
+ * successful connection test/save, mirroring the Konfigurasi UI's own gate.
+ */
+export const emailAccounts = pgTable("email_accounts", {
+  singleton: singletonGuard,
+  host: text("host"),
+  port: integer("port"),
+  username: text("username"),
+  passwordEncrypted: text("password_encrypted"),
+  fromNama: text("from_nama"),
+  fromEmail: text("from_email"),
+  isConfigured: boolean("is_configured").notNull().default(false),
+  ...timestamps,
+});
+
+/**
  * Per-(docType, year, month) running counter (PRD Bab 9.5).
  * Counters are SEPARATE per doc type and RESET each month. Numbers are assigned
  * once at creation and never change on edit — enforced by the numbering trigger

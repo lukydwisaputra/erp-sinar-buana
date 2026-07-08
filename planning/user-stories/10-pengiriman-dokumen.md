@@ -17,6 +17,17 @@ Standar **set aksi dokumen** yang konsisten untuk semua dokumen yang dihasilkan 
 Pengiriman via **WhatsApp** (`wa.me` + lampir PDF manual, tanpa biaya gateway) dan **Email
 otomatis** (PDF terlampir, perlu SMTP).
 
+> **Status implementasi (2026-07-08):** Kirim WhatsApp (FR-10.3) dan Kirim Email
+> (FR-10.4) tersambung ke backend nyata — riwayat pengiriman (`document_deliveries`)
+> tersimpan permanen di Postgres, bukan lagi state mock. Kirim WhatsApp tetap sinkron
+> (buka `wa.me`, langsung tercatat "Terkirim"); Kirim Email kini benar-benar mengantre
+> lewat `pg-boss` dan dikirim oleh worker Node terpisah (`nodemailer` ke akun SMTP yang
+> dikonfigurasi Admin) — statusnya `Menunggu` → `Terkirim`/`Gagal`, bukan langsung
+> sukses. **Belum diimplementasikan pass ini:** melampirkan PDF secara otomatis ke email
+> (FR-10.4 masih mengirim subjek+isi teks saja, tanpa lampiran) — dilampirkan manual
+> untuk WhatsApp seperti sebelumnya, dan untuk Email PDF belum di-generate/attach sama
+> sekali. FR-10.7 (duplikasi template PDF) tetap belum dibangun.
+
 ---
 
 ## 2. Functional Requirements

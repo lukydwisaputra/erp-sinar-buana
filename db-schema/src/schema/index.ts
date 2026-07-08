@@ -18,4 +18,5 @@ export * from "./tax";
 export * from "./audit";
 export * from "./notifications";
 export * from "./attachments";
+export * from "./deliveries";
 export * from "./relations";

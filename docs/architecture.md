@@ -93,7 +93,7 @@ only when server logic outgrows it) · **Zod** validation · **Pino** logging ·
 | File storage | **MinIO** via `@aws-sdk/client-s3` + presigned URLs (see §6) |
 | Periodic SQL jobs | **pg_cron** |
 | App jobs / queue | **pg-boss** (Postgres-backed — no Redis) |
-| Email | **Resend + React Email** (sent from the worker) |
+| Email | **nodemailer over admin-configured SMTP** (sent from the worker) — a deliberate deviation from the original Resend plan, made when Pengiriman was wired (§7); Resend's single-API-key model doesn't fit the already-built "Akun Email/SMTP" UI, which lets Admin configure any mail server (host/port/username/password, AES-256-GCM-encrypted at rest) rather than a fixed provider |
 | Error tracking | **GlitchTip / Sentry free hosted tier** (not self-hosted) |
 
 ### Removed vs. the original proposal (redundancy eliminated)
@@ -145,7 +145,11 @@ JWT, because the RLS model only needs `app.user_id` and sessions are revocable.
   sessions — [FR-01.6/01.9](../planning/user-stories/01-autentikasi-akun.md)).
 - **Primitives:** Oslo (`oslo/password`, `oslo/crypto`) + our own session table —
   no heavy auth framework.
-- **Invitation & reset tokens:** single-use, expiring rows; sent via Resend.
+- **Invitation & reset tokens:** single-use, expiring rows. Still a
+  pre-existing gap as of the Pengiriman pass (§7) — actual delivery isn't
+  wired for this specific flow (invite/reset links are shown directly in the
+  Admin UI instead, not emailed); the real SMTP/queue pipeline built for
+  Pengiriman would be the natural mechanism if this gets picked up later.
   ([US-01.2 / US-01.4](../planning/user-stories/01-autentikasi-akun.md)).
 - **Account ↔ employee:** 1:1, written into `auth.users` (which `user_profiles`
   already 1:1-extends in the schema).
@@ -173,7 +177,7 @@ S3-compatible storage on Coolify, accessed with `@aws-sdk/client-s3`.
 | Need | Mechanism | Examples |
 | --- | --- | --- |
 | Pure-SQL periodic | **pg_cron** | `mark_overdue_tax_entries`, monthly numbering resets |
-| App jobs (need Node) | **pg-boss** | Resend emails, invoice/SPH PDF rendering, H-3 due reminders, notification fan-out |
+| App jobs (need Node) | **pg-boss** | Pengiriman emails (nodemailer over admin-configured SMTP), invoice/SPH PDF rendering, H-3 due reminders, notification fan-out |
 
 - Both are Postgres-backed — **no Redis**.
 - App-side side effects are **enqueued inside the request's transaction** (the
@@ -181,6 +185,16 @@ S3-compatible storage on Coolify, accessed with `@aws-sdk/client-s3`.
   effects are observable, testable, and retryable.
 - The worker connects as `service_role` (it acts system-wide) — a marked
   exception per §4.
+
+**Pengiriman is the first background job actually built** (2026-07-08,
+`scripts/worker.ts`) — see the Pengiriman module writeup below for the
+"outbox-lite" simplification actually shipped (enqueue immediately *after* the
+transaction commits, not literally inside it — pg-boss's own connection pool
+is separate from the app's per-request Drizzle transaction, and no verified
+API exists for true co-transactional enqueue). The worker is standalone (no
+`@/` import alias — only Next's bundler resolves that), reimplementing
+`withServiceRole`'s `set local role service_role` locally with a plain
+`postgres()` client, same convention as `scripts/seed-*.ts`.
 
 ## 8. Observability
 
@@ -457,6 +471,84 @@ bypassing the real data layer entirely for contact info) is gone —
 `telepon`/`email` are now resolved server-side from the employee row at
 read time, same precedent as Faktur's bank-account resolution. See
 `planning/prd/05-dokumen-bisnis.md` for the reconciled Penggajian shape.
+
+Pengiriman (the ninth module wired) had two genuine schema gaps — no
+`email_accounts` (SMTP config) or send-log table existed anywhere in
+`db-schema` — alongside one already-complete piece, `message_templates`
+(email + WhatsApp subject/body per doc type, fully seeded since
+`0000_init.sql`, just never read by the app). It's also this repo's first
+background-job build: no pg-boss/nodemailer/worker code existed before this
+pass, even though this doc already described the intended shape.
+
+- **`email_accounts`** (new singleton, `migrations/0010`) — SMTP
+  host/port/username/`passwordEncrypted` (AES-256-GCM via `src/lib/crypto.ts`,
+  a new `ENCRYPTION_KEY` env var)/fromNama/fromEmail/`isConfigured`. RLS is
+  admin-only *read* (not the broader `read_auth` every other settings
+  singleton gets) since this one holds a secret. The password is never
+  returned to the client, decrypted or otherwise — `toEmailAkun()`'s DTO type
+  has no password field at all, and the Konfigurasi edit form always starts
+  blank rather than prefilling the old plaintext value the mock used to.
+- **`document_deliveries`** (new table, own file `deliveries.ts`) — a send-log
+  row per SPH/Invoice/Slip actually sent. Follows `attachments`' "explicit
+  nullable owner FKs, not a polymorphic type+id pair" convention
+  (`quotationId`/`installmentInvoiceId`/`payslipId`), but goes one step
+  further: it's the **first table in this repo with a real enforced
+  Postgres `CHECK`** (`num_nonnulls(...) = 1`) — the equivalent claim on
+  `attachments`' own header comment turned out to be aspirational prose, not
+  an actual constraint, discovered while planning this migration.
+- **The full async pipeline was built, not deferred** (the user's explicit
+  choice over a synchronous-send or persistence-only cut): clicking Kirim→
+  Email inserts a `queued` row, then enqueues a pg-boss job
+  (`pengiriman.email`) immediately after the transaction commits — an
+  "outbox-lite" simplification versus a literal same-transaction enqueue,
+  which pg-boss doesn't cleanly support. `scripts/worker.ts` (a new
+  long-running process, `npm run worker`) consumes the queue, decrypts the
+  SMTP password, re-reads `message_templates` fresh at send time (a template
+  fixed after a job is queued should still apply — the alternative,
+  snapshotting at enqueue time, would silently miss already-queued jobs),
+  resolves that document's tokens (`{no_sph}`/`{nama_perusahaan}`/`{pic}`/
+  `{no_inv}`/`{jatuh_tempo}`/`{nama_karyawan}`/`{periode}` — richer than the
+  mock's flat `{perusahaan}`/`{nomor}` pair) via nodemailer, and flips
+  `status` to `sent`/`failed` with the real error message on completion.
+  WhatsApp is unchanged — still an immediate client-side `window.open` +
+  synchronous log write, no queue involved (`fn_payslip_after_change`-style
+  "why would this need a job" reasoning: WhatsApp's own send already
+  happened by the time the app ever sees it).
+- **A real infra gap found standing the worker up** (same shape as Auth's
+  original `app`-role grants gap): the `app` LOGIN role inherits
+  `service_role`'s table grants, but not database-level `CREATE` — pg-boss's
+  `boss.start()` provisions its own `pgboss` schema using the app's own
+  connection (there's no separate physical login for `service_role`, only
+  `SET LOCAL ROLE` within a session), and failed with "permission denied for
+  database" until `infra/postgres/init/00-roles.sh` was extended with
+  `GRANT CREATE ON DATABASE ... TO app`.
+- **A real bug found forcing the failure path** (curl-verified by pointing
+  the dev SMTP account at a closed port): the worker's catch-block fallback
+  `UPDATE document_deliveries SET status = 'failed', ...` initially ran on a
+  bare connection *after* the failed transaction had already rolled back its
+  own `SET LOCAL ROLE service_role` — so the un-elevated `app`-role statement
+  was silently filtered by RLS (no staff UPDATE policy exists on
+  `document_deliveries` by design) and the row stayed `queued` forever with
+  no error surfaced anywhere. Fixed by re-wrapping the failure-path update in
+  its own `service_role`-elevated `sql.begin(...)`. Worth checking for this
+  same shape (a fallback/error-path DB write outside the block that actually
+  elevated the role) in any future worker/background-job code in this repo.
+- **WhatsApp templates became editable**, matching what `message_templates`
+  already stored (3 seeded `whatsapp` rows nothing read before this pass) —
+  Konfigurasi's Pengiriman tab gained a WhatsApp sub-section alongside each
+  document type's existing email template, both independently editable.
+- **Kept, not replaced**: the SMTP-style "bring your own mail server" config
+  model (host/port/username/password) the mock already had a full working UI
+  for, sending via **nodemailer** rather than switching to Resend's
+  single-API-key model — a deliberate divergence from this doc's original
+  Resend plan (see §3/§7 above), decided when this module confirmed the two
+  models don't actually fit the same UI.
+
+Local dev exercises the whole pipeline for real via a new `maildev` service
+in `infra/docker-compose.yml` (`docker compose up -d postgres minio maildev`)
+— an unauthenticated SMTP catcher at `localhost:1025`, web UI at
+`localhost:1080` — rather than needing real-world SMTP credentials just to
+verify the queue → worker → send → status-flip chain end to end.
 
 ## 10. Open / deferred
 

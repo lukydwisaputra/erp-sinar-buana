@@ -19,6 +19,8 @@
     "seed:realisasi-rab": "node --env-file=.env.local scripts/seed-realisasi-rab.ts",
     "seed:faktur": "node --env-file=.env.local scripts/seed-faktur.ts",
     "seed:penggajian": "node --env-file=.env.local scripts/seed-penggajian.ts",
+    "seed:pengiriman": "node --env-file=.env.local scripts/seed-pengiriman.ts",
+    "worker": "node --env-file=.env.local scripts/worker.ts",
     "screenshot:docs": "node --env-file=.env.local scripts/screenshot-docs.ts"
   },
   "dependencies": {
@@ -37,6 +39,8 @@
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
     "next-themes": "^0.4.6",
+    "nodemailer": "^9.0.3",
+    "pg-boss": "^12.25.1",
     "postgres": "^3.4.9",
     "radix-ui": "^1.5.0",
     "react": "19.2.4",
@@ -53,6 +57,7 @@
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

@@ -68,6 +68,14 @@ masih belum tersambung ke pengaturan nyata.)*
   jenis dokumen (SPH, Invoice, Slip Gaji).
 - **WhatsApp (wa.me):** **template pesan** default per jenis dokumen.
 
+> **Status implementasi:** sudah tersambung penuh ke Postgres (2026-07-08) — akun
+> email/SMTP tersimpan nyata (password terenkripsi AES-256-GCM), template email **dan**
+> WhatsApp kini sama-sama dapat diedit dari tab ini (sebelumnya WA hanya teks tetap di
+> kode), dan Kirim Email benar-benar mengantre & mengirim lewat `pg-boss` + worker Node
+> (`nodemailer`, bukan penyedia pihak ketiga) — bukan lagi sekadar mencatat log seperti
+> versi prototipe. Lihat `docs/architecture.md` §7 untuk detail pipeline & keputusan
+> nodemailer-vs-Resend.
+
 ### 9.6 Userflow — Konfigurasi
 ```mermaid
 flowchart TD

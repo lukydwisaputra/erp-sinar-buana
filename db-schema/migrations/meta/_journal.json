@@ -71,6 +71,13 @@
       "when": 1783446239541,
       "tag": "0009_payslip_numbering_and_planned_pay_date",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783472251295,
+      "tag": "0010_pengiriman_email_accounts_and_deliveries",
+      "breakpoints": true
     }
   ]
 }
