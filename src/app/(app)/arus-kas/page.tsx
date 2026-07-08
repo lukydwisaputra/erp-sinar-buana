@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
@@ -244,8 +245,10 @@ function SummaryCards({ entries, showDelta = true }: { entries: ArusKasEntry[]; 
 
 // ── Main Page ─────────────────────────────────────────────────────────────
 
-export default function ArusKasPage() {
+function ArusKasPageContent() {
   const { data, isLoading, isError, refetch } = useArusKasList();
+  const searchParams = useSearchParams();
+  const kategoriParam = searchParams.get("kategori");
 
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [pendingJenis, setPendingJenis] = React.useState<ArusKasJenis[]>([]);
@@ -253,7 +256,8 @@ export default function ArusKasPage() {
   const [pendingSumber, setPendingSumber] = React.useState<ArusKasSumber[]>([]);
   const [pendingTanggal, setPendingTanggal] = React.useState<DateRange | undefined>();
   const [appliedJenis, setAppliedJenis] = React.useState<ArusKasJenis[]>([]);
-  const [appliedKategori, setAppliedKategori] = React.useState<string[]>([]);
+  // FR-09.6 drilldown — Dasbor's category pie/table links here with ?kategori=
+  const [appliedKategori, setAppliedKategori] = React.useState<string[]>(kategoriParam ? [kategoriParam] : []);
   const [appliedSumber, setAppliedSumber] = React.useState<ArusKasSumber[]>([]);
   const [appliedTanggal, setAppliedTanggal] = React.useState<DateRange | undefined>();
 
@@ -408,5 +412,13 @@ export default function ArusKasPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function ArusKasPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <ArusKasPageContent />
+    </React.Suspense>
   );
 }

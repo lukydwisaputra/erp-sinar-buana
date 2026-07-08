@@ -74,7 +74,8 @@ export type AlertJenis =
   | "bukti_potong_belum"
   | "proyek_over_budget"
   | "proyek_margin_slip"
-  | "proyek_mangkrak";
+  | "proyek_mangkrak"
+  | "milestone_slipping";
 
 export type AlertPrioritas = "tinggi" | "sedang";
 

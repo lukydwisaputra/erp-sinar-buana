@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/get-current-session";
-import { requireRole } from "@/lib/auth/rbac";
+import { requireFinance } from "@/lib/auth/rbac";
 import { getForekast } from "@/lib/dasbor/forecast-view";
 import { errorResponse } from "@/lib/api-error";
 
-/** See dasbor/alerts/route.ts's comment — getForekast now transitively
- * depends on real Faktur/Arus Kas/Pajak service calls (DB access), which can
- * no longer run client-side. */
+/** Proyeksi Arus Kas & Runway is view_forecast territory (PRD Bab 8.7) —
+ * 403 before the service ever runs for non-finance callers. */
 export async function GET(request: NextRequest) {
   try {
-    const session = requireRole(
-      await getCurrentSession(),
-      "admin", "keuangan", "sales", "tim_teknis", "viewer",
-    );
+    const session = requireFinance(await getCurrentSession());
     const horizonParam = request.nextUrl.searchParams.get("horizonDays");
     const horizonDays = horizonParam ? Number(horizonParam) : undefined;
     const view = await getForekast(session.id, horizonDays);

@@ -10,7 +10,7 @@ import type { FakturTerminRow } from "@/lib/faktur/mapping";
 // Minimal termin factory — only fields the engine reads.
 function mk(partial: Partial<FakturTerminRow>): FakturTerminRow {
   return {
-    id: "INV-1", proyekId: "P1", perusahaanNama: "PT A",
+    id: "INV-1", indukId: "MI-1", proyekId: "P1", perusahaanNama: "PT A",
     tanggal: "2026-06-10", jatuhTempo: "2026-07-10", statusSystemRole: null,
     nilaiTermin: 100_000_000, pph23: 2_000_000, netIncome: 98_000_000, totalSetelahPajak: 109_000_000,
     ...partial,

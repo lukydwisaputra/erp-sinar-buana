@@ -17,7 +17,7 @@ const ak = (jenis: "kredit" | "debit", jumlah: number): ArusKasEntry => ({
 });
 
 const mkFaktur = (id: string, jatuhTempo: string, statusSystemRole: string | null = null): FakturTerminRow => ({
-  id, proyekId: "P1", perusahaanNama: "PT Klien",
+  id, indukId: "MI-" + id, proyekId: "P1", perusahaanNama: "PT Klien",
   tanggal: "2026-06-01", jatuhTempo, statusSystemRole,
   nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
 });

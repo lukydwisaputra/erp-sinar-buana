@@ -1,29 +1,25 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  listExpenseNature, listExpenseNatureRows, setSifatBeban, createKategoriArusKas, deleteKategoriArusKas,
-} from "@/lib/data/expense-nature";
-import type { SifatBeban } from "@/lib/schemas/expense-nature";
+import { apiClient } from "@/lib/api-client";
+import type { CashflowCategoryRow, CreateCashflowCategoryInput, SifatBeban } from "@/lib/schemas/expense-nature";
 
-export function useExpenseNatureList() {
-  return useQuery({ queryKey: ["expense-nature"], queryFn: listExpenseNature });
-}
+const KEY = ["cashflow-categories"];
 
 export function useKategoriArusKasList() {
-  return useQuery({ queryKey: ["expense-nature", "rows"], queryFn: listExpenseNatureRows });
-}
-
-function invalidateExpenseNature(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: ["expense-nature"] }); // matches both ["expense-nature"] and ["expense-nature","rows"]
+  return useQuery({
+    queryKey: KEY,
+    queryFn: () => apiClient.get<CashflowCategoryRow[]>("/api/arus-kas/categories"),
+  });
 }
 
 export function useCreateKategoriArusKas() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ kategori, sifat }: { kategori: string; sifat: SifatBeban }) => createKategoriArusKas(kategori, sifat),
+    mutationFn: (input: CreateCashflowCategoryInput) =>
+      apiClient.post<CashflowCategoryRow>("/api/arus-kas/categories", input),
     onSuccess: () => {
-      invalidateExpenseNature(qc);
+      qc.invalidateQueries({ queryKey: KEY });
       toast.success("Kategori Arus Kas ditambahkan.");
     },
     onError: (err) => {
@@ -35,9 +31,9 @@ export function useCreateKategoriArusKas() {
 export function useDeleteKategoriArusKas() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (kategori: string) => deleteKategoriArusKas(kategori),
+    mutationFn: (id: string) => apiClient.delete(`/api/arus-kas/categories/${id}`),
     onSuccess: () => {
-      invalidateExpenseNature(qc);
+      qc.invalidateQueries({ queryKey: KEY });
       toast.success("Kategori Arus Kas dihapus.");
     },
     onError: (err) => {
@@ -49,10 +45,10 @@ export function useDeleteKategoriArusKas() {
 export function useSetSifatBeban() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ kategori, sifat }: { kategori: string; sifat: SifatBeban }) =>
-      setSifatBeban(kategori, sifat),
+    mutationFn: ({ id, sifat }: { id: string; sifat: SifatBeban }) =>
+      apiClient.patch<CashflowCategoryRow>(`/api/arus-kas/categories/${id}`, { sifat }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["expense-nature"] });
+      qc.invalidateQueries({ queryKey: KEY });
       toast.success("Sifat beban kategori diperbarui.");
     },
     onError: () => {

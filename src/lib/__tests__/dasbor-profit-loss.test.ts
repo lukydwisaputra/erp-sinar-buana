@@ -11,7 +11,7 @@ const finalCfg: PajakConfig = { metode: "final_05", tarifFinalPersen: 0.5, tarif
 
 function mkFaktur(p: Partial<FakturTerminRow>): FakturTerminRow {
   return {
-    id: "INV-1", proyekId: "P1", perusahaanNama: "PT A",
+    id: "INV-1", indukId: "MI-1", proyekId: "P1", perusahaanNama: "PT A",
     tanggal: "2026-06-10", jatuhTempo: "2026-07-10", statusSystemRole: null,
     nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
     ...p,

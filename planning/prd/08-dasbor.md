@@ -15,6 +15,14 @@ job-desc, semua **disaring per peran (RBAC)**.
 > mengukur **profitabilitas (akrual)**. Keduanya ditampilkan terpisah & tidak dicampur —
 > lihat [Bab 10.4](10-penanganan-pajak.md#104-pendapatan-kotor-bersih-laba-rugi--perlakuan-arus-kas).
 
+> **Status implementasi (2026-07-08):** modul ini sudah tersambung penuh ke Postgres,
+> termasuk seluruh panel di bawah (8.1–8.6) dan penyaringan per peran (8.7) yang benar-benar
+> ditegakkan di server (`view_profit`/`view_project_cost`/`view_forecast`/`view_tax_detail`
+> — lihat `docs/architecture.md`). Satu penyederhanaan yang disengaja: Sales belum dibatasi
+> ke penawaran/proyek miliknya sendiri secara spesifik (butuh perubahan di modul Penawaran
+> di luar cakupan pass ini) — Sales & Tim Teknis & Viewer sama-sama mendapat dasbor yang
+> sama minus panel finansial, bukan versi yang dibatasi per-kepemilikan.
+
 ### 8.1 Ringkasan Keuangan Bulanan (Arus Kas)
 | Metrik | Keterangan |
 | --- | --- |

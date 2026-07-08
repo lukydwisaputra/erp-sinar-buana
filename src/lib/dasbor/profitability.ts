@@ -1,31 +1,39 @@
 import { listAll as listFaktur } from "@/lib/faktur/service";
 import { flattenTermins } from "@/lib/faktur/mapping";
 import { listProyek } from "@/lib/proyek/service";
-import { listPenawaran } from "@/lib/data/penawaran";
+import { listQuotations } from "@/lib/penawaran/service";
 import { listAll as listRealisasiRab } from "@/lib/realisasi-rab/service";
-import { listArusKas } from "@/lib/arus-kas/service";
-import { listExpenseNature } from "@/lib/data/expense-nature";
-import { getPajakConfig } from "@/lib/data/pajak-config";
-import { getDashboardParams } from "@/lib/data/dashboard-params";
-import { DEFAULT_SIFAT } from "@/lib/fixtures/expense-nature";
+import { listArusKas, listCashflowCategories } from "@/lib/arus-kas/service";
+import { getPajakConfig } from "@/lib/dasbor/pajak-config-service";
+import { getDashboardSettings } from "@/lib/dasbor/settings-service";
+import { DEFAULT_SIFAT } from "@/lib/schemas/expense-nature";
 import type { SifatBeban } from "@/lib/schemas/expense-nature";
 import type { Sph } from "@/lib/schemas/penawaran";
+import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
 import type { LabaRugi, Periode, ProyekProfit } from "@/lib/dasbor/types";
 import { computeLabaRugi } from "@/lib/dasbor/profit-loss";
 import { computeProjectProfitability } from "@/lib/dasbor/project-profit";
+import { computeMonthlyTrend, type TrendPoint } from "@/lib/dasbor/trend";
 
-export type ProfitabilitasView = { labaRugi: LabaRugi; proyek: ProyekProfit[] };
+export type ProfitabilitasView = {
+  labaRugi: LabaRugi;
+  proyek: ProyekProfit[];
+  /** Raw entries for the period — feeds FR-09.1/09.2/09.3's cashflow widgets client-side (pure functions, no extra route needed). */
+  arusKas: ArusKasEntry[];
+  /** FR-09.12 — MoM trend (Pendapatan/Laba/Kas), trailing 6 months ending today. */
+  trend: TrendPoint[];
+};
 
 export async function getProfitabilitas(userId: string, periode: Periode): Promise<ProfitabilitasView> {
   const [induks, proyeks, penawarans, realisasi, arusKas, natureRows, config, params] = await Promise.all([
     listFaktur(userId),
     listProyek(userId),
-    listPenawaran(),
+    listQuotations(userId),
     listRealisasiRab(userId),
     listArusKas(userId),
-    listExpenseNature(),
-    getPajakConfig(),
-    getDashboardParams(),
+    listCashflowCategories(userId),
+    getPajakConfig(userId),
+    getDashboardSettings(userId),
   ]);
   const fakturs = flattenTermins(induks);
 
@@ -35,6 +43,8 @@ export async function getProfitabilitas(userId: string, periode: Periode): Promi
 
   const labaRugi = computeLabaRugi({ fakturs, realisasi, arusKas, natureOf, config, periode });
   const proyek = computeProjectProfitability({ proyeks, sphById, fakturs, realisasi, ambang: params.ambangMarginProyek });
+  const today = new Date().toISOString().slice(0, 10);
+  const trend = computeMonthlyTrend({ fakturs, realisasi, arusKas, natureOf, config, today });
 
-  return { labaRugi, proyek };
+  return { labaRugi, proyek, arusKas, trend };
 }
