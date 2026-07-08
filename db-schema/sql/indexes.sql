@@ -24,6 +24,10 @@ create index if not exists idx_quotation_rab_pers_quotation on quotation_rab_per
 create index if not exists idx_quotation_rab_pers_item on quotation_rab_personnel (quotation_item_id);
 create index if not exists idx_quotation_rab_direct_quotation on quotation_rab_direct_costs (quotation_id);
 create index if not exists idx_quotation_rab_direct_item on quotation_rab_direct_costs (quotation_item_id);
+create index if not exists idx_kelengkapan_template_items_template on kelengkapan_template_items (template_id);
+create index if not exists idx_quotation_kelengkapan_quotation on quotation_kelengkapan (quotation_id);
+create index if not exists idx_quotation_kelengkapan_template on quotation_kelengkapan (template_id);
+create index if not exists idx_quotation_kelengkapan_items_parent on quotation_kelengkapan_items (quotation_kelengkapan_id);
 
 create index if not exists idx_schedules_quotation on activity_schedules (quotation_id);
 create index if not exists idx_schedules_item on activity_schedules (quotation_item_id);
@@ -107,6 +111,7 @@ create unique index if not exists uq_employment_statuses_label on employment_sta
 create unique index if not exists uq_salary_components_label on salary_components (label);
 create unique index if not exists uq_bank_accounts_label on bank_accounts (label);
 create unique index if not exists uq_milestone_templates_name on milestone_templates (name);
+create unique index if not exists uq_kelengkapan_templates_name on kelengkapan_templates (name);
 create unique index if not exists uq_legal_bases_label on legal_bases (label);
 create unique index if not exists uq_admin_areas_label on admin_areas (label);
 

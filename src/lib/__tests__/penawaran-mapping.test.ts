@@ -11,6 +11,8 @@ import {
   type ScheduleRow,
   type ScheduleRowRow,
   type MarkedWeekRow,
+  type QuotationKelengkapanRow,
+  type QuotationKelengkapanItemRow,
   type ToSphInput,
 } from "@/lib/penawaran/mapping";
 
@@ -120,6 +122,29 @@ function markedWeek(overrides: Partial<MarkedWeekRow> = {}): MarkedWeekRow {
   } as MarkedWeekRow;
 }
 
+function quotationKelengkapan(overrides: Partial<QuotationKelengkapanRow> = {}): QuotationKelengkapanRow {
+  return {
+    id: "klg-1",
+    quotationId: "quo-1",
+    templateId: "template-1",
+    name: "Kelengkapan Administrasi UKL-UPL",
+    sortOrder: 0,
+    ...overrides,
+  } as QuotationKelengkapanRow;
+}
+
+function quotationKelengkapanItem(overrides: Partial<QuotationKelengkapanItemRow> = {}): QuotationKelengkapanItemRow {
+  return {
+    id: "klg-item-1",
+    quotationKelengkapanId: "klg-1",
+    persyaratan: "Surat Permohonan",
+    status: "ada",
+    keterangan: null,
+    sortOrder: 0,
+    ...overrides,
+  } as QuotationKelengkapanItemRow;
+}
+
 function baseInput(overrides: Partial<ToSphInput> = {}): ToSphInput {
   return {
     quotation: quotation(),
@@ -133,6 +158,8 @@ function baseInput(overrides: Partial<ToSphInput> = {}): ToSphInput {
     schedules: [schedule()],
     scheduleRows: [scheduleRow()],
     markedWeeks: [markedWeek()],
+    kelengkapanAttachments: [],
+    kelengkapanItems: [],
     ...overrides,
   };
 }
@@ -207,8 +234,50 @@ describe("toSph", () => {
     expect(toSph(baseInput({ quotation: quotation({ validityDays: null }) })).masaBerlakuAktif).toBe(false);
   });
 
-  it("always returns an empty kelengkapan array (module stays out of scope)", () => {
+  it("returns an empty kelengkapan array when no attachment rows exist", () => {
     expect(toSph(baseInput()).kelengkapan).toEqual([]);
+  });
+
+  it("reconstructs one attachment's items in sortOrder, mapping null status/keterangan to ''", () => {
+    const sph = toSph(
+      baseInput({
+        kelengkapanAttachments: [quotationKelengkapan()],
+        kelengkapanItems: [
+          quotationKelengkapanItem({ id: "klg-item-2", persyaratan: "Identitas Diri", status: null, keterangan: null, sortOrder: 1 }),
+          quotationKelengkapanItem({ id: "klg-item-1", persyaratan: "Surat Permohonan", status: "ada", keterangan: "Lengkap", sortOrder: 0 }),
+        ],
+      }),
+    );
+    expect(sph.kelengkapan).toEqual([
+      {
+        templateId: "template-1",
+        nama: "Kelengkapan Administrasi UKL-UPL",
+        items: [
+          { persyaratan: "Surat Permohonan", status: "ada", keterangan: "Lengkap" },
+          { persyaratan: "Identitas Diri", status: "", keterangan: "" },
+        ],
+      },
+    ]);
+  });
+
+  it("regroups kelengkapan items onto the correct parent when multiple attachments exist", () => {
+    const sph = toSph(
+      baseInput({
+        kelengkapanAttachments: [
+          quotationKelengkapan({ id: "klg-1", name: "Template A", sortOrder: 0 }),
+          quotationKelengkapan({ id: "klg-2", name: "Template B", sortOrder: 1 }),
+        ],
+        kelengkapanItems: [
+          quotationKelengkapanItem({ id: "i1", quotationKelengkapanId: "klg-1", persyaratan: "A1" }),
+          quotationKelengkapanItem({ id: "i2", quotationKelengkapanId: "klg-2", persyaratan: "B1" }),
+        ],
+      }),
+    );
+    expect(sph.kelengkapan).toHaveLength(2);
+    expect(sph.kelengkapan[0].nama).toBe("Template A");
+    expect(sph.kelengkapan[0].items.map((i) => i.persyaratan)).toEqual(["A1"]);
+    expect(sph.kelengkapan[1].nama).toBe("Template B");
+    expect(sph.kelengkapan[1].items.map((i) => i.persyaratan)).toEqual(["B1"]);
   });
 });
 

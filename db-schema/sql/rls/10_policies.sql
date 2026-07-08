@@ -38,9 +38,11 @@ declare
     'employment_statuses','salary_components','bank_accounts',
     'cashflow_categories','workflow_statuses','message_templates',
     'milestone_templates','milestone_template_steps',
+    'kelengkapan_templates','kelengkapan_template_items',
     'company_profile','tax_settings','numbering_settings','dashboard_settings',
     'quotations','quotation_items','quotation_term_scheme',
     'quotation_rab_personnel','quotation_rab_direct_costs',
+    'quotation_kelengkapan','quotation_kelengkapan_items',
     'activity_schedules','activity_schedule_rows','activity_schedule_marked_weeks',
     'projects','project_services','project_assignees','milestones',
     'milestone_assignees','project_comments','comment_mentions','project_status_log'
@@ -74,7 +76,8 @@ create policy emp_comp_sel on employee_salary_components for select to authentic
 do $$
 declare t text;
   q text[] := array['quotations','quotation_items','quotation_term_scheme',
-                    'quotation_rab_personnel','quotation_rab_direct_costs'];
+                    'quotation_rab_personnel','quotation_rab_direct_costs',
+                    'quotation_kelengkapan','quotation_kelengkapan_items'];
 begin
   foreach t in array q loop
     execute format(

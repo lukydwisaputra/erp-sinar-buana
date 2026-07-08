@@ -169,6 +169,16 @@ export const documentDeliveryStatus = pgEnum("document_delivery_status", [
   "failed",
 ]);
 
+/**
+ * Per-item fulfillment status on an SPH's attached Kelengkapan checklist
+ * snapshot (PRD Bab 4 lampiran). NULL on the item row = unfilled (the app's
+ * "" tri-state value) — not a third enum member, see quotations.ts.
+ */
+export const kelengkapanItemStatus = pgEnum("kelengkapan_item_status", [
+  "ada",
+  "tidak",
+]);
+
 /** In-app / email notification categories (PRD Bab 13 / Dasbor Pusat Perhatian 8.5). */
 export const notificationType = pgEnum("notification_type", [
   "tax_due", // H-3 tax due reminder

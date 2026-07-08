@@ -20,6 +20,7 @@
     "seed:faktur": "node --env-file=.env.local scripts/seed-faktur.ts",
     "seed:penggajian": "node --env-file=.env.local scripts/seed-penggajian.ts",
     "seed:pengiriman": "node --env-file=.env.local scripts/seed-pengiriman.ts",
+    "seed:kelengkapan": "node --env-file=.env.local scripts/seed-kelengkapan.ts",
     "worker": "node --env-file=.env.local scripts/worker.ts",
     "screenshot:docs": "node --env-file=.env.local scripts/screenshot-docs.ts"
   },

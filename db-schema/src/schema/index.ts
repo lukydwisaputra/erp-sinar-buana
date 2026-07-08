@@ -7,6 +7,7 @@ export * from "./auth";
 export * from "./config";
 export * from "./settings";
 export * from "./master-data";
+export * from "./kelengkapan";
 export * from "./quotations";
 export * from "./schedules";
 export * from "./projects";

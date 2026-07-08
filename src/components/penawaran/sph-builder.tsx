@@ -267,6 +267,7 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
           picAktif: existing.picAktif,
           picNama: existing.picNama,
           picJabatan: existing.picJabatan,
+          kelengkapan: existing.kelengkapan,
         }
       : emptyValues,
   });
