@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Link from "next/link";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,18 @@ const JENIS_LABEL: Record<string, string> = {
   proyek_over_budget: "Proyek",
   proyek_margin_slip: "Proyek",
   proyek_mangkrak: "Proyek",
+  milestone_slipping: "Milestone",
 };
+
+/** FR-09.6 — drilldown from an alert to its source. Pajak has no per-entry
+ * detail route yet (only the /pajak list page) — a documented limitation,
+ * not a missing feature in this component. */
+function alertHref(a: AlertItem): string | null {
+  if (a.refType === "proyek") return `/proyek/${a.refId}`;
+  if (a.refType === "faktur") return `/faktur/${a.refId}`;
+  if (a.refType === "pajak") return "/pajak";
+  return null;
+}
 
 export function NeedsAttention({ alerts, isLoading }: NeedsAttentionProps) {
   const [open, setOpen] = React.useState(true);
@@ -53,20 +65,34 @@ export function NeedsAttention({ alerts, isLoading }: NeedsAttentionProps) {
             <p className="text-sm text-muted-foreground py-2">Tidak ada item yang memerlukan perhatian.</p>
           ) : (
             <ul className="divide-y">
-              {alerts.map((a) => (
-                <li key={a.id} className="flex items-start gap-3 py-2.5">
-                  <Badge
-                    variant={a.prioritas === "tinggi" ? "destructive" : "warning"}
-                    className="mt-0.5 shrink-0 uppercase"
-                  >
-                    {JENIS_LABEL[a.jenis] ?? a.jenis}
-                  </Badge>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium leading-tight">{a.judul}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.detail}</p>
-                  </div>
-                </li>
-              ))}
+              {alerts.map((a) => {
+                const href = alertHref(a);
+                const content = (
+                  <>
+                    <Badge
+                      variant={a.prioritas === "tinggi" ? "destructive" : "warning"}
+                      className="mt-0.5 shrink-0 uppercase"
+                    >
+                      {JENIS_LABEL[a.jenis] ?? a.jenis}
+                    </Badge>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-tight">{a.judul}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.detail}</p>
+                    </div>
+                  </>
+                );
+                return (
+                  <li key={a.id}>
+                    {href ? (
+                      <Link href={href} className="flex items-start gap-3 py-2.5 hover:bg-muted/50 -mx-1 px-1 rounded">
+                        {content}
+                      </Link>
+                    ) : (
+                      <div className="flex items-start gap-3 py-2.5">{content}</div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardContent>

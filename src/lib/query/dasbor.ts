@@ -4,6 +4,7 @@ import { apiClient } from "@/lib/api-client";
 import type { Periode } from "@/lib/dasbor/types";
 import type { ProfitabilitasView } from "@/lib/dasbor/profitability";
 import type { ForecastView, AlertItem } from "@/lib/dasbor/types";
+import type { ProyekSummary } from "@/lib/dasbor/proyek-summary";
 
 // profitabilitas/alerts/forekast now all go through real API routes —
 // getProfitabilitas/getAlerts/getForekast transitively call real
@@ -36,5 +37,13 @@ export function useAlerts() {
   return useQuery({
     queryKey: ["dasbor", "alerts"],
     queryFn: () => apiClient.get<AlertItem[]>("/api/dasbor/alerts"),
+  });
+}
+
+/** FR-09.4 — Ringkasan Proyek, all roles (Tim Teknis narrowed server-side). */
+export function useProyekSummary() {
+  return useQuery({
+    queryKey: ["dasbor", "proyek-summary"],
+    queryFn: () => apiClient.get<ProyekSummary>("/api/dasbor/proyek-summary"),
   });
 }

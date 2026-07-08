@@ -2,16 +2,24 @@
 import { useState, useMemo } from "react";
 import { LayoutDashboard } from "lucide-react";
 import { useSession } from "@/lib/query/session";
-import { useProfitabilitas, useForekast, useAlerts } from "@/lib/query/dasbor";
+import { useProfitabilitas, useForekast, useAlerts, useProyekSummary } from "@/lib/query/dasbor";
 import { useFakturList } from "@/lib/query/faktur";
 import { useTaxEntryList } from "@/lib/query/tax-entries";
 import { useDashboardParams } from "@/lib/query/dashboard-params";
 import { periodePreset } from "@/lib/dasbor/periode-utils";
+import { computeMonthlySummary, groupByKategori } from "@/lib/dasbor/cashflow-summary";
+import { computeTaxSummary } from "@/lib/dasbor/tax-summary";
 import { PeriodPicker } from "@/components/dasbor/period-picker";
 import { KpiStrip } from "@/components/dasbor/kpi-strip";
 import { NeedsAttention } from "@/components/dasbor/needs-attention";
 import { PlWaterfall } from "@/components/dasbor/pl-waterfall";
 import { ProyekProfitability } from "@/components/dasbor/proyek-profitability";
+import { CashflowSummaryCards } from "@/components/dasbor/cashflow-summary-cards";
+import { CashflowCategoryPie } from "@/components/dasbor/cashflow-category-pie";
+import { CashflowTable } from "@/components/dasbor/cashflow-table";
+import { ProyekSummaryPanel } from "@/components/dasbor/proyek-summary";
+import { TaxSummaryPanel } from "@/components/dasbor/tax-summary-panel";
+import { TrendLineChart } from "@/components/dasbor/trend-line-chart";
 import type { Periode } from "@/lib/dasbor/types";
 
 const FINANCE_ROLES = new Set(["admin", "keuangan"]);
@@ -32,6 +40,7 @@ export default function DasborPage() {
   const { data: alerts = [], isLoading: alertsLoading } = useAlerts();
   const { data: fakturs = [] } = useFakturList();
   const { data: kewajiban = [] } = useTaxEntryList(isFinance);
+  const { data: proyekSummary, isLoading: proyekSummaryLoading } = useProyekSummary();
 
   const arOutstanding = useMemo(
     () =>
@@ -49,6 +58,16 @@ export default function DasborPage() {
         .reduce((s, k) => s + k.jumlah, 0),
     [kewajiban],
   );
+
+  const taxSummary = useMemo(() => {
+    if (!isFinance) return undefined;
+    return computeTaxSummary(kewajiban, new Date().toISOString().slice(0, 10));
+  }, [kewajiban, isFinance]);
+
+  const arusKas = useMemo(() => profitabilitas?.arusKas ?? [], [profitabilitas]);
+  const cashflowSummary = useMemo(() => computeMonthlySummary(arusKas, periode), [arusKas, periode]);
+  const kategoriPemasukan = useMemo(() => groupByKategori(arusKas, "kredit"), [arusKas]);
+  const kategoriPengeluaran = useMemo(() => groupByKategori(arusKas, "debit"), [arusKas]);
 
   return (
     <div className="space-y-6">
@@ -76,6 +95,9 @@ export default function DasborPage() {
           alert kinds server-side for non-finance callers. */}
       <NeedsAttention alerts={alerts} isLoading={alertsLoading} />
 
+      {/* Ringkasan Proyek — all roles (Tim Teknis narrowed to assigned projects server-side). */}
+      <ProyekSummaryPanel summary={proyekSummary} isLoading={proyekSummaryLoading} />
+
       {isFinance && (
         <>
           {/* P&L */}
@@ -86,6 +108,21 @@ export default function DasborPage() {
             proyek={profitabilitas?.proyek ?? []}
             isLoading={plLoading}
           />
+
+          {/* Ringkasan Keuangan Bulanan */}
+          <CashflowSummaryCards summary={cashflowSummary} isLoading={plLoading} />
+
+          {/* Distribusi kategori */}
+          <CashflowCategoryPie pemasukan={kategoriPemasukan} pengeluaran={kategoriPengeluaran} />
+
+          {/* Tren bulanan */}
+          <TrendLineChart points={profitabilitas?.trend ?? []} />
+
+          {/* Ringkasan Pajak */}
+          <TaxSummaryPanel summary={taxSummary} isLoading={plLoading} />
+
+          {/* Riwayat Arus Kas (periode terpilih) */}
+          <CashflowTable entries={arusKas} isLoading={plLoading} />
         </>
       )}
     </div>

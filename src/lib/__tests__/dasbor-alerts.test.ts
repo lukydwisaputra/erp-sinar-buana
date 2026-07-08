@@ -1,17 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
-  alertsFaktur, alertsPajak, alertsProyek, alertsProyekMangkrak, lastActivityDate, computeAlerts,
+  alertsFaktur, alertsPajak, alertsProyek, alertsProyekMangkrak, alertsMilestoneSlipping, lastActivityDate, computeAlerts,
   FAKTUR_DUE_SOON_DAYS, PAJAK_DUE_SOON_DAYS,
 } from "@/lib/dasbor/alerts";
 import type { FakturTerminRow } from "@/lib/faktur/mapping";
 import type { TaxEntry } from "@/lib/schemas/tax-entries";
-import type { Proyek } from "@/lib/schemas/proyek";
+import type { Proyek, Milestone } from "@/lib/schemas/proyek";
 import type { ProyekProfit } from "@/lib/dasbor/types";
 
 const TODAY = "2026-06-22";
 
 const mkFaktur = (id: string, jatuhTempo: string, statusSystemRole: string | null = null): FakturTerminRow => ({
-  id, proyekId: "P1", perusahaanNama: "PT Klien",
+  id, indukId: "MI-" + id, proyekId: "P1", perusahaanNama: "PT Klien",
   tanggal: "2026-06-01", jatuhTempo, statusSystemRole,
   nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
 });
@@ -34,6 +34,11 @@ const mkProyekEntity = (id: string, statusSystemRole: string | null, overrides: 
   ...overrides,
 });
 
+const mkMilestone = (id: string, targetDate: string | null, actualDate: string | null): Milestone => ({
+  id, parentId: null, nama: "Milestone " + id, urutan: 1, description: null, descriptionAttachments: [],
+  assignees: [], targetDate, actualDate, statusId: null, status: "Berjalan", triggersTerm: false, linkedMasterInvoiceId: null,
+});
+
 const mkProyek = (id: string, kesehatan: ProyekProfit["kesehatan"]): ProyekProfit => ({
   proyekId: id, proyekNama: "Proyek " + id, nilaiKontrak: 100_000_000,
   pendapatanDiakui: 50_000_000, rabRencana: 30_000_000,
@@ -49,7 +54,7 @@ describe("alertsFaktur", () => {
     expect(alerts).toHaveLength(1);
     expect(alerts[0].jenis).toBe("faktur_terlambat");
     expect(alerts[0].prioritas).toBe("tinggi");
-    expect(alerts[0].refId).toBe("F1");
+    expect(alerts[0].refId).toBe("MI-F1"); // refId points at the Induk, not the termin
   });
 
   it("flags invoices due within FAKTUR_DUE_SOON_DAYS as sedang", () => {
@@ -163,6 +168,37 @@ describe("lastActivityDate", () => {
   it("falls back to createdAt when no milestone has an actualDate", () => {
     const p = mkProyekEntity("P2", null, { createdAt: "2026-03-15T10:00:00.000Z" });
     expect(lastActivityDate(p)).toBe("2026-03-15");
+  });
+});
+
+describe("alertsMilestoneSlipping", () => {
+  it("flags a milestone whose targetDate has passed with no actualDate", () => {
+    const p = mkProyekEntity("P1", null, { milestones: [mkMilestone("M1", "2026-06-10", null)] });
+    const alerts = alertsMilestoneSlipping([p], TODAY);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].jenis).toBe("milestone_slipping");
+    expect(alerts[0].refType).toBe("proyek");
+    expect(alerts[0].refId).toBe("P1");
+  });
+
+  it("does not flag a milestone with no targetDate", () => {
+    const p = mkProyekEntity("P1", null, { milestones: [mkMilestone("M1", null, null)] });
+    expect(alertsMilestoneSlipping([p], TODAY)).toHaveLength(0);
+  });
+
+  it("does not flag a milestone that already has an actualDate", () => {
+    const p = mkProyekEntity("P1", null, { milestones: [mkMilestone("M1", "2026-06-10", "2026-06-15")] });
+    expect(alertsMilestoneSlipping([p], TODAY)).toHaveLength(0);
+  });
+
+  it("does not flag a milestone whose targetDate hasn't passed yet", () => {
+    const p = mkProyekEntity("P1", null, { milestones: [mkMilestone("M1", "2026-07-01", null)] });
+    expect(alertsMilestoneSlipping([p], TODAY)).toHaveLength(0);
+  });
+
+  it("never flags milestones on a terminal SELESAI/BATAL project", () => {
+    const p = mkProyekEntity("P1", "SELESAI", { milestones: [mkMilestone("M1", "2026-06-10", null)] });
+    expect(alertsMilestoneSlipping([p], TODAY)).toHaveLength(0);
   });
 });
 

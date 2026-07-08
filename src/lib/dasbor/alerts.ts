@@ -43,14 +43,14 @@ export function alertsFaktur(fakturs: FakturTerminRow[], today: string): AlertIt
         "faktur-terlambat-" + f.id, "faktur_terlambat", "tinggi",
         "Faktur Terlambat: " + f.id,
         f.perusahaanNama + " – jatuh tempo " + f.jatuhTempo,
-        f.id, "faktur", f.jatuhTempo,
+        f.indukId, "faktur", f.jatuhTempo,
       ));
     } else if (diff <= FAKTUR_DUE_SOON_DAYS) {
       items.push(makeItem(
         "faktur-jatuh-tempo-" + f.id, "faktur_jatuh_tempo", "sedang",
         "Faktur Jatuh Tempo: " + f.id,
         f.perusahaanNama + " – jatuh tempo " + f.jatuhTempo,
-        f.id, "faktur", f.jatuhTempo,
+        f.indukId, "faktur", f.jatuhTempo,
       ));
     }
   }
@@ -118,6 +118,26 @@ export function lastActivityDate(p: Proyek): string {
   return actuals.length > 0 ? actuals.sort().at(-1)! : p.createdAt.slice(0, 10);
 }
 
+/** FR-09.11 — milestone whose targetDate has passed with no actualDate yet, on a still-active project. */
+export function alertsMilestoneSlipping(proyeks: Proyek[], today: string): AlertItem[] {
+  const items: AlertItem[] = [];
+  for (const p of proyeks) {
+    if (!isActiveProyek(p)) continue;
+    for (const m of p.milestones) {
+      if (m.actualDate !== null || !m.targetDate) continue;
+      if (daysDiff(m.targetDate, today) > 0) {
+        items.push(makeItem(
+          "milestone-slipping-" + m.id, "milestone_slipping", "sedang",
+          "Milestone Mundur: " + m.nama,
+          p.nama + " – target " + m.targetDate,
+          p.id, "proyek", m.targetDate,
+        ));
+      }
+    }
+  }
+  return items;
+}
+
 export function alertsProyekMangkrak(proyeks: Proyek[], today: string, ambangHari: number): AlertItem[] {
   const items: AlertItem[] = [];
   for (const p of proyeks) {
@@ -149,6 +169,7 @@ export function computeAlerts(args: {
     ...alertsPajak(args.kewajiban, args.today),
     ...alertsProyek(args.proyek),
     ...alertsProyekMangkrak(args.proyeks, args.today, args.ambangMangkrakHari),
+    ...alertsMilestoneSlipping(args.proyeks, args.today),
   ];
   return all.sort((a, b) => {
     if (a.prioritas !== b.prioritas) {

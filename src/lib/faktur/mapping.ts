@@ -83,6 +83,8 @@ export type ToFakturIndukInput = {
  * hierarchy themselves. Pure, no DB access. */
 export type FakturTerminRow = {
   id: string;
+  /** Faktur Induk (master invoice) id — the /faktur/[id] route target, distinct from `id` (the termin itself). */
+  indukId: string;
   proyekId: string;
   perusahaanNama: string;
   tanggal: string;
@@ -97,6 +99,7 @@ export type FakturTerminRow = {
 export function flattenTermins(induks: FakturInduk[]): FakturTerminRow[] {
   return induks.flatMap((f) => f.termins.map((t) => ({
     id: t.id,
+    indukId: f.id,
     proyekId: f.proyekId,
     perusahaanNama: f.perusahaanNama,
     tanggal: t.tanggal,
