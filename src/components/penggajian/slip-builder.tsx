@@ -14,7 +14,7 @@ import { ScaleToFit } from "@/components/shared/scale-to-fit";
 import { SlipDocument } from "@/components/penggajian/slip-document";
 import { KirimDokumenDialog } from "@/components/shared/document/kirim-dokumen-dialog";
 import { calcSlip } from "@/lib/schemas/penggajian";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, formatTanggalPanjang } from "@/lib/format";
 import { useSlip, useBatch, useMarkSlipDibayar, useCancelSlip } from "@/lib/query/penggajian";
 
 export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: string }) {
@@ -106,6 +106,9 @@ export function SlipBuilder({ batchId, slipId }: { batchId: string; slipId: stri
         dokumenId={slip.id}
         dokumenNomor={slip.number ?? slip.id}
         tujuanOptions={tujuanOptions}
+        tokens={{
+          periode: `${formatTanggalPanjang(batch.periode.mulai)} – ${formatTanggalPanjang(batch.periode.selesai)}`,
+        }}
       />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

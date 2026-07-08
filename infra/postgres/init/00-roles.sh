@@ -66,4 +66,16 @@ GRANT authenticated, service_role TO app;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   GRANT ALL ON TABLES TO authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
+
+-- pg-boss (docs/architecture.md §7) provisions its own "pgboss" schema on
+-- boss.start() using the app's own connection (always logged in as `app` —
+-- there's no separate physical login for service_role, only SET LOCAL ROLE
+-- within a session). Table/schema GRANTs above don't cover CREATE SCHEMA,
+-- which is a database-level privilege — found 2026-07-08 the same way the
+-- original `app`-role grants gap was found (a real "permission denied"
+-- while first standing up the worker, not assumed in advance).
+DO $$
+BEGIN
+  EXECUTE format('GRANT CREATE ON DATABASE %I TO app', current_database());
+END $$;
 SQL

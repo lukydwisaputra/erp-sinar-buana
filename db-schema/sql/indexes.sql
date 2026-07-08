@@ -109,3 +109,10 @@ create unique index if not exists uq_bank_accounts_label on bank_accounts (label
 create unique index if not exists uq_milestone_templates_name on milestone_templates (name);
 create unique index if not exists uq_legal_bases_label on legal_bases (label);
 create unique index if not exists uq_admin_areas_label on admin_areas (label);
+
+-- ── Pengiriman Dokumen ───────────────────────────────────────────────────────
+create index if not exists idx_deliveries_quotation on document_deliveries (quotation_id);
+create index if not exists idx_deliveries_installment on document_deliveries (installment_invoice_id);
+create index if not exists idx_deliveries_payslip on document_deliveries (payslip_id);
+create index if not exists idx_deliveries_status on document_deliveries (status);
+create index if not exists idx_deliveries_created_by on document_deliveries (created_by);

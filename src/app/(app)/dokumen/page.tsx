@@ -1,13 +1,14 @@
 "use client";
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Mail, MessageCircle, Send } from "lucide-react";
+import { Mail, MessageCircle, Send, TriangleAlert } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePengirimanLog } from "@/lib/query/pengiriman";
-import type { ChannelPengiriman, JenisDokumenKirim, PengirimanLog } from "@/lib/schemas/pengiriman";
+import type { ChannelPengiriman, DeliveryStatus, JenisDokumenKirim, PengirimanLog } from "@/lib/schemas/pengiriman";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -33,6 +34,29 @@ function ChannelBadge({ channel }: { channel: ChannelPengiriman }) {
     <Badge variant="success"><MessageCircle className="size-3" /> WhatsApp</Badge>
   ) : (
     <Badge variant="info"><Mail className="size-3" /> Email</Badge>
+  );
+}
+
+const STATUS_META: Record<DeliveryStatus, { label: string; variant: "warning" | "success" | "destructive" }> = {
+  queued: { label: "Menunggu", variant: "warning" },
+  sent: { label: "Terkirim", variant: "success" },
+  failed: { label: "Gagal", variant: "destructive" },
+};
+
+function StatusBadge({ status, error }: { status: DeliveryStatus; error: string | null }) {
+  const m = STATUS_META[status];
+  const badge = <Badge variant={m.variant}>{m.label}</Badge>;
+  if (status !== "failed" || !error) return badge;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex items-center gap-1">
+          {badge}
+          <TriangleAlert className="size-3 text-destructive" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{error}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -69,6 +93,11 @@ const columns: ColumnDef<PengirimanLog>[] = [
     header: "Channel",
     cell: ({ row }) => <ChannelBadge channel={row.original.channel} />,
   },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <StatusBadge status={row.original.status} error={row.original.error} />,
+  },
 ];
 
 // ── KPI strip ─────────────────────────────────────────────────────────────
@@ -96,7 +125,8 @@ export default function Page() {
     const all = data ?? [];
     const whatsapp = all.filter((r) => r.channel === "whatsapp").length;
     const email = all.filter((r) => r.channel === "email").length;
-    return { total: all.length, whatsapp, email };
+    const failed = all.filter((r) => r.status === "failed").length;
+    return { total: all.length, whatsapp, email, failed };
   }, [data]);
 
   return (
@@ -106,10 +136,11 @@ export default function Page() {
         <h1 className="text-xl font-semibold tracking-tight">Pengiriman Dokumen</h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <KpiCard label="Total Terkirim" value={String(kpi.total)} icon={Send} />
         <KpiCard label="Via WhatsApp" value={String(kpi.whatsapp)} icon={MessageCircle} />
         <KpiCard label="Via Email" value={String(kpi.email)} icon={Mail} />
+        <KpiCard label="Gagal Terkirim" value={String(kpi.failed)} icon={TriangleAlert} />
       </div>
 
       {isError ? (

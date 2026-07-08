@@ -1,15 +1,15 @@
 # Infra — local & Coolify stack
 
-Reference deployment for the 4-service architecture in
+Reference deployment for the architecture in
 [`docs/architecture.md`](../docs/architecture.md): **Postgres** (data + RLS +
 pg_cron + pg-boss), **MinIO** (S3 storage), **App** (Next.js), **Worker**
-(pg-boss consumer).
+(pg-boss consumer), plus **MailDev** (dev-only SMTP catcher, never deployed).
 
 ## Local development
 
 ```bash
 cp infra/.env.example infra/.env      # fill in passwords
-docker compose -f infra/docker-compose.yml up -d postgres minio
+docker compose -f infra/docker-compose.yml up -d postgres minio maildev
 ```
 
 First boot runs [`postgres/init/00-roles.sh`](postgres/init/00-roles.sh),
@@ -49,6 +49,13 @@ npm run seed:admin
 ```
 
 MinIO console: http://localhost:9001 · S3 API: http://localhost:9000.
+
+**Pengiriman's dev SMTP account** (Konfigurasi → Pengiriman → Akun Email/SMTP):
+`host=localhost, port=1025`, any username/password, e.g.
+`fromEmail=noreply@sbmj.local`. MailDev accepts any credentials unauthenticated
+— caught mail is visible at http://localhost:1080. Run `npm run worker`
+(`scripts/worker.ts`) in its own terminal to actually process queued email
+deliveries against it.
 
 The `app` and `worker` services are commented in the compose file until their
 Dockerfiles exist.

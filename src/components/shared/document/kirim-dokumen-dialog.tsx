@@ -13,8 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePending } from "@/lib/use-pending";
 import { usePengirimanConfig } from "@/lib/query/pengiriman-config";
-import { buildPesanWa, buildWaLink, buildEmailSubjek, buildEmailBody } from "@/lib/pengiriman-templates";
-import { useCreatePengirimanLog } from "@/lib/query/pengiriman";
+import { buildWaLink, fillTokens } from "@/lib/pengiriman/token-fill";
+import { useCreateWhatsappDelivery, useCreateEmailDelivery } from "@/lib/query/pengiriman";
 import type { ChannelPengiriman, JenisDokumenKirim } from "@/lib/schemas/pengiriman";
 
 export interface KirimTujuan {
@@ -32,6 +32,12 @@ interface KirimDokumenDialogProps {
   dokumenNomor: string;
   /** PIC list for SPH/Faktur (may be several); a single locked entry for Slip Gaji. */
   tujuanOptions: KirimTujuan[];
+  /**
+   * Static placeholder values the caller already has (e.g. nama_perusahaan,
+   * jatuh_tempo, periode) — merged in here with the selected recipient's name
+   * at {pic} (SPH/Faktur) or {nama_karyawan} (Slip Gaji).
+   */
+  tokens?: Record<string, string>;
   onSent?: (channel: ChannelPengiriman) => void;
 }
 
@@ -42,34 +48,45 @@ export function KirimDokumenDialog({
   dokumenId,
   dokumenNomor,
   tujuanOptions,
+  tokens = {},
   onSent,
 }: KirimDokumenDialogProps): React.JSX.Element {
   const [index, setIndex] = React.useState(0);
   const [sendingWa, runSendWa] = usePending();
-  const createLog = useCreatePengirimanLog();
+  const [sendingEmail, runSendEmail] = usePending();
+  const createWhatsapp = useCreateWhatsappDelivery();
+  const createEmail = useCreateEmailDelivery();
   const { data: pengirimanConfig } = usePengirimanConfig();
-  const emailTerkonfigurasi = pengirimanConfig?.emailAkun != null;
+  const emailTerkonfigurasi = pengirimanConfig?.emailAkun?.terkonfigurasi ?? false;
 
   React.useEffect(() => {
     if (open) setIndex(0);
   }, [open]);
 
   const tujuan = tujuanOptions[index];
-  const pesan = tujuan ? buildPesanWa(jenisDokumen, { perusahaan: tujuan.nama, nomor: dokumenNomor }) : "";
+  const recipientKey = jenisDokumen === "slip" ? "nama_karyawan" : "pic";
+  const docNumberKey = jenisDokumen === "sph" ? "no_sph" : jenisDokumen === "faktur" ? "no_inv" : null;
+  const allTokens: Record<string, string> = {
+    ...tokens,
+    ...(docNumberKey ? { [docNumberKey]: dokumenNomor } : {}),
+    ...(tujuan ? { [recipientKey]: tujuan.nama } : {}),
+  };
+
+  const waTemplate = pengirimanConfig?.whatsappTemplates[jenisDokumen];
+  const pesan = waTemplate ? fillTokens(waTemplate.body, allTokens) : "";
   const teleponKosong = !tujuan?.telepon;
 
   const emailTemplate = pengirimanConfig?.emailTemplates[jenisDokumen];
-  const emailData = tujuan ? { perusahaan: tujuan.nama, nomor: dokumenNomor } : null;
-  const emailSubjek = emailTemplate && emailData ? buildEmailSubjek(emailTemplate, emailData) : "";
-  const emailBody = emailTemplate && emailData ? buildEmailBody(emailTemplate, emailData) : "";
+  const emailSubjek = emailTemplate ? fillTokens(emailTemplate.subjek ?? "", allTokens) : "";
+  const emailBody = emailTemplate ? fillTokens(emailTemplate.body, allTokens) : "";
 
   function handleKirimWhatsApp() {
     if (!tujuan) return;
     runSendWa(async () => {
       window.open(buildWaLink(tujuan.telepon, pesan), "_blank");
-      await createLog.mutateAsync({
+      await createWhatsapp.mutateAsync({
         jenisDokumen, dokumenId, dokumenNomor,
-        tujuanNama: tujuan.nama, tujuanKontak: tujuan.telepon, channel: "whatsapp",
+        tujuanNama: tujuan.nama, tujuanKontak: tujuan.telepon,
       });
       toast.success("Tautan WhatsApp dibuka — lampirkan PDF secara manual.");
       onSent?.("whatsapp");
@@ -77,15 +94,17 @@ export function KirimDokumenDialog({
     });
   }
 
-  async function handleKirimEmail() {
-    if (!tujuan || !pengirimanConfig?.emailAkun) return;
-    await createLog.mutateAsync({
-      jenisDokumen, dokumenId, dokumenNomor,
-      tujuanNama: tujuan.nama, tujuanKontak: tujuan.email, channel: "email",
+  function handleKirimEmail() {
+    if (!tujuan || !emailTerkonfigurasi) return;
+    runSendEmail(async () => {
+      await createEmail.mutateAsync({
+        jenisDokumen, dokumenId, dokumenNomor,
+        tujuanNama: tujuan.nama, tujuanKontak: tujuan.email,
+      });
+      toast.success("Email sedang dikirim…");
+      onSent?.("email");
+      onOpenChange(false);
     });
-    toast.success("Email terkirim.");
-    onSent?.("email");
-    onOpenChange(false);
   }
 
   return (
@@ -153,7 +172,7 @@ export function KirimDokumenDialog({
           <Tooltip>
             <TooltipTrigger asChild>
               <span tabIndex={emailTerkonfigurasi ? undefined : 0}>
-                <Button disabled={!emailTerkonfigurasi} onClick={handleKirimEmail}>
+                <Button disabled={!emailTerkonfigurasi} loading={sendingEmail} onClick={handleKirimEmail}>
                   <Mail className="size-4" /> Kirim Email
                 </Button>
               </span>

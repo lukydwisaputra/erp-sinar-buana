@@ -1,24 +1,36 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getPengirimanConfig, testEmailConnection, updateEmailAkun, updateEmailTemplate } from "@/lib/data/pengiriman-config";
-import type { EmailAkun, EmailTemplate } from "@/lib/schemas/pengiriman-config";
-import type { JenisDokumenKirim } from "@/lib/schemas/pengiriman";
+import { apiClient } from "@/lib/api-client";
+import type {
+  PengirimanConfig,
+  UpdateEmailAkunInput,
+  TestEmailConnectionInput,
+  UpdateTemplateInput,
+  MessageTemplateDto,
+} from "@/lib/schemas/pengiriman-config";
 
 const KEY = ["pengiriman-config"];
 
 export function usePengirimanConfig() {
-  return useQuery({ queryKey: KEY, queryFn: getPengirimanConfig });
+  return useQuery({
+    queryKey: KEY,
+    queryFn: () => apiClient.get<PengirimanConfig>("/api/pengiriman-config"),
+  });
 }
 
 export function useTestEmailConnection() {
-  return useMutation({ mutationFn: (input: Omit<EmailAkun, "terkonfigurasi">) => testEmailConnection(input) });
+  return useMutation({
+    mutationFn: (input: TestEmailConnectionInput) =>
+      apiClient.post<{ ok: boolean; message: string }>("/api/pengiriman-config/test-connection", input),
+  });
 }
 
 export function useUpdateEmailAkun() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: Omit<EmailAkun, "terkonfigurasi">) => updateEmailAkun(input),
+    mutationFn: (input: UpdateEmailAkunInput) =>
+      apiClient.patch<PengirimanConfig["emailAkun"]>("/api/pengiriman-config/email-akun", input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
       toast.success("Akun email pengirim diperbarui.");
@@ -29,10 +41,11 @@ export function useUpdateEmailAkun() {
   });
 }
 
-export function useUpdateEmailTemplate() {
+export function useUpdateTemplate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ jenis, template }: { jenis: JenisDokumenKirim; template: EmailTemplate }) => updateEmailTemplate(jenis, template),
+    mutationFn: (input: UpdateTemplateInput) =>
+      apiClient.patch<MessageTemplateDto>("/api/pengiriman-config/template", input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
       toast.success("Template pesan diperbarui.");

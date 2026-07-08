@@ -15,6 +15,7 @@
 import {
   type AnyPgColumn,
   boolean,
+  check,
   date,
   integer,
   numeric,
@@ -671,3 +672,60 @@ export const taxEntries = pgTable("tax_entries", {
   notes: text("notes"),
   ...bookkeeping,
 });
+
+// ── Pengiriman Dokumen (db-schema/src/schema/{config,settings,deliveries}.ts) ─
+
+export const messageChannel = pgEnum("message_channel", ["email", "whatsapp"]);
+export const businessDocumentType = pgEnum("business_document_type", [
+  "sph", "invoice", "slip_gaji",
+]);
+export const documentDeliveryStatus = pgEnum("document_delivery_status", [
+  "queued", "sent", "failed",
+]);
+
+export const messageTemplates = pgTable("message_templates", {
+  id: pk(),
+  channel: messageChannel("channel").notNull(),
+  documentType: businessDocumentType("document_type").notNull(),
+  subject: text("subject"),
+  body: text("body").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const emailAccounts = pgTable("email_accounts", {
+  singleton: boolean("singleton").notNull().default(true).primaryKey(),
+  host: text("host"),
+  port: integer("port"),
+  username: text("username"),
+  passwordEncrypted: text("password_encrypted"),
+  fromNama: text("from_nama"),
+  fromEmail: text("from_email"),
+  isConfigured: boolean("is_configured").notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const documentDeliveries = pgTable("document_deliveries", {
+  id: pk(),
+  channel: messageChannel("channel").notNull(),
+  documentType: businessDocumentType("document_type").notNull(),
+  quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "cascade" }),
+  installmentInvoiceId: uuid("installment_invoice_id").references(() => installmentInvoices.id, { onDelete: "cascade" }),
+  payslipId: uuid("payslip_id").references(() => payslips.id, { onDelete: "cascade" }),
+  documentNumber: text("document_number").notNull(),
+  recipientName: text("recipient_name").notNull(),
+  recipientContact: text("recipient_contact").notNull(),
+  status: documentDeliveryStatus("status").notNull().default("queued"),
+  error: text("error"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  createdBy: uuid("created_by").references(() => userProfiles.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (t) => ({
+  exactlyOneOwnerChk: check(
+    "document_deliveries_exactly_one_owner_chk",
+    sql`num_nonnulls(${t.quotationId}, ${t.installmentInvoiceId}, ${t.payslipId}) = 1`,
+  ),
+}));

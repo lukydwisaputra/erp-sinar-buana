@@ -166,6 +166,7 @@ function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
         dokumenId={existing.id}
         dokumenNomor={noSph}
         tujuanOptions={tujuanOptionsFor(perusahaanOptions, existing.perusahaanId)}
+        tokens={{ nama_perusahaan: perusahaanOptions.find((p) => p.id === existing.perusahaanId)?.nama ?? "" }}
       />
 
       {mounted && createPortal(

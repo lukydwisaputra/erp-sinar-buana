@@ -1,0 +1,25 @@
+import { PgBoss } from "pg-boss";
+import { env } from "@/env";
+
+export const DELIVERY_EMAIL_QUEUE = "pengiriman.email";
+
+let bossPromise: Promise<PgBoss> | null = null;
+
+/**
+ * Lazy-started, module-level pg-boss singleton — safe under this app's
+ * already-persistent Node runtime (same assumption src/lib/db/client.ts makes
+ * for the Postgres pool). Manages its own `pgboss` schema, separate from
+ * `public`, so it never conflicts with Drizzle's migration tracking.
+ */
+export async function getBoss(): Promise<PgBoss> {
+  if (!bossPromise) {
+    bossPromise = (async () => {
+      const boss = new PgBoss(env.DATABASE_URL);
+      boss.on("error", (err: Error) => console.error("[pg-boss]", err));
+      await boss.start();
+      await boss.createQueue(DELIVERY_EMAIL_QUEUE);
+      return boss;
+    })();
+  }
+  return bossPromise;
+}

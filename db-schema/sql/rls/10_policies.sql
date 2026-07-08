@@ -204,3 +204,21 @@ create policy dns_sel on document_number_sequences for select to authenticated
   using (is_finance());
 
 -- audit_log: Admin-only (covered by admin_all); inserts via DEFINER fn_audit.
+
+-- ── 3n. Pengiriman Dokumen ───────────────────────────────────────────────────
+-- email_accounts holds an encrypted SMTP secret — Admin-only read (not the
+-- broad read_auth widening other settings singletons get; Konfigurasi's
+-- Pengiriman tab is itself an admin-only route per nav.ts). Write already
+-- covered by admin_all.
+create policy email_accounts_sel on email_accounts for select to authenticated
+  using (is_admin());
+
+-- document_deliveries — read/create for the roles that actually use the
+-- "Kirim Dokumen" dialog (SPH=sales, Faktur/Slip=keuangan), matching the
+-- /dokumen page's nav.ts role list. No staff update/delete policy: rows are
+-- append-only from the app's perspective — the worker flips status via
+-- service_role (bypasses RLS), and Admin already has full access via admin_all.
+create policy deliveries_sel on document_deliveries for select to authenticated
+  using (auth_role() in ('admin','keuangan','sales'));
+create policy deliveries_ins on document_deliveries for insert to authenticated
+  with check (auth_role() in ('admin','keuangan','sales'));

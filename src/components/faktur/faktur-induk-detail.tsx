@@ -28,7 +28,7 @@ import { DocumentFooter } from "@/components/shared/document/document-footer";
 import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/document/kirim-dokumen-dialog";
 import { FakturDocument } from "@/components/faktur/faktur-document";
 import { cn } from "@/lib/utils";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, formatTanggalPanjang } from "@/lib/format";
 import { useGenerateTermin, useUpdateTermin } from "@/lib/query/faktur";
 import { useWorkflowStatuses } from "@/lib/query/proyek";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
@@ -185,6 +185,10 @@ function TerminDocumentDialog({ induk, termin, open, onOpenChange }: {
         dokumenId={termin.id}
         dokumenNomor={termin.number ?? termin.label}
         tujuanOptions={tujuanOptionsFor(perusahaanOptions, induk.perusahaanId)}
+        tokens={{
+          nama_perusahaan: perusahaanOptions.find((p) => p.id === induk.perusahaanId)?.nama ?? "",
+          jatuh_tempo: formatTanggalPanjang(termin.jatuhTempo),
+        }}
       />
 
       {mounted && createPortal(
