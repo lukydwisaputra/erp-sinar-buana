@@ -550,6 +550,64 @@ in `infra/docker-compose.yml` (`docker compose up -d postgres minio maildev`)
 `localhost:1080` — rather than needing real-world SMTP credentials just to
 verify the queue → worker → send → status-flip chain end to end.
 
+Dasbor (the tenth module, and unlike every other one — a completion pass
+on an already-mostly-real page rather than a from-scratch build) landed
+as two commits on `feature/dasbor`. `getProfitabilitas`/`getAlerts`/
+`getForekast` were already hitting real Faktur/Proyek/Realisasi RAB/Arus
+Kas/Tax Entries/Penggajian service functions before this pass — only 3
+mock modules were still blended in, and all 3 turned out to have a real,
+already-migrated Postgres table sitting completely unused
+(`dashboard_settings`, `tax_settings`'s `corp_tax_*` columns,
+`cashflow_categories.expense_nature`), plus a clean drop-in swap
+(`listPenawaran()` → the real `listQuotations()`, identical `Sph` shape
+both ways).
+
+**Commit 1** retired those 3 mocks and added the PRD's fine-grained
+dashboard permission model. `view_profit`/`view_project_cost`/
+`view_forecast`/`view_tax_detail` collapse to the exact same boolean
+everywhere they're defined in the PRD (admin ✓, keuangan ✓, everyone else
+✗) — rather than four independently-tracked flags, this pass added one
+`isFinance()`/`requireFinance()` check to `src/lib/auth/rbac.ts`, mirroring
+`db-schema/sql/rls/00_helpers.sql`'s own `is_finance()`. Laba-Rugi and
+Proyeksi Arus Kas now 403 entirely for non-finance roles *before* the
+service ever runs — satisfying the PRD's literal acceptance criterion
+("panel tidak dikembalikan server, bukan sekadar disembunyikan UI") —
+while Pusat Perhatian stays open to all 5 roles but drops finance-only
+alert kinds for non-finance callers, the "same engine, narrower subset"
+shape the PRD actually asks for there. A real, pre-existing UI gap was
+found while wiring `expense-nature`: Konfigurasi's "Kategori Arus Kas" tab
+already had full create/delete/sifat-update CRUD built against the mock,
+so a read-plus-toggle-only wiring would have left create/delete silently
+broken against the real `cashflow_categories` table — this pass built
+full CRUD instead, scoping the widened ambition to match what the
+existing UI already assumed.
+
+**Commit 2** built the PRD's genuinely-missing widgets — Ringkasan
+Keuangan Bulanan, income/expense category pie charts, a filterable
+cashflow table, Ringkasan Proyek (project counts by status/area/layanan
+— the one financial-adjacent panel every role sees, Tim Teknis narrowed
+to their own assigned projects via a new `filterProyekForRole`), a
+dedicated Ringkasan Pajak panel, and month-over-month trend lines
+(Pendapatan/Laba/Kas) — none of which existed even as mocks before this
+pass. The trend/category/table widgets reuse `recharts` + the shared
+`ChartContainer` exactly as `arus-kas/page.tsx` already established (the
+only other chart in the app), rather than inventing a second charting
+convention. Also added the "milestone mundur" alert type Pusat Perhatian
+was missing, and wired drilldown from alerts/category slices to their
+source — which surfaced a real, previously-unnoticed bug: Faktur alerts'
+`refId` pointed at the *termin* id, but `/faktur/[id]` expects the
+*Induk* id, so the link never actually resolved to anything. Fixed by
+threading `indukId` through `flattenTermins`.
+
+**Deliberately deferred, disclosed, not silently regressed**: Sales's
+"only my own quotations/projects" narrowing (the PRD's finer intent for
+that role) isn't implemented — `Sph` carries no owner/`createdBy` field
+through to the app layer at all, and exposing one is a Penawaran-module
+change outside this pass's boundary. Sales gets the same subtractive
+dashboard as Tim Teknis/Viewer (no P&L/cost/forecast/tax) rather than a
+row-scoped one. Tax alerts' drilldown links to `/pajak`'s list page only
+— no per-entry detail route exists there yet to link into directly.
+
 ## 10. Open / deferred
 
 - **Realtime:** deferred. TanStack Query refetch-on-focus + polling covers

@@ -18,6 +18,16 @@ Disusun sebagai **Pusat Komando** (Owner) + **dasbor per-peran** yang diringkas 
 job-desc. Konten **menyesuaikan peran** (mis. Tim Teknis melihat ringkasan proyek, Keuangan
 melihat keuangan penuh). Dasbor **tidak menyimpan nilai sendiri** — selalu agregasi real-time.
 
+> **Status implementasi (2026-07-08):** FR-09.1 s/d FR-09.6, FR-09.9–FR-09.12 sudah
+> terimplementasi penuh terhadap Postgres nyata. FR-09.7/FR-09.13 (penyaringan per peran)
+> ditegakkan server-side lewat satu pemeriksaan `isFinance()` (bukan 4 flag terpisah, karena
+> keempatnya identik di seluruh dokumen PRD) — lihat `docs/architecture.md`. US-09.5's
+> kriteria "panel tidak dikembalikan server" dipenuhi secara harfiah untuk Laba-Rugi/
+> Profitabilitas Per-Proyek/Proyeksi (403 sebelum service dipanggil), bukan sekadar
+> disembunyikan di UI. Belum diimplementasikan: pembatasan Sales ke penawaran/proyek
+> miliknya sendiri secara spesifik (lihat `docs/architecture.md`'s Dasbor writeup untuk
+> alasannya).
+
 > **Arus kas ≠ laba.** Ringkasan arus kas mengukur pergerakan kas; Laba-Rugi mengukur
 > profitabilitas (akrual). Keduanya terpisah & tidak dicampur ([BR-14](11-konvensi-global-nfr.md#8-daftar-aturan-bisnis-tidak-boleh-dilanggar-highlight-lintas-epic)).
 
