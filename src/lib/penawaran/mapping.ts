@@ -17,8 +17,10 @@ import type {
   activitySchedules,
   activityScheduleRows,
   activityScheduleMarkedWeeks,
+  quotationKelengkapan,
+  quotationKelengkapanItems,
 } from "@/lib/db/schema";
-import type { Sph, SphStatus, SphItem } from "@/lib/schemas/penawaran";
+import type { Sph, SphStatus, SphItem, SphKelengkapan } from "@/lib/schemas/penawaran";
 
 export type QuotationRow = typeof quotations.$inferSelect;
 export type QuotationItemRow = typeof quotationItems.$inferSelect;
@@ -28,6 +30,8 @@ export type RabDirectCostRow = typeof quotationRabDirectCosts.$inferSelect;
 export type ScheduleRow = typeof activitySchedules.$inferSelect;
 export type ScheduleRowRow = typeof activityScheduleRows.$inferSelect;
 export type MarkedWeekRow = typeof activityScheduleMarkedWeeks.$inferSelect;
+export type QuotationKelengkapanRow = typeof quotationKelengkapan.$inferSelect;
+export type QuotationKelengkapanItemRow = typeof quotationKelengkapanItems.$inferSelect;
 
 /** App enum <-> real `workflow_statuses.label` (entity='penawaran'). Keeps the
  * UI's 5-value enum (StatusBadge maps, filters, business logic in sph.ts)
@@ -89,6 +93,31 @@ function toItemJadwal(
   };
 }
 
+/** Reconstructs the attached Kelengkapan checklists (already sorted/grouped
+ * by parent). `templateId` is carried through for traceability only — it is
+ * never used to re-read live template content, since each attachment is a
+ * SNAPSHOT taken at attach time (see db-schema/src/schema/quotations.ts). */
+function toSphKelengkapan(
+  parents: QuotationKelengkapanRow[],
+  items: QuotationKelengkapanItemRow[],
+): SphKelengkapan[] {
+  const itemsByParentId = new Map<string, QuotationKelengkapanItemRow[]>();
+  for (const item of items) {
+    const list = itemsByParentId.get(item.quotationKelengkapanId) ?? [];
+    list.push(item);
+    itemsByParentId.set(item.quotationKelengkapanId, list);
+  }
+  return sortByOrder(parents).map((parent) => ({
+    templateId: parent.templateId ?? "",
+    nama: parent.name,
+    items: sortByOrder(itemsByParentId.get(parent.id) ?? []).map((item) => ({
+      persyaratan: item.persyaratan,
+      status: item.status ?? "",
+      keterangan: item.keterangan ?? "",
+    })),
+  }));
+}
+
 export type ItemAssemblyInput = {
   items: QuotationItemRow[];
   rabPersonnel: RabPersonnelRow[];
@@ -128,6 +157,8 @@ export type ToSphInput = ItemAssemblyInput & {
   companyAddress: string;
   termScheme: TermSchemeRow[];
   statusLabel: string | null;
+  kelengkapanAttachments: QuotationKelengkapanRow[];
+  kelengkapanItems: QuotationKelengkapanItemRow[];
 };
 
 export function toSph(input: ToSphInput): Sph {
@@ -160,7 +191,7 @@ export function toSph(input: ToSphInput): Sph {
     picAktif: q.picOverrideActive,
     picNama: q.picOverrideName ?? "",
     picJabatan: q.picOverridePosition ?? "",
-    kelengkapan: [], // Kelengkapan Administrasi stays mock/deferred — no DB table
+    kelengkapan: toSphKelengkapan(input.kelengkapanAttachments, input.kelengkapanItems),
   };
 }
 

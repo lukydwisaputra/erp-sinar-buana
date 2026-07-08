@@ -10,6 +10,8 @@ import { boolean, date, integer, pgTable, text, uuid } from "drizzle-orm/pg-core
 import { money, rate, bookkeeping, pk } from "./_shared";
 import { companies, companyContacts, serviceCatalog } from "./master-data";
 import { workflowStatuses } from "./config";
+import { kelengkapanItemStatus } from "./enums";
+import { kelengkapanTemplates } from "./kelengkapan";
 
 /** SPH header (PRD Bab 4.1 / 4.2). `number` is assigned by the numbering trigger. */
 export const quotations = pgTable("quotations", {
@@ -115,5 +117,37 @@ export const quotationRabDirectCosts = pgTable("quotation_rab_direct_costs", {
   }),
   description: text("description").notNull(), // survey, cetak, transportasi, ...
   amount: money("amount").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+/**
+ * A Kelengkapan Administrasi checklist attached to an SPH (PRD Bab 4
+ * lampiran) — a SNAPSHOT taken at attach time, not a live join to
+ * `kelengkapan_templates`. `templateId` is kept only for traceability
+ * (never read from to reconstruct item content) since the attachment's
+ * name/items can diverge from the source template afterward (renamed,
+ * edited, or the template later deleted).
+ */
+export const quotationKelengkapan = pgTable("quotation_kelengkapan", {
+  id: pk(),
+  quotationId: uuid("quotation_id")
+    .notNull()
+    .references(() => quotations.id, { onDelete: "cascade" }),
+  templateId: uuid("template_id").references(() => kelengkapanTemplates.id, {
+    onDelete: "set null",
+  }),
+  name: text("name").notNull(), // snapshot of the template's name, user-editable per SPH
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+/** Per-item fulfillment snapshot (persyaratan/status/keterangan). */
+export const quotationKelengkapanItems = pgTable("quotation_kelengkapan_items", {
+  id: pk(),
+  quotationKelengkapanId: uuid("quotation_kelengkapan_id")
+    .notNull()
+    .references(() => quotationKelengkapan.id, { onDelete: "cascade" }),
+  persyaratan: text("persyaratan").notNull(),
+  status: kelengkapanItemStatus("status"), // nullable; NULL <-> app's ""
+  keterangan: text("keterangan"),
   sortOrder: integer("sort_order").notNull().default(0),
 });

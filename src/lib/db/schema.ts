@@ -53,6 +53,8 @@ export const appRole = pgEnum("app_role", [
 
 export const authTokenType = pgEnum("auth_token_type", ["invite", "reset"]);
 
+export const kelengkapanItemStatus = pgEnum("kelengkapan_item_status", ["ada", "tidak"]);
+
 const pk = () => uuid("id").primaryKey().default(sql`gen_random_uuid()`);
 const createdAt = () =>
   timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
@@ -265,6 +267,24 @@ export const employeeSalaryComponents = pgTable(
   (t) => [unique("employee_salary_components_emp_component_uq").on(t.employeeId, t.salaryComponentId)],
 );
 
+// ── Kelengkapan Administrasi (db-schema/src/schema/kelengkapan.ts) ───────────
+
+export const kelengkapanTemplates = pgTable("kelengkapan_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const kelengkapanTemplateItems = pgTable("kelengkapan_template_items", {
+  id: pk(),
+  templateId: uuid("template_id").notNull().references(() => kelengkapanTemplates.id, { onDelete: "cascade" }),
+  persyaratan: text("persyaratan").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 // ── Penawaran / SPH (db-schema/src/schema/quotations.ts) ─────────────────────
 
 export const quotations = pgTable("quotations", {
@@ -332,6 +352,25 @@ export const quotationRabDirectCosts = pgTable("quotation_rab_direct_costs", {
   quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "cascade" }),
   description: text("description").notNull(),
   amount: money("amount").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// Kelengkapan attached to an SPH — a SNAPSHOT taken at attach time, not a live
+// join to kelengkapan_templates (see db-schema/src/schema/quotations.ts).
+export const quotationKelengkapan = pgTable("quotation_kelengkapan", {
+  id: pk(),
+  quotationId: uuid("quotation_id").notNull().references(() => quotations.id, { onDelete: "cascade" }),
+  templateId: uuid("template_id").references(() => kelengkapanTemplates.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const quotationKelengkapanItems = pgTable("quotation_kelengkapan_items", {
+  id: pk(),
+  quotationKelengkapanId: uuid("quotation_kelengkapan_id").notNull().references(() => quotationKelengkapan.id, { onDelete: "cascade" }),
+  persyaratan: text("persyaratan").notNull(),
+  status: kelengkapanItemStatus("status"),
+  keterangan: text("keterangan"),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 

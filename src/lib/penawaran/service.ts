@@ -8,7 +8,7 @@ import {
   STATUS_LABEL_BY_ENUM,
   type ToSphInput,
 } from "@/lib/penawaran/mapping";
-import type { Sph, SphItem, SphStatus, CreatePenawaranInput, UpdatePenawaranInput } from "@/lib/schemas/penawaran";
+import type { Sph, SphItem, SphStatus, SphKelengkapan, CreatePenawaranInput, UpdatePenawaranInput } from "@/lib/schemas/penawaran";
 
 export { toSph } from "@/lib/penawaran/mapping";
 
@@ -36,7 +36,7 @@ async function loadCompany(tx: Tx, companyId: string) {
 }
 
 async function assembleSph(tx: Tx, quotation: typeof schema.quotations.$inferSelect): Promise<Sph> {
-  const [items, rabPersonnel, rabDirectCosts, schedules, termScheme, company, statusLabel] = await Promise.all([
+  const [items, rabPersonnel, rabDirectCosts, schedules, termScheme, company, statusLabel, kelengkapanAttachments] = await Promise.all([
     tx.select().from(schema.quotationItems).where(eq(schema.quotationItems.quotationId, quotation.id)),
     tx.select().from(schema.quotationRabPersonnel).where(eq(schema.quotationRabPersonnel.quotationId, quotation.id)),
     tx.select().from(schema.quotationRabDirectCosts).where(eq(schema.quotationRabDirectCosts.quotationId, quotation.id)),
@@ -44,6 +44,7 @@ async function assembleSph(tx: Tx, quotation: typeof schema.quotations.$inferSel
     tx.select().from(schema.quotationTermScheme).where(eq(schema.quotationTermScheme.quotationId, quotation.id)),
     loadCompany(tx, quotation.companyId),
     loadStatusLabel(tx, quotation.statusId),
+    tx.select().from(schema.quotationKelengkapan).where(eq(schema.quotationKelengkapan.quotationId, quotation.id)),
   ]);
 
   const scheduleIds = schedules.map((s) => s.id);
@@ -53,6 +54,11 @@ async function assembleSph(tx: Tx, quotation: typeof schema.quotations.$inferSel
   const rowIds = scheduleRows.map((r) => r.id);
   const markedWeeks = rowIds.length
     ? await tx.select().from(schema.activityScheduleMarkedWeeks).where(inArray(schema.activityScheduleMarkedWeeks.rowId, rowIds))
+    : [];
+
+  const kelengkapanParentIds = kelengkapanAttachments.map((k) => k.id);
+  const kelengkapanItems = kelengkapanParentIds.length
+    ? await tx.select().from(schema.quotationKelengkapanItems).where(inArray(schema.quotationKelengkapanItems.quotationKelengkapanId, kelengkapanParentIds))
     : [];
 
   const input: ToSphInput = {
@@ -67,6 +73,8 @@ async function assembleSph(tx: Tx, quotation: typeof schema.quotations.$inferSel
     markedWeeks,
     termScheme,
     statusLabel,
+    kelengkapanAttachments,
+    kelengkapanItems,
   };
   return toSph(input);
 }
@@ -153,6 +161,33 @@ async function deleteChildren(tx: Tx, quotationId: string) {
   await tx.delete(schema.quotationItems).where(eq(schema.quotationItems.quotationId, quotationId));
 }
 
+/** Full replace of the attached Kelengkapan checklists — a SNAPSHOT taken at
+ * attach time (items cascade automatically via FK on the parent's delete). */
+async function insertKelengkapan(tx: Tx, quotationId: string, kelengkapan: SphKelengkapan[]) {
+  for (const [i, attachment] of kelengkapan.entries()) {
+    const [parent] = await tx
+      .insert(schema.quotationKelengkapan)
+      .values({
+        quotationId,
+        templateId: attachment.templateId || null,
+        name: attachment.nama,
+        sortOrder: i,
+      })
+      .returning();
+    if (attachment.items.length) {
+      await tx.insert(schema.quotationKelengkapanItems).values(
+        attachment.items.map((item, j) => ({
+          quotationKelengkapanId: parent.id,
+          persyaratan: item.persyaratan,
+          status: item.status === "" ? null : item.status,
+          keterangan: item.keterangan || null,
+          sortOrder: j,
+        })),
+      );
+    }
+  }
+}
+
 export async function listQuotations(userId: string): Promise<Sph[]> {
   return withUserTransaction(userId, async (tx) => {
     const rows = await tx
@@ -209,6 +244,9 @@ export async function createQuotation(userId: string, input: CreatePenawaranInpu
         })),
       );
     }
+    if (input.kelengkapan.length) {
+      await insertKelengkapan(tx, quotation.id, input.kelengkapan);
+    }
 
     return assembleSph(tx, quotation);
   });
@@ -258,6 +296,13 @@ export async function updateQuotation(userId: string, id: string, input: UpdateP
           })),
         );
       }
+    }
+
+    // Gated independently of items/termin above: a pure status transition or
+    // an items-only edit must never wipe kelengkapan (or vice versa).
+    if (input.kelengkapan !== undefined) {
+      await tx.delete(schema.quotationKelengkapan).where(eq(schema.quotationKelengkapan.quotationId, id));
+      await insertKelengkapan(tx, id, input.kelengkapan);
     }
 
     return assembleSph(tx, quotation);

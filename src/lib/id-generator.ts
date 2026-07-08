@@ -4,10 +4,8 @@ const h = (salt: string) => new Hashids(`sb-erp-${salt}`, 5);
 
 const lyn  = h("lyn");
 const sph  = h("sph");
-const klg  = h("klg");
 
 export const encodeLayanan     = (n: number) => `LYN-${lyn.encode(n)}`;
-export const encodeKelengkapan = (n: number) => `KLG-${klg.encode(n)}`;
 
 /** SPH/xxxxx/bulan.tahun */
 export const encodeSph = (n: number, bulan: number, tahun: number) =>
