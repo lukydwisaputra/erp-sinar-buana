@@ -30,3 +30,13 @@ export const taxEntrySchema = z.object({
   employeeId: z.string().nullable(),
 });
 export type TaxEntry = z.infer<typeof taxEntrySchema>;
+
+/** PATCH /api/tax-entries/[id] input — marks a `belum_disetor` entry
+ * `sudah_disetor` (fn_tax_entry_after_change creates the locked cashflow
+ * debit; the app never inserts into cashflow_entries itself). */
+export const settleTaxEntrySchema = z.object({
+  settledDate: z.string().min(1, "Tanggal setor wajib diisi."),
+  ntpn: z.string().optional(),
+  buktiPotongReceived: z.boolean().optional(), // only meaningful for pph23_dipotong
+});
+export type SettleTaxEntryInput = z.infer<typeof settleTaxEntrySchema>;

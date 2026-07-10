@@ -132,6 +132,19 @@ async function processDelivery(deliveryId: string): Promise<void> {
   }
 }
 
+const TAX_OVERDUE_SWEEP_QUEUE = "tax.overdue-sweep";
+
+/** Flips `belum_disetor` + past-`due_date` tax_entries rows to `terlambat`
+ * (db-schema/sql/triggers/40_tax_automation.sql's `mark_overdue_tax_entries()`,
+ * whose own doc comment says "call from a scheduled job / pg_cron" — this is
+ * that job). Same service_role elevation pattern as processDelivery. */
+async function sweepOverdueTaxEntries(): Promise<void> {
+  await sql.begin(async (tx) => {
+    await tx`set local role service_role`;
+    await tx`select mark_overdue_tax_entries()`;
+  });
+}
+
 async function main() {
   await boss.start();
   await boss.createQueue(DELIVERY_EMAIL_QUEUE);
@@ -141,6 +154,15 @@ async function main() {
     console.log("[worker] sent delivery", job.data.deliveryId);
   });
   console.log("[worker] listening on", DELIVERY_EMAIL_QUEUE);
+
+  await boss.createQueue(TAX_OVERDUE_SWEEP_QUEUE);
+  await boss.schedule(TAX_OVERDUE_SWEEP_QUEUE, "0 1 * * *", {});
+  await boss.work(TAX_OVERDUE_SWEEP_QUEUE, async () => {
+    console.log("[worker] sweeping overdue tax entries");
+    await sweepOverdueTaxEntries();
+    console.log("[worker] overdue tax entries swept");
+  });
+  console.log("[worker] scheduled", TAX_OVERDUE_SWEEP_QUEUE, "daily at 01:00");
 }
 
 main().catch((err) => {
