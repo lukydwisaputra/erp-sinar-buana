@@ -5,13 +5,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Building, ImageUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { onFormInvalid } from "@/lib/form-toast";
+import { useKaryawanList } from "@/lib/query/karyawan";
 import { useCompanyProfile, useUpdateCompanyProfile } from "@/lib/query/company-profile";
-import { companyProfileSchema, type CompanyProfile } from "@/lib/schemas/company-profile";
+import { updateCompanyProfileSchema, type CompanyProfile, type UpdateCompanyProfileInput } from "@/lib/schemas/company-profile";
 
-type CompanyProfileForm = CompanyProfile;
+type CompanyProfileForm = UpdateCompanyProfileInput;
 
 /** 16:9 preview, per docs/design/… "Logo perusahaan (16:9)" convention. */
 function LogoField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -108,8 +111,25 @@ function AlamatField({
   );
 }
 
+function toFormValues(profile: CompanyProfile): CompanyProfileForm {
+  return {
+    nama: profile.nama,
+    tagline: profile.tagline,
+    logo: profile.logo,
+    kota: profile.kota,
+    telepon: profile.telepon,
+    email: profile.email,
+    website: profile.website,
+    alamat: profile.alamat,
+    npwp: profile.npwp,
+    isPkp: profile.isPkp,
+    defaultSignerEmployeeId: profile.defaultSignerEmployeeId,
+  };
+}
+
 function ProfilPerusahaanForm({ profile }: { profile: CompanyProfile }) {
   const { mutateAsync, isPending } = useUpdateCompanyProfile();
+  const { data: karyawanList = [] } = useKaryawanList();
   const {
     register,
     handleSubmit,
@@ -117,12 +137,12 @@ function ProfilPerusahaanForm({ profile }: { profile: CompanyProfile }) {
     reset,
     formState: { errors },
   } = useForm<CompanyProfileForm>({
-    resolver: zodResolver(companyProfileSchema),
-    defaultValues: profile,
+    resolver: zodResolver(updateCompanyProfileSchema),
+    defaultValues: toFormValues(profile),
   });
 
   React.useEffect(() => {
-    reset(profile);
+    reset(toFormValues(profile));
   }, [profile, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
@@ -183,44 +203,58 @@ function ProfilPerusahaanForm({ profile }: { profile: CompanyProfile }) {
               <Input id="cp-website" {...register("website")} />
             </Field>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field data-invalid={!!errors.npwp}>
+              <FieldLabel htmlFor="cp-npwp">NPWP</FieldLabel>
+              <Input id="cp-npwp" className="font-mono" aria-invalid={!!errors.npwp} {...register("npwp")} />
+              <FieldError errors={errors.npwp ? [errors.npwp] : undefined} />
+            </Field>
+            <Controller
+              control={control}
+              name="isPkp"
+              render={({ field }) => (
+                <Field orientation="horizontal" className="items-center pt-6">
+                  <Checkbox id="cp-is-pkp" checked={field.value} onCheckedChange={(v) => field.onChange(!!v)} />
+                  <FieldLabel htmlFor="cp-is-pkp" className="font-normal">Berstatus PKP (Pengusaha Kena Pajak)</FieldLabel>
+                </Field>
+              )}
+            />
+          </div>
         </CardContent>
       </Card>
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle className="text-sm">Direktur & Rekening Bank</CardTitle>
+          <CardTitle className="text-sm">Penandatangan</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Field data-invalid={!!errors.direktur?.nama}>
-              <FieldLabel htmlFor="cp-direktur-nama">Nama Direktur</FieldLabel>
-              <Input id="cp-direktur-nama" aria-invalid={!!errors.direktur?.nama} {...register("direktur.nama")} />
-              <FieldError errors={errors.direktur?.nama ? [errors.direktur.nama] : undefined} />
-            </Field>
-            <Field data-invalid={!!errors.direktur?.jabatan}>
-              <FieldLabel htmlFor="cp-direktur-jabatan">Jabatan</FieldLabel>
-              <Input id="cp-direktur-jabatan" aria-invalid={!!errors.direktur?.jabatan} {...register("direktur.jabatan")} />
-              <FieldError errors={errors.direktur?.jabatan ? [errors.direktur.jabatan] : undefined} />
-            </Field>
-          </div>
+          <Controller
+            control={control}
+            name="defaultSignerEmployeeId"
+            render={({ field }) => (
+              <Field>
+                <FieldLabel htmlFor="cp-signer">Penandatangan Dokumen</FieldLabel>
+                <Select value={field.value ?? undefined} onValueChange={field.onChange}>
+                  <SelectTrigger id="cp-signer" className="w-full">
+                    <SelectValue placeholder="Pilih karyawan…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {karyawanList.map((k) => (
+                      <SelectItem key={k.id} value={k.id}>{k.nama} — {k.jabatan}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  Tampil sebagai penanda tangan pada SPH, Faktur, dan Slip Gaji.
+                </FieldDescription>
+              </Field>
+            )}
+          />
 
-          <div className="grid grid-cols-3 gap-4">
-            <Field data-invalid={!!errors.bank?.nama}>
-              <FieldLabel htmlFor="cp-bank-nama">Nama Bank</FieldLabel>
-              <Input id="cp-bank-nama" aria-invalid={!!errors.bank?.nama} {...register("bank.nama")} />
-              <FieldError errors={errors.bank?.nama ? [errors.bank.nama] : undefined} />
-            </Field>
-            <Field data-invalid={!!errors.bank?.atasNama}>
-              <FieldLabel htmlFor="cp-bank-an">Atas Nama</FieldLabel>
-              <Input id="cp-bank-an" aria-invalid={!!errors.bank?.atasNama} {...register("bank.atasNama")} />
-              <FieldError errors={errors.bank?.atasNama ? [errors.bank.atasNama] : undefined} />
-            </Field>
-            <Field data-invalid={!!errors.bank?.noRekening}>
-              <FieldLabel htmlFor="cp-bank-no">Nomor Rekening</FieldLabel>
-              <Input id="cp-bank-no" className="font-mono" aria-invalid={!!errors.bank?.noRekening} {...register("bank.noRekening")} />
-              <FieldError errors={errors.bank?.noRekening ? [errors.bank.noRekening] : undefined} />
-            </Field>
-          </div>
+          <FieldDescription>
+            Rekening bank kini dikelola di Konfigurasi → Daftar Pilihan (kategori Rekening Bank) — tandai satu rekening sebagai default untuk ditampilkan pada dokumen.
+          </FieldDescription>
         </CardContent>
       </Card>
 

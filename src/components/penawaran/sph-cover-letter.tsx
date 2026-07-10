@@ -1,4 +1,4 @@
-import { companyProfileFixture } from "@/lib/fixtures/company-profile";
+import { companyProfileCache } from "@/lib/company-profile/cache";
 import { formatRupiah, formatTanggalPanjang as tglPanjang, titleCase } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { totalPenawaran } from "@/lib/sph";
@@ -14,7 +14,7 @@ export function SphCoverLetter({
   values: SphFormValues;
   noSph: string;
 }): React.JSX.Element {
-  const companyProfile = companyProfileFixture.current;
+  const companyProfile = companyProfileCache.current;
   const total = totalPenawaran(values.items);
 
   // Lampiran line: the typed "Dokumen pendukung" plus the RAB & Estimasi Waktu

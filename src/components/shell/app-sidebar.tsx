@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Leaf } from "lucide-react";
@@ -9,11 +10,20 @@ import {
 import { navForRole } from "@/lib/nav";
 import { useSession } from "@/lib/query/session";
 import { useCompanyProfile } from "@/lib/query/company-profile";
+import { companyProfileCache } from "@/lib/company-profile/cache";
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { data: profile } = useCompanyProfile();
+  // Printed documents (letterhead/footer/faktur/slip/SPH cover) read this
+  // singleton synchronously, with no loading state of their own — see
+  // `src/lib/company-profile/cache.ts`. The sidebar is part of the persistent
+  // app shell, mounted before any document can be opened, so this keeps the
+  // cache fresh with zero props threaded through the document tree.
+  React.useEffect(() => {
+    if (profile) companyProfileCache.current = profile;
+  }, [profile]);
   const nav = navForRole(session?.role);
   return (
     <Sidebar collapsible="icon">

@@ -1,4 +1,4 @@
-import { companyProfileFixture } from "@/lib/fixtures/company-profile";
+import { companyProfileCache } from "@/lib/company-profile/cache";
 import { formatRupiah, formatTanggalPanjang as tglPanjang, titleCase } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import type { FakturInduk, InvoiceTermin } from "@/lib/schemas/faktur";
@@ -11,7 +11,7 @@ import { DocumentLetterhead } from "@/components/shared/document/document-letter
  * table from the old mock is replaced by a plain service list, with the
  * total sourced from the Faktur Induk's stored `totalBiaya`. */
 export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: InvoiceTermin }): React.JSX.Element {
-  const companyProfile = companyProfileFixture.current;
+  const companyProfile = companyProfileCache.current;
   const cell = "border border-[var(--doc-rule)] px-2 py-1";
   const sumLabel = `${cell} text-right font-bold`;
   const sumVal = `${cell} text-right font-mono tabular-nums whitespace-nowrap`;
