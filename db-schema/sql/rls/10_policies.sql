@@ -169,6 +169,13 @@ create policy tax_sel on tax_entries for select to authenticated using (is_finan
 create policy tax_write on tax_entries for all to authenticated
   using (is_finance()) with check (is_finance());
 
+-- tax_settings already has the generic read_auth SELECT (all 5 roles need
+-- ppnRate/pph23Rate/quotationValidityDays for SPH creation) + admin_all —
+-- this adds the missing Keuangan write grant per the Tax Center RBAC row
+-- (PRD 02-peran-rbac.md: Admin CRUDE, Keuangan CRUDES), matching tax_entries.
+create policy tax_settings_write on tax_settings for all to authenticated
+  using (is_finance()) with check (is_finance());
+
 -- ── 3i-bis. Realisasi RAB — biaya/margin proyek = Admin/Finance only ─────────
 -- Matches the `view_project_cost` rule (PRD Bab 6.8 / RBAC 2.2): Tim Teknis &
 -- Sales see project progress but NOT cost/margin.
