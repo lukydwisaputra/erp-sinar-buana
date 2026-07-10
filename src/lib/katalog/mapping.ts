@@ -3,13 +3,14 @@
  * connection import so these functions stay unit-testable without a live
  * Postgres — see `src/lib/katalog/service.ts` for the actual queries.
  */
-import type { serviceCatalog, documentTypes, authorities, legalBases } from "@/lib/db/schema";
+import type { serviceCatalog, documentTypes, authorities, legalBases, milestoneTemplates } from "@/lib/db/schema";
 import type { Layanan } from "@/lib/schemas/katalog";
 
 export type ServiceRow = typeof serviceCatalog.$inferSelect;
 export type DocumentTypeRow = typeof documentTypes.$inferSelect;
 export type AuthorityRow = typeof authorities.$inferSelect;
 export type LegalBasisRow = typeof legalBases.$inferSelect;
+export type MilestoneTemplateRow = typeof milestoneTemplates.$inferSelect;
 
 // `dipakaiSPH`/`dipakaiProyek` are both real counts now (Penawaran and
 // Proyek are wired) — see src/lib/katalog/service.ts, which queries them via
@@ -24,6 +25,7 @@ export function toLayanan(
   documentType: DocumentTypeRow | undefined,
   authority: AuthorityRow | undefined,
   legalBasis: LegalBasisRow | undefined,
+  milestoneTemplate: MilestoneTemplateRow | undefined,
   dipakaiSPH: number,
   dipakaiProyek: number,
 ): Layanan {
@@ -39,6 +41,8 @@ export function toLayanan(
     hargaStandar: service.standardPrice !== null ? Number(service.standardPrice) : null,
     isRecurring: service.isRecurring,
     status: service.isActive ? "aktif" : "terarsip",
+    milestoneTemplateId: service.milestoneTemplateId,
+    milestoneTemplateNama: milestoneTemplate?.name ?? null,
     metrik: computeMetrik(dipakaiSPH, dipakaiProyek),
   };
 }
