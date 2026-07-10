@@ -4,23 +4,33 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, ChevronDown, ChevronUp, FileX, Landmark, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, Check, ChevronDown, ChevronUp, FileX, Landmark, SlidersHorizontal, Undo2 } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { MoneyInput } from "@/components/shared/money-input";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { onFormInvalid } from "@/lib/form-toast";
-import { useTaxEntryList } from "@/lib/query/tax-entries";
+import {
+  useTaxEntryList, useSettleTaxEntry, useUnsettleTaxEntry, useUpdateBuktiPotong,
+} from "@/lib/query/tax-entries";
 import { usePajakConfig, useUpdatePajakConfig } from "@/lib/query/pajak-config";
-import { taxType, type TaxType, type TaxEntry, type TaxSettlementStatus } from "@/lib/schemas/tax-entries";
+import {
+  taxType, settleTaxEntrySchema, type TaxType, type TaxEntry, type TaxSettlementStatus,
+} from "@/lib/schemas/tax-entries";
 import type { PajakConfig } from "@/lib/schemas/pajak-config";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -69,31 +79,140 @@ function JatuhTempoBadge({ iso, status }: { iso: string | null; status: TaxSettl
   return <span className="font-mono">{label}</span>;
 }
 
+// ── Settle dialog ────────────────────────────────────────────────────────
+
+const settleFormSchema = settleTaxEntrySchema.extend({
+  buktiPotongReceived: z.boolean().optional(),
+});
+type SettleForm = z.input<typeof settleFormSchema>;
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function SettleDialog({ entry, onOpenChange }: { entry: TaxEntry | null; onOpenChange: (open: boolean) => void }) {
+  const { mutateAsync, isPending } = useSettleTaxEntry();
+  const isPph23 = entry?.taxType === "pph23_dipotong";
+
+  const form = useForm<SettleForm>({
+    resolver: zodResolver(settleFormSchema),
+    defaultValues: { settledDate: todayISO(), ntpn: "", buktiPotongReceived: false },
+  });
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = form;
+
+  React.useEffect(() => {
+    if (entry) reset({ settledDate: todayISO(), ntpn: entry.ntpn ?? "", buktiPotongReceived: entry.buktiPotongReceived });
+  }, [entry, reset]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    if (!entry) return;
+    await mutateAsync({
+      id: entry.id,
+      input: {
+        settledDate: values.settledDate,
+        ntpn: values.ntpn || undefined,
+        buktiPotongReceived: isPph23 ? values.buktiPotongReceived : undefined,
+      },
+    });
+    onOpenChange(false);
+  }, onFormInvalid);
+
+  return (
+    <Dialog open={!!entry} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Tandai Selesai</DialogTitle></DialogHeader>
+        {entry && (
+          <form onSubmit={onSubmit} className="space-y-4">
+            <Field data-invalid={!!errors.settledDate}>
+              <FieldLabel>Tanggal Setor</FieldLabel>
+              <Input type="date" {...register("settledDate")} />
+              {errors.settledDate && <FieldError>{errors.settledDate.message}</FieldError>}
+            </Field>
+            <Field>
+              <FieldLabel>NTPN (opsional)</FieldLabel>
+              <Input className="font-mono" placeholder="No. Bukti Setor" {...register("ntpn")} />
+            </Field>
+            {isPph23 && (
+              <Field orientation="horizontal" className="items-center">
+                <Checkbox
+                  id="settle-bukti-potong"
+                  checked={watch("buktiPotongReceived")}
+                  onCheckedChange={(v) => setValue("buktiPotongReceived", !!v)}
+                />
+                <FieldLabel htmlFor="settle-bukti-potong" className="font-normal">Bukti potong sudah diterima</FieldLabel>
+              </Field>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
+              <Button type="submit" disabled={isPending}>{isPending ? "Menyimpan…" : "Tandai Selesai"}</Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── Table columns ─────────────────────────────────────────────────────────
 
-const columns: ColumnDef<TaxEntry>[] = [
-  { accessorKey: "id", header: "ID", meta: { mono: true }, cell: ({ row }) => <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span> },
-  { accessorKey: "taxType", header: "Jenis", cell: ({ row }) => <JenisBadge jenis={row.original.taxType} /> },
-  { accessorKey: "taxPeriod", header: "Periode", meta: { mono: true }, cell: ({ row }) => <span className="font-mono">{row.original.taxPeriod.slice(0, 7)}</span> },
-  {
-    accessorKey: "jumlah", header: "Jumlah", meta: { mono: true, className: "text-right" },
-    cell: ({ row }) => <span className="font-mono" title={formatRupiah(row.original.jumlah)}>{formatRupiahCompact(row.original.jumlah)}</span>,
-  },
-  { accessorKey: "dueDate", header: "Jatuh Tempo", cell: ({ row }) => <JatuhTempoBadge iso={row.original.dueDate} status={row.original.settlementStatus} /> },
-  {
-    accessorKey: "buktiPotongReceived", header: "Bukti Potong",
-    cell: ({ row }) => {
-      const { taxType: jenis, buktiPotongReceived } = row.original;
-      if (jenis !== "pph23_dipotong") return <span className="text-muted-foreground">—</span>;
-      return buktiPotongReceived ? <Badge variant="success">Diterima</Badge> : <Badge variant="destructive">Belum</Badge>;
+function BuktiPotongCell({ entry }: { entry: TaxEntry }) {
+  const { mutate, isPending } = useUpdateBuktiPotong();
+  if (entry.taxType !== "pph23_dipotong") return <span className="text-muted-foreground">—</span>;
+  return (
+    <button
+      type="button"
+      disabled={isPending}
+      onClick={() => mutate({ id: entry.id, received: !entry.buktiPotongReceived })}
+      className="disabled:opacity-50"
+    >
+      {entry.buktiPotongReceived ? <Badge variant="success">Diterima</Badge> : <Badge variant="destructive">Belum</Badge>}
+    </button>
+  );
+}
+
+function AksiCell({ entry, onSettle, onUnsettle }: { entry: TaxEntry; onSettle: () => void; onUnsettle: () => void }) {
+  if (entry.settlementStatus === "sudah_disetor") {
+    return (
+      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={onUnsettle}>
+        <Undo2 className="size-3.5" /> Batalkan
+      </Button>
+    );
+  }
+  return (
+    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={onSettle}>
+      <Check className="size-3.5" /> Tandai Selesai
+    </Button>
+  );
+}
+
+function buildColumns(
+  onSettle: (entry: TaxEntry) => void,
+  onUnsettle: (entry: TaxEntry) => void,
+): ColumnDef<TaxEntry>[] {
+  return [
+    { accessorKey: "id", header: "ID", meta: { mono: true }, cell: ({ row }) => <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span> },
+    { accessorKey: "taxType", header: "Jenis", cell: ({ row }) => <JenisBadge jenis={row.original.taxType} /> },
+    { accessorKey: "taxPeriod", header: "Periode", meta: { mono: true }, cell: ({ row }) => <span className="font-mono">{row.original.taxPeriod.slice(0, 7)}</span> },
+    {
+      accessorKey: "jumlah", header: "Jumlah", meta: { mono: true, className: "text-right" },
+      cell: ({ row }) => <span className="font-mono" title={formatRupiah(row.original.jumlah)}>{formatRupiahCompact(row.original.jumlah)}</span>,
     },
-  },
-  { accessorKey: "notes", header: "Keterangan", meta: { className: "min-w-48 text-muted-foreground" }, cell: ({ row }) => row.original.notes || <span className="text-muted-foreground">—</span> },
-  {
-    accessorKey: "settlementStatus", header: "Status",
-    cell: ({ row }) => { const m = STATUS_META[row.original.settlementStatus]; return <Badge variant={m.variant}>{m.label}</Badge>; },
-  },
-];
+    { accessorKey: "dueDate", header: "Jatuh Tempo", cell: ({ row }) => <JatuhTempoBadge iso={row.original.dueDate} status={row.original.settlementStatus} /> },
+    {
+      accessorKey: "buktiPotongReceived", header: "Bukti Potong",
+      cell: ({ row }) => <BuktiPotongCell entry={row.original} />,
+    },
+    { accessorKey: "notes", header: "Keterangan", meta: { className: "min-w-48 text-muted-foreground" }, cell: ({ row }) => row.original.notes || <span className="text-muted-foreground">—</span> },
+    {
+      accessorKey: "settlementStatus", header: "Status",
+      cell: ({ row }) => { const m = STATUS_META[row.original.settlementStatus]; return <Badge variant={m.variant}>{m.label}</Badge>; },
+    },
+    {
+      id: "aksi", header: "", enableSorting: false,
+      cell: ({ row }) => <AksiCell entry={row.original} onSettle={() => onSettle(row.original)} onUnsettle={() => onUnsettle(row.original)} />,
+    },
+  ];
+}
 
 // ── KPI strip ─────────────────────────────────────────────────────────────
 
@@ -245,9 +364,17 @@ export default function Page() {
   const [pendingStatus, setPendingStatus] = React.useState<TaxSettlementStatus[]>([]);
   const [appliedJenis, setAppliedJenis] = React.useState<TaxType[]>([]);
   const [appliedStatus, setAppliedStatus] = React.useState<TaxSettlementStatus[]>([]);
+  const [settlingEntry, setSettlingEntry] = React.useState<TaxEntry | null>(null);
+  const [unsettlingEntry, setUnsettlingEntry] = React.useState<TaxEntry | null>(null);
 
   const { data, isLoading, isError, refetch } = useTaxEntryList();
   const { data: config, isLoading: configLoading } = usePajakConfig();
+  const { mutateAsync: unsettle, isPending: unsettling } = useUnsettleTaxEntry();
+
+  const columns = React.useMemo(
+    () => buildColumns(setSettlingEntry, setUnsettlingEntry),
+    [],
+  );
 
   const hasFilter = appliedJenis.length > 0 || appliedStatus.length > 0;
   const hasPending = pendingJenis.length > 0 || pendingStatus.length > 0;
@@ -333,6 +460,33 @@ export default function Page() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SettleDialog entry={settlingEntry} onOpenChange={(open) => !open && setSettlingEntry(null)} />
+
+      <AlertDialog open={!!unsettlingEntry} onOpenChange={(open) => !open && setUnsettlingEntry(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan status setor?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Kewajiban ini akan dikembalikan ke status <strong>Belum Disetor</strong>. Jurnal arus kas yang
+              sudah tercatat dari penyetoran sebelumnya tidak akan dihapus.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={unsettling}
+              onClick={async () => {
+                if (!unsettlingEntry) return;
+                await unsettle(unsettlingEntry.id);
+                setUnsettlingEntry(null);
+              }}
+            >
+              {unsettling ? "Memproses…" : "Batalkan"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
