@@ -228,14 +228,22 @@ export default function PenawaranPage() {
                 >
                   <Trash2Icon className="mr-2 size-4" /> Hapus
                 </DropdownMenuItem>
-                {isDeal && sphToProyekId.has(sph.id) && (
+                {isDeal && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={() => router.push(`/proyek/${encodeURIComponent(sphToProyekId.get(sph.id) ?? "")}`)}
-                    >
-                      <FolderKanban className="mr-2 size-4" /> Lihat Proyek
-                    </DropdownMenuItem>
+                    {sphToProyekId.has(sph.id) ? (
+                      <DropdownMenuItem
+                        onSelect={() => router.push(`/proyek/${encodeURIComponent(sphToProyekId.get(sph.id) ?? "")}`)}
+                      >
+                        <FolderKanban className="mr-2 size-4" /> Lihat Proyek
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onSelect={() => router.push(`/proyek/baru?sphId=${encodeURIComponent(sph.id)}`)}
+                      >
+                        <FolderKanban className="mr-2 size-4" /> Buat Proyek
+                      </DropdownMenuItem>
+                    )}
                   </>
                 )}
               </DropdownMenuContent>
