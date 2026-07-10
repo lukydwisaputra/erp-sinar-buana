@@ -48,7 +48,7 @@ const SPH_STATUS: Record<SphStatus, StatusBadgeConfig> = {
   dibatalkan: { label: "Dibatalkan", variant: "secondary" },
 };
 import { useSph, useCreatePenawaran, useUpdatePenawaran, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
-import { useTarifConfig } from "@/lib/query/tarif-config";
+import { useTaxSettings } from "@/lib/query/tax-settings";
 
 const emptyValues: SphFormValues = {
   perusahaanId: "",
@@ -232,7 +232,7 @@ function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string })
 }
 
 function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
-  const { data: tarif } = useTarifConfig();
+  const { data: tarif } = useTaxSettings();
   const { data: perusahaanOptions = [] } = usePerusahaanList();
   const { data: katalogData = [] } = useKatalogList();
   const layananOptions: LayananOption[] = katalogData.map((l) => ({
@@ -279,9 +279,9 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
   React.useEffect(() => {
     if (existing || !tarif || appliedTarifDefaults.current) return;
     appliedTarifDefaults.current = true;
-    form.setValue("ppnPersen", tarif.ppnPersenDefault);
-    form.setValue("pph23Persen", tarif.pph23PersenDefault);
-    form.setValue("masaBerlakuHari", tarif.masaBerlakuPenawaranHariDefault);
+    form.setValue("ppnPersen", tarif.ppnRate);
+    form.setValue("pph23Persen", tarif.pph23Rate);
+    form.setValue("masaBerlakuHari", tarif.quotationValidityDays);
   }, [existing, tarif, form]);
 
   const values = form.watch();

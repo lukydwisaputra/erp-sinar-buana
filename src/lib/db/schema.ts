@@ -821,3 +821,13 @@ export const dashboardSettings = pgTable("dashboard_settings", {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+export const numberingSettings = pgTable("numbering_settings", {
+  singleton: boolean("singleton").notNull().default(true).primaryKey(),
+  sphFormat: text("sph_format").notNull().default("SPH/{seq}/{month}.{year}"),
+  invFormat: text("inv_format").notNull().default("INV/{seq}/{month}.{year}"),
+  gajFormat: text("gaj_format").notNull().default("GAJ/{seq}/{month}.{year}"),
+  seqPadding: smallint("seq_padding").notNull().default(3),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});

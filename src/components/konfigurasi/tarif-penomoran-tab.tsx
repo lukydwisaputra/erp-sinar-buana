@@ -9,54 +9,59 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
-import { Switch } from "@/components/ui/switch";
 import { onFormInvalid } from "@/lib/form-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useTarifConfig, useUpdateTarifConfig } from "@/lib/query/tarif-config";
-import { usePenomoranConfig, useUpdatePenomoranFormat } from "@/lib/query/penomoran";
+import { useTaxSettings, useUpdateTaxSettings } from "@/lib/query/tax-settings";
+import { useNumberingSettings, useUpdateNumberingSettings } from "@/lib/query/numbering-settings";
 import { useDashboardParams, useUpdateDashboardParams } from "@/lib/query/dashboard-params";
 import { usePajakConfig, useUpdatePajakConfig } from "@/lib/query/pajak-config";
-import type { TarifConfig } from "@/lib/schemas/tarif-config";
-import type { DocTypePenomoran } from "@/lib/schemas/penomoran-config";
+import type { TaxSettings } from "@/lib/schemas/tax-settings";
+import type { NumberingSettings, DocTypeNumbering } from "@/lib/schemas/numbering";
 import type { DashboardParams } from "@/lib/schemas/dashboard-params";
 import type { PajakConfig, PphBadanMetode } from "@/lib/schemas/pajak-config";
 
 // ── Tarif Pajak & Jatuh Tempo ───────────────────────────────────────────────
 
-const tarifFormSchema = z.object({
-  ppnPersenDefault: z.coerce.number().min(0).max(100),
-  pph23PersenDefault: z.coerce.number().min(0).max(100),
-  statusPkp: z.boolean(),
-  jatuhTempoFakturHari: z.coerce.number().int().min(0),
-  jatuhTempoPpnHari: z.coerce.number().int().min(0),
-  jatuhTempoPphHari: z.coerce.number().int().min(0),
-  jatuhTempoBpjsHari: z.coerce.number().int().min(0),
-  masaBerlakuPenawaranHariDefault: z.coerce.number().int().min(0),
-  pengaliProbationDefault: z.coerce.number().positive(),
+const taxSettingsFormSchema = z.object({
+  ppnRate: z.coerce.number().min(0).max(100),
+  ppnDppNumerator: z.coerce.number().int().positive(),
+  ppnDppDenominator: z.coerce.number().int().positive(),
+  ppnSetorDay: z.coerce.number().int().min(1).max(31),
+  pph23Rate: z.coerce.number().min(0).max(100),
+  pph23SetorDay: z.coerce.number().int().min(1).max(31),
+  pph23LaporDay: z.coerce.number().int().min(1).max(31),
+  pph21SetorDay: z.coerce.number().int().min(1).max(31),
+  pph21LaporDay: z.coerce.number().int().min(1).max(31),
+  bpjsSetorDay: z.coerce.number().int().min(1).max(31),
+  invoiceDueDays: z.coerce.number().int().min(0),
+  quotationValidityDays: z.coerce.number().int().min(0),
 });
-type TarifForm = z.input<typeof tarifFormSchema>;
+type TaxSettingsForm = z.input<typeof taxSettingsFormSchema>;
 
-function TarifCard({ config }: { config: TarifConfig }) {
+function TarifCard({ config }: { config: TaxSettings }) {
   const [open, setOpen] = React.useState(false);
   const [editing, setEditing] = React.useState(false);
-  const { mutateAsync, isPending } = useUpdateTarifConfig();
+  const { mutateAsync, isPending } = useUpdateTaxSettings();
 
-  const form = useForm<TarifForm>({ resolver: zodResolver(tarifFormSchema), defaultValues: config });
-  const { register, handleSubmit, control, reset, formState: { errors } } = form;
+  const form = useForm<TaxSettingsForm>({ resolver: zodResolver(taxSettingsFormSchema), defaultValues: config });
+  const { register, handleSubmit, reset, formState: { errors } } = form;
 
   React.useEffect(() => { reset(config); }, [config, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
     await mutateAsync({
-      ppnPersenDefault: Number(values.ppnPersenDefault),
-      pph23PersenDefault: Number(values.pph23PersenDefault),
-      statusPkp: values.statusPkp,
-      jatuhTempoFakturHari: Number(values.jatuhTempoFakturHari),
-      jatuhTempoPpnHari: Number(values.jatuhTempoPpnHari),
-      jatuhTempoPphHari: Number(values.jatuhTempoPphHari),
-      jatuhTempoBpjsHari: Number(values.jatuhTempoBpjsHari),
-      masaBerlakuPenawaranHariDefault: Number(values.masaBerlakuPenawaranHariDefault),
-      pengaliProbationDefault: Number(values.pengaliProbationDefault),
+      ppnRate: Number(values.ppnRate),
+      ppnDppNumerator: Number(values.ppnDppNumerator),
+      ppnDppDenominator: Number(values.ppnDppDenominator),
+      ppnSetorDay: Number(values.ppnSetorDay),
+      pph23Rate: Number(values.pph23Rate),
+      pph23SetorDay: Number(values.pph23SetorDay),
+      pph23LaporDay: Number(values.pph23LaporDay),
+      pph21SetorDay: Number(values.pph21SetorDay),
+      pph21LaporDay: Number(values.pph21LaporDay),
+      bpjsSetorDay: Number(values.bpjsSetorDay),
+      invoiceDueDays: Number(values.invoiceDueDays),
+      quotationValidityDays: Number(values.quotationValidityDays),
     });
     setEditing(false);
   }, onFormInvalid);
@@ -81,74 +86,91 @@ function TarifCard({ config }: { config: TarifConfig }) {
         <CardContent className="pt-0">
           {!editing ? (
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
-              <div><p className="text-xs text-muted-foreground">PPN Default</p><p className="font-mono font-medium">{config.ppnPersenDefault}%</p></div>
-              <div><p className="text-xs text-muted-foreground">PPh 23 Default</p><p className="font-mono font-medium">{config.pph23PersenDefault}%</p></div>
-              <div><p className="text-xs text-muted-foreground">Status PKP</p><p className="font-medium">{config.statusPkp ? "PKP" : "Non-PKP"}</p></div>
-              <div><p className="text-xs text-muted-foreground">Jatuh Tempo Faktur</p><p className="font-mono font-medium">{config.jatuhTempoFakturHari} hari</p></div>
-              <div><p className="text-xs text-muted-foreground">Jatuh Tempo PPN</p><p className="font-mono font-medium">{config.jatuhTempoPpnHari} hari</p></div>
-              <div><p className="text-xs text-muted-foreground">Jatuh Tempo PPh</p><p className="font-mono font-medium">{config.jatuhTempoPphHari} hari</p></div>
-              <div><p className="text-xs text-muted-foreground">Jatuh Tempo BPJS</p><p className="font-mono font-medium">{config.jatuhTempoBpjsHari} hari</p></div>
-              <div><p className="text-xs text-muted-foreground">Masa Berlaku SPH</p><p className="font-mono font-medium">{config.masaBerlakuPenawaranHariDefault} hari</p></div>
-              <div><p className="text-xs text-muted-foreground">Pengali Probation</p><p className="font-mono font-medium">{config.pengaliProbationDefault}</p></div>
+              <div><p className="text-xs text-muted-foreground">PPN</p><p className="font-mono font-medium">{config.ppnRate}%</p></div>
+              <div><p className="text-xs text-muted-foreground">PPN DPP</p><p className="font-mono font-medium">{config.ppnDppNumerator}/{config.ppnDppDenominator}</p></div>
+              <div><p className="text-xs text-muted-foreground">Setor PPN</p><p className="font-mono font-medium">Tgl {config.ppnSetorDay}</p></div>
+              <div><p className="text-xs text-muted-foreground">PPh 23</p><p className="font-mono font-medium">{config.pph23Rate}%</p></div>
+              <div><p className="text-xs text-muted-foreground">Setor PPh 23</p><p className="font-mono font-medium">Tgl {config.pph23SetorDay}</p></div>
+              <div><p className="text-xs text-muted-foreground">Lapor PPh 23</p><p className="font-mono font-medium">Tgl {config.pph23LaporDay}</p></div>
+              <div><p className="text-xs text-muted-foreground">Setor PPh 21</p><p className="font-mono font-medium">Tgl {config.pph21SetorDay}</p></div>
+              <div><p className="text-xs text-muted-foreground">Lapor PPh 21</p><p className="font-mono font-medium">Tgl {config.pph21LaporDay}</p></div>
+              <div><p className="text-xs text-muted-foreground">Setor BPJS</p><p className="font-mono font-medium">Tgl {config.bpjsSetorDay}</p></div>
+              <div><p className="text-xs text-muted-foreground">Jatuh Tempo Faktur</p><p className="font-mono font-medium">{config.invoiceDueDays} hari</p></div>
+              <div><p className="text-xs text-muted-foreground">Masa Berlaku SPH</p><p className="font-mono font-medium">{config.quotationValidityDays} hari</p></div>
             </div>
           ) : (
             <form onSubmit={onSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <p className="text-xs font-medium text-muted-foreground">PPN</p>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <Field>
-                  <FieldLabel>PPN Default (%)</FieldLabel>
+                  <FieldLabel>Tarif (%)</FieldLabel>
                   <InputGroup>
-                    <InputGroupInput type="number" step="0.1" {...register("ppnPersenDefault")} />
+                    <InputGroupInput type="number" step="0.1" {...register("ppnRate")} />
                     <InputGroupAddon align="inline-end"><InputGroupText>%</InputGroupText></InputGroupAddon>
                   </InputGroup>
-                  {errors.ppnPersenDefault && <FieldError>{errors.ppnPersenDefault.message}</FieldError>}
+                  {errors.ppnRate && <FieldError>{errors.ppnRate.message}</FieldError>}
                 </Field>
                 <Field>
-                  <FieldLabel>PPh 23 Default (%)</FieldLabel>
-                  <InputGroup>
-                    <InputGroupInput type="number" step="0.1" {...register("pph23PersenDefault")} />
-                    <InputGroupAddon align="inline-end"><InputGroupText>%</InputGroupText></InputGroupAddon>
-                  </InputGroup>
-                  {errors.pph23PersenDefault && <FieldError>{errors.pph23PersenDefault.message}</FieldError>}
+                  <FieldLabel>DPP Pembilang</FieldLabel>
+                  <Input type="number" {...register("ppnDppNumerator")} />
+                </Field>
+                <Field>
+                  <FieldLabel>DPP Penyebut</FieldLabel>
+                  <Input type="number" {...register("ppnDppDenominator")} />
+                </Field>
+                <Field>
+                  <FieldLabel>Tanggal Setor</FieldLabel>
+                  <Input type="number" {...register("ppnSetorDay")} />
                 </Field>
               </div>
 
-              <Field>
-                <div className="flex items-center justify-between gap-2">
-                  <FieldLabel className="mb-0">Status PKP</FieldLabel>
-                  <Controller name="statusPkp" control={control} render={({ field }) => (
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                  )} />
-                </div>
-                <FieldDescription>Menentukan default aktif/tidaknya PPN pada dokumen baru.</FieldDescription>
-              </Field>
+              <p className="text-xs font-medium text-muted-foreground">PPh 23</p>
+              <div className="grid grid-cols-3 gap-4">
+                <Field>
+                  <FieldLabel>Tarif (%)</FieldLabel>
+                  <InputGroup>
+                    <InputGroupInput type="number" step="0.1" {...register("pph23Rate")} />
+                    <InputGroupAddon align="inline-end"><InputGroupText>%</InputGroupText></InputGroupAddon>
+                  </InputGroup>
+                  {errors.pph23Rate && <FieldError>{errors.pph23Rate.message}</FieldError>}
+                </Field>
+                <Field>
+                  <FieldLabel>Tanggal Setor</FieldLabel>
+                  <Input type="number" {...register("pph23SetorDay")} />
+                </Field>
+                <Field>
+                  <FieldLabel>Tanggal Lapor</FieldLabel>
+                  <Input type="number" {...register("pph23LaporDay")} />
+                </Field>
+              </div>
 
+              <p className="text-xs font-medium text-muted-foreground">PPh 21 & BPJS</p>
+              <div className="grid grid-cols-3 gap-4">
+                <Field>
+                  <FieldLabel>Setor PPh 21</FieldLabel>
+                  <Input type="number" {...register("pph21SetorDay")} />
+                </Field>
+                <Field>
+                  <FieldLabel>Lapor PPh 21</FieldLabel>
+                  <Input type="number" {...register("pph21LaporDay")} />
+                </Field>
+                <Field>
+                  <FieldLabel>Setor BPJS</FieldLabel>
+                  <Input type="number" {...register("bpjsSetorDay")} />
+                </Field>
+              </div>
+
+              <p className="text-xs font-medium text-muted-foreground">Umum</p>
               <div className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel>Jatuh Tempo Faktur (hari)</FieldLabel>
-                  <Input type="number" {...register("jatuhTempoFakturHari")} />
-                  {errors.jatuhTempoFakturHari && <FieldError>{errors.jatuhTempoFakturHari.message}</FieldError>}
+                  <Input type="number" {...register("invoiceDueDays")} />
+                  {errors.invoiceDueDays && <FieldError>{errors.invoiceDueDays.message}</FieldError>}
                 </Field>
                 <Field>
                   <FieldLabel>Masa Berlaku SPH (hari)</FieldLabel>
-                  <Input type="number" {...register("masaBerlakuPenawaranHariDefault")} />
-                  {errors.masaBerlakuPenawaranHariDefault && <FieldError>{errors.masaBerlakuPenawaranHariDefault.message}</FieldError>}
-                </Field>
-                <Field>
-                  <FieldLabel>Jatuh Tempo PPN (hari)</FieldLabel>
-                  <Input type="number" {...register("jatuhTempoPpnHari")} />
-                </Field>
-                <Field>
-                  <FieldLabel>Jatuh Tempo PPh (hari)</FieldLabel>
-                  <Input type="number" {...register("jatuhTempoPphHari")} />
-                </Field>
-                <Field>
-                  <FieldLabel>Jatuh Tempo BPJS (hari)</FieldLabel>
-                  <Input type="number" {...register("jatuhTempoBpjsHari")} />
-                </Field>
-                <Field>
-                  <FieldLabel>Pengali Probation</FieldLabel>
-                  <Input type="number" step="0.01" {...register("pengaliProbationDefault")} />
-                  <FieldDescription>Dipakai bila Daftar Pilihan tidak punya baris Probation.</FieldDescription>
+                  <Input type="number" {...register("quotationValidityDays")} />
+                  {errors.quotationValidityDays && <FieldError>{errors.quotationValidityDays.message}</FieldError>}
                 </Field>
               </div>
 
@@ -166,71 +188,93 @@ function TarifCard({ config }: { config: TarifConfig }) {
 
 // ── Format Penomoran ────────────────────────────────────────────────────────
 
-const DOC_TYPE_LABEL: Record<DocTypePenomoran, string> = { sph: "SPH", inv: "Invoice", proyek: "Proyek" };
+const DOC_TYPE_LABEL: Record<DocTypeNumbering, string> = { sph: "SPH", inv: "Invoice", gaj: "Slip Gaji" };
 
-function PenomoranCard({ formats }: { formats: { docType: DocTypePenomoran; format: string }[] }) {
+const numberingFormSchema = z.object({
+  sphFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  invFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  gajFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  seqPadding: z.coerce.number().int().min(1).max(10),
+});
+type NumberingForm = z.input<typeof numberingFormSchema>;
+
+const NUMBERING_FIELDS: { key: "sphFormat" | "invFormat" | "gajFormat"; docType: DocTypeNumbering }[] = [
+  { key: "sphFormat", docType: "sph" },
+  { key: "invFormat", docType: "inv" },
+  { key: "gajFormat", docType: "gaj" },
+];
+
+function PenomoranCard({ settings }: { settings: NumberingSettings }) {
   const [open, setOpen] = React.useState(false);
-  const [editingType, setEditingType] = React.useState<DocTypePenomoran | null>(null);
-  const [value, setValue] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
-  const { mutateAsync, isPending } = useUpdatePenomoranFormat();
+  const [editing, setEditing] = React.useState(false);
+  const { mutateAsync, isPending } = useUpdateNumberingSettings();
+
+  const form = useForm<NumberingForm>({ resolver: zodResolver(numberingFormSchema), defaultValues: settings });
+  const { register, handleSubmit, reset, formState: { errors } } = form;
+
+  React.useEffect(() => { reset(settings); }, [settings, reset]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    await mutateAsync({
+      sphFormat: values.sphFormat,
+      invFormat: values.invFormat,
+      gajFormat: values.gajFormat,
+      seqPadding: Number(values.seqPadding),
+    });
+    setEditing(false);
+  }, onFormInvalid);
 
   return (
     <Card size="sm">
       <CardHeader>
         <CardTitle className="text-sm">Format Penomoran</CardTitle>
-        <CardAction>
+        <CardAction className="flex items-center gap-1">
+          {!editing && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setEditing(true); setOpen(true); }}>
+              Ubah
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen((o) => !o)}>
             {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
           </Button>
         </CardAction>
       </CardHeader>
       {open && (
-        <CardContent className="pt-0 space-y-3">
-          {formats.map((f) => (
-            <div key={f.docType} className="flex items-center justify-between gap-2 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground">{DOC_TYPE_LABEL[f.docType]}</p>
-                {editingType === f.docType ? (
-                  <Input
-                    className="mt-1 h-8 font-mono text-sm"
-                    value={value}
-                    onChange={(e) => { setValue(e.target.value); setError(null); }}
-                  />
-                ) : (
-                  <p className="font-mono font-medium">{f.format}</p>
-                )}
-                {editingType === f.docType && error && <p className="mt-1 text-xs text-destructive">{error}</p>}
-              </div>
-              {editingType === f.docType ? (
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    disabled={isPending}
-                    onClick={async () => {
-                      if (!value.includes("{urut}")) { setError("Format nomor harus memuat {urut}."); return; }
-                      await mutateAsync({ docType: f.docType, format: value });
-                      setEditingType(null);
-                    }}
-                  >
-                    Simpan
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingType(null)}>Batal</Button>
+        <CardContent className="pt-0">
+          {!editing ? (
+            <div className="space-y-2 text-sm">
+              {NUMBERING_FIELDS.map(({ key, docType }) => (
+                <div key={key}>
+                  <p className="text-xs text-muted-foreground">{DOC_TYPE_LABEL[docType]}</p>
+                  <p className="font-mono font-medium">{settings[key]}</p>
                 </div>
-              ) : (
-                <Button
-                  variant="ghost" size="sm" className="h-7 text-xs"
-                  onClick={() => { setEditingType(f.docType); setValue(f.format); setError(null); }}
-                >
-                  Ubah
-                </Button>
-              )}
+              ))}
+              <div><p className="text-xs text-muted-foreground">Padding Urut</p><p className="font-mono font-medium">{settings.seqPadding} digit</p></div>
             </div>
-          ))}
-          <FieldDescription>
-            Placeholder: {"{urut}"} (wajib), {"{bulan}"}, {"{tahun}"}. Penomoran ini hanya berlaku untuk dokumen baru
-            — dokumen lama tidak dinomori ulang.
-          </FieldDescription>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-4">
+              {NUMBERING_FIELDS.map(({ key, docType }) => (
+                <Field key={key}>
+                  <FieldLabel>{DOC_TYPE_LABEL[docType]}</FieldLabel>
+                  <Input className="font-mono" {...register(key)} />
+                  {errors[key] && <FieldError>{errors[key]?.message}</FieldError>}
+                </Field>
+              ))}
+              <Field>
+                <FieldLabel>Padding Urut (digit)</FieldLabel>
+                <Input type="number" {...register("seqPadding")} />
+                {errors.seqPadding && <FieldError>{errors.seqPadding.message}</FieldError>}
+              </Field>
+              <FieldDescription>
+                Placeholder: {"{seq}"} (wajib), {"{month}"}, {"{year}"}. Nomor bersifat tetap setelah dokumen dibuat —
+                mengubah format ini hanya berlaku untuk dokumen baru.
+              </FieldDescription>
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" disabled={isPending}>{isPending ? "Menyimpan…" : "Simpan"}</Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setEditing(false); reset(settings); }}>Batal</Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       )}
     </Card>
@@ -440,22 +484,22 @@ function DashboardParamsCard({ params }: { params: DashboardParams }) {
 // ── Tab ──────────────────────────────────────────────────────────────────
 
 export function TarifPenomoranTab() {
-  const { data: tarif, isLoading: tarifLoading } = useTarifConfig();
-  const { data: penomoran, isLoading: penomoranLoading } = usePenomoranConfig();
+  const { data: taxSettings, isLoading: taxLoading } = useTaxSettings();
+  const { data: numbering, isLoading: numberingLoading } = useNumberingSettings();
   const { data: dashboardParams, isLoading: paramsLoading } = useDashboardParams();
   const { data: pajakConfig, isLoading: pajakLoading } = usePajakConfig();
 
   if (
-    tarifLoading || penomoranLoading || paramsLoading || pajakLoading ||
-    !tarif || !penomoran || !dashboardParams || !pajakConfig
+    taxLoading || numberingLoading || paramsLoading || pajakLoading ||
+    !taxSettings || !numbering || !dashboardParams || !pajakConfig
   ) {
     return <p className="text-sm text-muted-foreground">Memuat…</p>;
   }
 
   return (
     <div className="space-y-4">
-      <TarifCard config={tarif} />
-      <PenomoranCard formats={penomoran.formats} />
+      <TarifCard config={taxSettings} />
+      <PenomoranCard settings={numbering} />
       <PphBadanCard config={pajakConfig} />
       <DashboardParamsCard params={dashboardParams} />
     </div>
