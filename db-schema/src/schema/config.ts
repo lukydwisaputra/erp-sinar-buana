@@ -151,3 +151,41 @@ export const messageTemplates = pgTable(
     ),
   }),
 );
+
+// ── 9.4 Template (Termin & PDF) ────────────────────────────────────────────
+// Milestone templates live in master-data.ts (milestone_templates /
+// milestone_template_steps) — already real, FK'd from service_catalog.
+
+/** Skema termin (payment-schedule) templates, reusable across SPHs. Field
+ * names mirror `quotation_term_scheme` (the real per-SPH table) for
+ * consistency: label/percentage/milestoneTriggerLabel/sortOrder. */
+export const terminTemplates = pgTable("termin_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  ...timestamps,
+});
+
+export const terminTemplateSteps = pgTable("termin_template_steps", {
+  id: pk(),
+  templateId: uuid("template_id")
+    .notNull()
+    .references(() => terminTemplates.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  percentage: rate("percentage").notNull(),
+  milestoneTriggerLabel: text("milestone_trigger_label"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+/** PDF header/footer note templates per document type. Not wired into
+ * actual document rendering (sph-cover-letter.tsx etc. stay hardcoded) —
+ * CRUD only, same boundary the mock had. */
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  documentType: businessDocumentType("document_type").notNull(),
+  headerNote: text("header_note").notNull().default(""),
+  footerNote: text("footer_note").notNull().default(""),
+  isActive: boolean("is_active").notNull().default(true),
+  ...timestamps,
+});

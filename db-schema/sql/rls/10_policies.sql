@@ -38,6 +38,7 @@ declare
     'employment_statuses','salary_components','bank_accounts',
     'cashflow_categories','workflow_statuses','message_templates',
     'milestone_templates','milestone_template_steps',
+    'termin_templates','termin_template_steps','pdf_templates',
     'kelengkapan_templates','kelengkapan_template_items',
     'company_profile','tax_settings','numbering_settings','dashboard_settings',
     'quotations','quotation_items','quotation_term_scheme',

@@ -21,6 +21,8 @@ export const layananSchema = z.object({
   hargaStandar: z.number().nullable(),
   isRecurring: z.boolean(), // "Tag Berulang" (PRD Bab 3.2) — e.g. Laporan Semester
   status: katalogStatus, // derived from service_catalog.is_active
+  milestoneTemplateId: z.string().nullable(),
+  milestoneTemplateNama: z.string().nullable(), // resolved milestone_templates.name
   metrik: z.object({ dipakaiSPH: z.number(), dipakaiProyek: z.number() }),
 });
 export type Layanan = z.infer<typeof layananSchema>;
@@ -33,6 +35,7 @@ export const createLayananSchema = z.object({
   legalBasisId: z.string().optional(),
   hargaStandar: z.number().nullable().optional(),
   isRecurring: z.boolean().optional(),
+  milestoneTemplateId: z.string().nullable().optional(),
 });
 export type CreateLayananInput = z.infer<typeof createLayananSchema>;
 
@@ -44,5 +47,6 @@ export const updateLayananSchema = z.object({
   hargaStandar: z.number().nullable().optional(),
   isRecurring: z.boolean().optional(),
   status: katalogStatus.optional(),
+  milestoneTemplateId: z.string().nullable().optional(),
 });
 export type UpdateLayananInput = z.infer<typeof updateLayananSchema>;

@@ -22,6 +22,7 @@
     "seed:pengiriman": "node --env-file=.env.local scripts/seed-pengiriman.ts",
     "seed:kelengkapan": "node --env-file=.env.local scripts/seed-kelengkapan.ts",
     "seed:company-profile": "node --env-file=.env.local scripts/seed-company-profile.ts",
+    "seed:templates": "node --env-file=.env.local scripts/seed-templates.ts",
     "worker": "node --env-file=.env.local scripts/worker.ts",
     "screenshot:docs": "node --env-file=.env.local scripts/screenshot-docs.ts"
   },

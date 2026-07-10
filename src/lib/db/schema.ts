@@ -215,6 +215,25 @@ export const workflowStatuses = pgTable("workflow_statuses", {
 // query/write it (see docs/architecture.md's Katalog note); Drizzle simply
 // won't know about that column, which is fine since we never touch it.
 
+export const milestoneTemplates = pgTable("milestone_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const milestoneTemplateSteps = pgTable("milestone_template_steps", {
+  id: pk(),
+  templateId: uuid("template_id").notNull().references(() => milestoneTemplates.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  triggersTerm: boolean("triggers_term").notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 export const serviceCatalog = pgTable("service_catalog", {
   id: pk(),
   name: text("name").notNull(),
@@ -223,6 +242,7 @@ export const serviceCatalog = pgTable("service_catalog", {
   legalBasisId: uuid("legal_basis_id").references(() => legalBases.id, { onDelete: "set null" }),
   standardPrice: money("standard_price"),
   isRecurring: boolean("is_recurring").notNull().default(false),
+  milestoneTemplateId: uuid("milestone_template_id").references(() => milestoneTemplates.id, { onDelete: "set null" }),
   isActive: boolean("is_active").notNull().default(true),
   ...bookkeeping,
 });
@@ -728,6 +748,34 @@ export const messageTemplates = pgTable("message_templates", {
   documentType: businessDocumentType("document_type").notNull(),
   subject: text("subject"),
   body: text("body").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const terminTemplates = pgTable("termin_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const terminTemplateSteps = pgTable("termin_template_steps", {
+  id: pk(),
+  templateId: uuid("template_id").notNull().references(() => terminTemplates.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  percentage: rate("percentage").notNull(),
+  milestoneTriggerLabel: text("milestone_trigger_label"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  documentType: businessDocumentType("document_type").notNull(),
+  headerNote: text("header_note").notNull().default(""),
+  footerNote: text("footer_note").notNull().default(""),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),

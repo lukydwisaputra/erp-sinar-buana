@@ -34,6 +34,7 @@ import { StatTile, InfoRow, InfoList, SectionLabel } from "@/components/shared/d
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 import { useKatalogList, useCreateLayanan, useUpdateLayanan, useDeleteLayanan } from "@/lib/query/katalog";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
+import { useMilestoneTemplateList } from "@/lib/query/milestone-templates";
 import { onFormInvalid } from "@/lib/form-toast";
 import type { Layanan } from "@/lib/schemas/katalog";
 
@@ -150,6 +151,7 @@ const layananCreateSchema = z.object({
   legalBasisId: z.string().optional(),
   hargaStandar: z.string(),
   isRecurring: z.boolean().optional(),
+  milestoneTemplateId: z.string().optional(),
 });
 type LayananCreate = z.infer<typeof layananCreateSchema>;
 
@@ -158,9 +160,10 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
   const { data: jenisDokumenOptions = [] } = useOptionList("jenis_dokumen");
   const { data: kewenanganOptions = [] } = useOptionList("kewenangan");
   const { data: dasarHukumOptions = [] } = useOptionList("dasar_hukum");
+  const { data: milestoneTemplates = [] } = useMilestoneTemplateList();
   const form = useForm<LayananCreate>({
     resolver: zodResolver(layananCreateSchema),
-    defaultValues: { nama: "", documentTypeId: "", authorityId: "", legalBasisId: "", hargaStandar: "", isRecurring: false },
+    defaultValues: { nama: "", documentTypeId: "", authorityId: "", legalBasisId: "", hargaStandar: "", isRecurring: false, milestoneTemplateId: "" },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
@@ -175,6 +178,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
       legalBasisId: values.legalBasisId,
       hargaStandar: hargaNum,
       isRecurring: values.isRecurring,
+      milestoneTemplateId: values.milestoneTemplateId || null,
     });
     onOpenChange(false);
     reset();
@@ -272,6 +276,24 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
         />
         <FieldLabel className="font-normal">Berulang (mis. Laporan Semester)</FieldLabel>
       </Field>
+
+      <Field>
+        <FieldLabel htmlFor="l-milestone">Template Milestone (opsional)</FieldLabel>
+        <Controller
+          control={control}
+          name="milestoneTemplateId"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="l-milestone" className="w-full">
+                <SelectValue placeholder="Tidak ada" />
+              </SelectTrigger>
+              <SelectContent>
+                {milestoneTemplates.map((t) => <SelectItem key={t.id} value={t.id}>{t.nama}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </Field>
     </FormSheet>
   );
 }
@@ -286,6 +308,7 @@ const layananEditSchema = z.object({
   hargaStandar: z.string(),
   isRecurring: z.boolean().optional(),
   status: z.enum(["aktif", "terarsip"]),
+  milestoneTemplateId: z.string().optional(),
 });
 type LayananEdit = z.infer<typeof layananEditSchema>;
 
@@ -304,6 +327,7 @@ function LayananEditForm({
   const { data: jenisDokumenOptions = [] } = useOptionList("jenis_dokumen");
   const { data: kewenanganOptions = [] } = useOptionList("kewenangan");
   const { data: dasarHukumOptions = [] } = useOptionList("dasar_hukum");
+  const { data: milestoneTemplates = [] } = useMilestoneTemplateList();
   const defaults = React.useCallback((l: Layanan): LayananEdit => ({
     nama: l.nama,
     documentTypeId: l.documentTypeId ?? "",
@@ -312,6 +336,7 @@ function LayananEditForm({
     hargaStandar: l.hargaStandar === null ? "" : String(l.hargaStandar),
     isRecurring: l.isRecurring,
     status: l.status,
+    milestoneTemplateId: l.milestoneTemplateId ?? "",
   }), []);
   const form = useForm<LayananEdit>({
     resolver: zodResolver(layananEditSchema),
@@ -337,6 +362,7 @@ function LayananEditForm({
         hargaStandar: hargaNum,
         isRecurring: values.isRecurring,
         status: values.status,
+        milestoneTemplateId: values.milestoneTemplateId || null,
       },
     });
     onSuccess(updated);
@@ -449,6 +475,24 @@ function LayananEditForm({
               <SelectContent>
                 <SelectItem value="aktif">Aktif</SelectItem>
                 <SelectItem value="terarsip">Terarsip</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="e-milestone">Template Milestone (opsional)</FieldLabel>
+        <Controller
+          control={control}
+          name="milestoneTemplateId"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="e-milestone" className="w-full">
+                <SelectValue placeholder="Tidak ada" />
+              </SelectTrigger>
+              <SelectContent>
+                {milestoneTemplates.map((t) => <SelectItem key={t.id} value={t.id}>{t.nama}</SelectItem>)}
               </SelectContent>
             </Select>
           )}

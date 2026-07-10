@@ -114,6 +114,9 @@ create unique index if not exists uq_milestone_templates_name on milestone_templ
 create unique index if not exists uq_kelengkapan_templates_name on kelengkapan_templates (name);
 create unique index if not exists uq_legal_bases_label on legal_bases (label);
 create unique index if not exists uq_admin_areas_label on admin_areas (label);
+create unique index if not exists uq_termin_templates_name on termin_templates (name);
+create unique index if not exists uq_pdf_templates_name on pdf_templates (name);
+create index if not exists idx_termin_template_steps_template on termin_template_steps (template_id);
 
 -- ── Pengiriman Dokumen ───────────────────────────────────────────────────────
 create index if not exists idx_deliveries_quotation on document_deliveries (quotation_id);
