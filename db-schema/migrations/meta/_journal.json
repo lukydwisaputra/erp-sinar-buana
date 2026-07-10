@@ -99,6 +99,13 @@
       "when": 1783669256946,
       "tag": "0013_old_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1783673376528,
+      "tag": "0014_giant_killer_shrike",
+      "breakpoints": true
     }
   ]
 }

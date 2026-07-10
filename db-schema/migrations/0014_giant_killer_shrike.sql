@@ -1,0 +1,1 @@
+ALTER TABLE "workflow_statuses" ADD COLUMN "is_system" boolean DEFAULT false NOT NULL;

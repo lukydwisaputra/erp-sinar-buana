@@ -118,6 +118,9 @@ export const workflowStatuses = pgTable(
     systemRole: statusSystemRole("system_role"),
     color: text("color"), // optional UI hint, e.g. "#facc15"
     isDefault: boolean("is_default").notNull().default(false),
+    // Protects rows automation/default-assignment depends on from Konfigurasi
+    // delete — mirrors cashflow_categories.isSystem. Not client-settable.
+    isSystem: boolean("is_system").notNull().default(false),
   },
   (t) => ({
     uqEntityLabel: unique("workflow_statuses_entity_label_uq").on(
