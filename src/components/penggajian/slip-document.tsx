@@ -1,4 +1,4 @@
-import { companyProfileFixture } from "@/lib/fixtures/company-profile";
+import { companyProfileCache } from "@/lib/company-profile/cache";
 import { formatRupiah, formatTanggalPanjang as tglPanjang } from "@/lib/format";
 import { calcSlip, type SlipGaji } from "@/lib/schemas/penggajian";
 import { DocumentPage } from "@/components/shared/document/document-page";
@@ -23,7 +23,7 @@ export function SlipDocument({
   slip: SlipGaji;
   periode: { mulai: string; selesai: string };
 }) {
-  const companyProfile = companyProfileFixture.current;
+  const companyProfile = companyProfileCache.current;
   const { gajiPokokEfektif, potonganTotal, penggajianKotor, penggajianBersih } = calcSlip(slip);
   const totalPotongan = slip.pph21 + potonganTotal;
   const tglPaid = slip.paidAt ? tglPanjang(slip.paidAt) : tglPanjang(new Date().toISOString());

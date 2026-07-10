@@ -34,6 +34,10 @@ export const companyProfile = pgTable("company_profile", {
   singleton: singletonGuard,
   logoUrl: text("logo_url"),
   legalName: text("legal_name").notNull(),
+  tagline: text("tagline"),
+  city: text("city"),
+  /** Multi-line address, joined by "\n" — same convention as
+   * `quotations.notes` for the app's `alamat: string[]` (Bab 3.4). */
   address: text("address"),
   phone: text("phone"),
   email: text("email"),

@@ -775,6 +775,23 @@ export const documentDeliveries = pgTable("document_deliveries", {
 
 export const corpTaxMethod = pgEnum("corp_tax_method", ["final_0_5", "badan_22"]);
 
+export const companyProfile = pgTable("company_profile", {
+  singleton: boolean("singleton").notNull().default(true).primaryKey(),
+  logoUrl: text("logo_url"),
+  legalName: text("legal_name").notNull(),
+  tagline: text("tagline"),
+  city: text("city"),
+  address: text("address"),
+  phone: text("phone"),
+  email: text("email"),
+  website: text("website"),
+  npwp: text("npwp"),
+  isPkp: boolean("is_pkp").notNull().default(true),
+  defaultSignerEmployeeId: uuid("default_signer_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 export const taxSettings = pgTable("tax_settings", {
   singleton: boolean("singleton").notNull().default(true).primaryKey(),
   ppnRate: rate("ppn_rate").notNull().default("12"),

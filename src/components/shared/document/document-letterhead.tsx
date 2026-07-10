@@ -1,4 +1,4 @@
-import { companyProfileFixture } from "@/lib/fixtures/company-profile";
+import { companyProfileCache } from "@/lib/company-profile/cache";
 
 /** SBMJ letterhead. `full` = angled brand band (cover/invoice); `strip` = compact bar (appendix pages). */
 export function DocumentLetterhead({
@@ -6,10 +6,11 @@ export function DocumentLetterhead({
 }: {
   variant?: "full" | "strip";
 }): React.JSX.Element {
-  // Read fresh on every render — `.current` is reassigned wholesale on save
-  // (src/lib/data/company-profile.ts), so a stale module-level alias would
-  // never pick up edits made via /profil-perusahaan.
-  const companyProfile = companyProfileFixture.current;
+  // Read fresh on every render — `.current` is reassigned wholesale whenever
+  // the real profile query resolves (src/components/shell/app-sidebar.tsx),
+  // so a stale module-level alias would never pick up edits made via
+  // /profil-perusahaan.
+  const companyProfile = companyProfileCache.current;
   if (variant === "strip") {
     return (
       <div className="flex items-center gap-2 border-b border-[var(--doc-rule)] px-8 py-1.5">
@@ -40,7 +41,7 @@ export function DocumentLetterhead({
 
 /** Configurable logo: real image when `companyProfile.logo` is set, else the SBMJ badge. */
 function Logo({ className = "" }: { className?: string }): React.JSX.Element {
-  const { logo } = companyProfileFixture.current;
+  const { logo } = companyProfileCache.current;
   if (logo) {
     return <img src={logo} alt="Logo" className={`object-contain ${className}`} />;
   }
