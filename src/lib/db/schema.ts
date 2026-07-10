@@ -208,12 +208,10 @@ export const workflowStatuses = pgTable("workflow_statuses", {
   systemRole: statusSystemRole("system_role"),
   color: text("color"),
   isDefault: boolean("is_default").notNull().default(false),
+  isSystem: boolean("is_system").notNull().default(false),
 });
 
 // ── Katalog Layanan (db-schema/src/schema/master-data.ts) ────────────────────
-// `milestone_template_id` is deliberately omitted here — this pass doesn't
-// query/write it (see docs/architecture.md's Katalog note); Drizzle simply
-// won't know about that column, which is fine since we never touch it.
 
 export const milestoneTemplates = pgTable("milestone_templates", {
   id: pk(),
