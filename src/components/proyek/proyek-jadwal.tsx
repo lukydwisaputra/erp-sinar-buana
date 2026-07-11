@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import {
   useProjectSchedules, useToggleActualWeek, useAddScheduleRow, useRemoveScheduleRow,
 } from "@/lib/query/proyek";
+import { useSession } from "@/lib/query/session";
+import { isClientPortal } from "@/lib/auth/rbac";
 
 /**
  * Read/write Gantt view for a project — reuses the same activity_schedules
@@ -21,6 +23,8 @@ export function ProyekJadwal({ proyekId }: { proyekId: string }) {
   const addRow = useAddScheduleRow();
   const removeRow = useRemoveScheduleRow();
   const [newActivityName, setNewActivityName] = React.useState("");
+  const { data: session } = useSession();
+  const isClient = isClientPortal(session);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Memuat jadwal…</p>;
 
@@ -58,6 +62,24 @@ export function ProyekJadwal({ proyekId }: { proyekId: string }) {
                         {weeks.map((w) => {
                           const rencana = row.rencana.includes(w);
                           const aktual = row.aktual.includes(w);
+                          const cellCls = cn(
+                            "size-6 rounded-sm border transition-colors",
+                            aktual
+                              ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                              : rencana
+                                ? "border-primary/50 bg-transparent hover:bg-primary/20"
+                                : "border-border bg-transparent hover:bg-primary/10",
+                          );
+                          if (isClient) {
+                            return (
+                              <td key={w} className="px-0.5 py-1 text-center">
+                                <span
+                                  aria-label={`Minggu ${w} — rencana ${rencana ? "ya" : "tidak"}, aktual ${aktual ? "ya" : "tidak"}`}
+                                  className={cn(cellCls, "inline-block hover:bg-transparent")}
+                                />
+                              </td>
+                            );
+                          }
                           return (
                             <td key={w} className="px-0.5 py-1 text-center">
                               <button
@@ -66,26 +88,21 @@ export function ProyekJadwal({ proyekId }: { proyekId: string }) {
                                 aria-pressed={aktual}
                                 onClick={() => toggleActual.mutate({ proyekId, rowId: row.id, weekNumber: w })}
                                 disabled={toggleActual.isPending}
-                                className={cn(
-                                  "size-6 rounded-sm border transition-colors",
-                                  aktual
-                                    ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                                    : rencana
-                                      ? "border-primary/50 bg-transparent hover:bg-primary/20"
-                                      : "border-border bg-transparent hover:bg-primary/10",
-                                )}
+                                className={cellCls}
                               />
                             </td>
                           );
                         })}
-                        <td className="px-1 py-1">
-                          <Button
-                            type="button" variant="ghost" size="icon-sm" aria-label="Hapus kegiatan"
-                            onClick={() => removeRow.mutate({ proyekId, rowId: row.id })}
-                          >
-                            <Trash2Icon className="size-4 text-destructive" />
-                          </Button>
-                        </td>
+                        {!isClient && (
+                          <td className="px-1 py-1">
+                            <Button
+                              type="button" variant="ghost" size="icon-sm" aria-label="Hapus kegiatan"
+                              onClick={() => removeRow.mutate({ proyekId, rowId: row.id })}
+                            >
+                              <Trash2Icon className="size-4 text-destructive" />
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -96,26 +113,28 @@ export function ProyekJadwal({ proyekId }: { proyekId: string }) {
         );
       })}
 
-      <div className="flex items-center gap-2">
-        <Input
-          value={newActivityName}
-          onChange={(e) => setNewActivityName(e.target.value)}
-          placeholder="Nama kegiatan baru…"
-          className="max-w-70"
-        />
-        <Button
-          type="button" variant="outline" size="sm"
-          disabled={!newActivityName.trim() || addRow.isPending}
-          onClick={() => {
-            addRow.mutate(
-              { proyekId, scheduleId: schedules[0]?.scheduleId, activityName: newActivityName.trim() },
-              { onSuccess: () => setNewActivityName("") },
-            );
-          }}
-        >
-          <Plus className="size-4" /> Tambah Kegiatan
-        </Button>
-      </div>
+      {!isClient && (
+        <div className="flex items-center gap-2">
+          <Input
+            value={newActivityName}
+            onChange={(e) => setNewActivityName(e.target.value)}
+            placeholder="Nama kegiatan baru…"
+            className="max-w-70"
+          />
+          <Button
+            type="button" variant="outline" size="sm"
+            disabled={!newActivityName.trim() || addRow.isPending}
+            onClick={() => {
+              addRow.mutate(
+                { proyekId, scheduleId: schedules[0]?.scheduleId, activityName: newActivityName.trim() },
+                { onSuccess: () => setNewActivityName("") },
+              );
+            }}
+          >
+            <Plus className="size-4" /> Tambah Kegiatan
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { apiClient, ApiError } from "@/lib/api-client";
+import { apiClient, apiErrorMessage } from "@/lib/api-client";
 import type {
   CreatePenggunaInput,
   UpdatePenggunaInput,
@@ -15,16 +15,13 @@ export type PenggunaAccount = {
   fullName: string;
   role: AppRole;
   employeeId: string | null;
+  clientCompanyId: string | null;
   isActive: boolean;
   hasPasswordSet: boolean;
   status: AkunStatus;
 };
 
 export type CreatedPenggunaAccount = PenggunaAccount & { inviteToken: string };
-
-function apiErrorMessage(error: unknown, fallback: string) {
-  return error instanceof ApiError ? error.message : fallback;
-}
 
 export function usePenggunaList() {
   return useQuery({

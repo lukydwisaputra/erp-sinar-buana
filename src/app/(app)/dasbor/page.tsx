@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { LayoutDashboard } from "lucide-react";
 import { useSession } from "@/lib/query/session";
+import { isFinance as checkFinanceAccess } from "@/lib/auth/rbac";
 import { useProfitabilitas, useForekast, useAlerts, useProyekSummary } from "@/lib/query/dasbor";
 import { useFakturList } from "@/lib/query/faktur";
 import { useTaxEntryList } from "@/lib/query/tax-entries";
@@ -22,12 +23,10 @@ import { TaxSummaryPanel } from "@/components/dasbor/tax-summary-panel";
 import { TrendLineChart } from "@/components/dasbor/trend-line-chart";
 import type { Periode } from "@/lib/dasbor/types";
 
-const FINANCE_ROLES = new Set(["admin", "keuangan"]);
-
 export default function DasborPage() {
   const [periode, setPeriode] = useState<Periode>(() => periodePreset("mtd"));
   const { data: session } = useSession();
-  const isFinance = !!session && FINANCE_ROLES.has(session.role);
+  const isFinance = checkFinanceAccess(session);
 
   // Laba-Rugi/Profitabilitas Per-Proyek/Forecast/Tax detail are
   // view_profit/view_project_cost/view_forecast/view_tax_detail territory
@@ -38,7 +37,7 @@ export default function DasborPage() {
   const { data: dashboardParams } = useDashboardParams();
   const { data: forecastView } = useForekast(dashboardParams?.horizonProyeksiHari ?? 90, isFinance);
   const { data: alerts = [], isLoading: alertsLoading } = useAlerts();
-  const { data: fakturs = [] } = useFakturList();
+  const { data: fakturs = [] } = useFakturList(undefined, isFinance);
   const { data: kewajiban = [] } = useTaxEntryList(isFinance);
   const { data: proyekSummary, isLoading: proyekSummaryLoading } = useProyekSummary();
 

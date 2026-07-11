@@ -1,14 +1,10 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { apiClient, ApiError } from "@/lib/api-client";
+import { apiClient, apiErrorMessage } from "@/lib/api-client";
 import type {
   PenggajianBatch, SlipGaji, CreateBatchInput, UpdateSlipInput, CreateComponentInput,
 } from "@/lib/schemas/penggajian";
-
-function apiErrorMessage(error: unknown, fallback: string) {
-  return error instanceof ApiError ? error.message : fallback;
-}
 
 export function useBatchList() {
   return useQuery({

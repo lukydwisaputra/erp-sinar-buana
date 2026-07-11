@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalEmail, optionalEmailDefaultEmpty } from "@/lib/schemas/common";
 
 export const perusahaanStatus = z.enum(["aktif", "nonaktif"]);
 
@@ -27,7 +28,8 @@ export const perusahaanMetrikSchema = z.object({
 export type PerusahaanMetrik = z.infer<typeof perusahaanMetrikSchema>;
 
 export const perusahaanSchema = z.object({
-  id: z.string(), // uuid (companies.id) — no cosmetic PRSH-xxxx code anymore
+  id: z.string(), // uuid (companies.id)
+  number: z.string().nullable(), // e.g. PRS/00001 — assigned by trigger, never reset
   nama: z.string(),
   npwp: z.string(),
   alamat: z.string(),
@@ -46,7 +48,7 @@ export const picInputSchema = z.object({
   nama: z.string().min(1, "Nama PIC wajib."),
   jabatan: z.string().optional().default(""),
   telepon: z.string().min(1, "Nomor HP PIC wajib."),
-  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]).optional().default(""),
+  email: optionalEmailDefaultEmpty,
 });
 
 export const createPerusahaanSchema = z.object({
@@ -55,7 +57,7 @@ export const createPerusahaanSchema = z.object({
   kota: z.string().min(1, "Kota wajib diisi."),
   kabupaten: z.string().min(1, "Kabupaten wajib diisi."),
   npwp: z.string().regex(/^\d{1,16}$/, "NPWP wajib diisi, maksimal 16 digit angka."),
-  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]).optional().default(""),
+  email: optionalEmailDefaultEmpty,
   pic: z.array(picInputSchema).min(1, "Minimal satu PIC."),
 });
 export type CreatePerusahaanInput = z.infer<typeof createPerusahaanSchema>;
@@ -66,7 +68,7 @@ export const updatePerusahaanSchema = z.object({
   kota: z.string().min(1).optional(),
   kabupaten: z.string().min(1).optional(),
   npwp: z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.").optional(),
-  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]).optional(),
+  email: optionalEmail,
   status: perusahaanStatus.optional(),
   pic: z.array(picInputSchema).min(1, "Minimal satu PIC.").optional(),
 });

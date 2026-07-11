@@ -48,7 +48,9 @@ const SPH_STATUS: Record<SphStatus, StatusBadgeConfig> = {
   dibatalkan: { label: "Dibatalkan", variant: "secondary" },
 };
 import { useSph, useCreatePenawaran, useUpdatePenawaran, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
+import { useSession } from "@/lib/query/session";
 import { useTaxSettings } from "@/lib/query/tax-settings";
+import { isClientPortal } from "@/lib/auth/rbac";
 
 const emptyValues: SphFormValues = {
   perusahaanId: "",
@@ -179,6 +181,37 @@ function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
         document.body,
       )}
     </>
+  );
+}
+
+/** Client portal — always read-only regardless of status (a draft/terkirim
+ * SPH the client can see is still not theirs to edit). Generic copy, no
+ * "Kirim" button (a client has no one to send their own SPH to). */
+function SphClientView({ existing, noSph }: { existing: Sph; noSph: string }) {
+  const values = sphToFormValues(existing);
+  return (
+    <div className="space-y-4">
+      <Alert>
+        <Lock className="size-4" />
+        <AlertTitle>Hanya Lihat</AlertTitle>
+        <AlertDescription>Penawaran ini ditampilkan untuk dilihat saja.</AlertDescription>
+      </Alert>
+      <div className="overflow-hidden rounded-lg border border-border">
+        <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
+          <SphHeaderBar noSph={noSph} status={existing.status} />
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Download className="size-4" /> Unduh
+          </Button>
+        </div>
+        <div className="p-4">
+          <div className="mx-auto max-w-[794px]">
+            <ScaleToFit>
+              <SphCoverLetter values={values} noSph={noSph} />
+            </ScaleToFit>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -358,9 +391,16 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
 
 export function SphBuilder({ existing }: { existing?: Sph }) {
   const { data: live } = useSph(existing?.id ?? "", existing);
+  const { data: session } = useSession();
   const sph = live ?? existing;
   const noSph = sph?.number ?? "Draf Baru";
   const status = sph?.status;
+
+  // Client portal — always read-only, regardless of status. Checked first:
+  // a draft/terkirim SPH the client can see is still not theirs to edit.
+  if (sph && isClientPortal(session)) {
+    return <SphClientView existing={sph} noSph={noSph} />;
+  }
 
   if (sph && status === "deal") {
     return <SphDealView existing={sph} noSph={noSph} />;

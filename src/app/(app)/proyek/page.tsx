@@ -17,6 +17,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useProyekList, useWorkflowStatuses } from "@/lib/query/proyek";
 import { useKatalogList } from "@/lib/query/katalog";
+import { useSession } from "@/lib/query/session";
+import { isFinance, isClientPortal } from "@/lib/auth/rbac";
 import type { Proyek } from "@/lib/schemas/proyek";
 
 /** Same systemRole-based heuristic used across the Proyek module — status is
@@ -54,6 +56,10 @@ function LayananCell({ names }: { names: string[] }) {
 
 function RowActions({ proyek }: { proyek: Proyek }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  // Faktur nav is admin/keuangan/viewer (client portal, own company scoped
+  // by RLS) — Sales/Tim Teknis have no Faktur access at all, matches nav.ts.
+  const canSeeFaktur = isFinance(session) || isClientPortal(session);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="outline-none">
@@ -66,10 +72,12 @@ function RowActions({ proyek }: { proyek: Proyek }) {
             Lihat SPH
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onSelect={() => router.push(`/faktur?proyekId=${encodeURIComponent(proyek.id)}`)}>
-          <Receipt className="size-3.5" />
-          Lihat Faktur
-        </DropdownMenuItem>
+        {canSeeFaktur && (
+          <DropdownMenuItem onSelect={() => router.push(`/faktur?proyekId=${encodeURIComponent(proyek.id)}`)}>
+            <Receipt className="size-3.5" />
+            Lihat Faktur
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -133,12 +141,12 @@ export default function ProyekPage() {
 
   const columns: ColumnDef<Proyek>[] = [
     {
-      accessorKey: "id", header: "No. Proyek", meta: { mono: true },
+      accessorKey: "number", header: "No. Proyek", meta: { mono: true },
       cell: ({ row }) => (
         <button type="button"
           onClick={() => router.push(`/proyek/${encodeURIComponent(row.original.id)}`)}
           className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-          {row.original.id}
+          {row.original.number ?? "—"}
         </button>
       ),
     },
@@ -173,10 +181,10 @@ export default function ProyekPage() {
           columns={columns}
           data={filteredData}
           loading={isLoading}
-          searchColumns={["id", "perusahaanNama"]}
+          searchColumns={["number", "perusahaanNama"]}
           searchPlaceholder="Cari No. Proyek atau perusahaan…"
           emptyMessage="Belum ada proyek"
-          defaultSorting={[{ id: "id", desc: true }]}
+          defaultSorting={[{ id: "number", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>

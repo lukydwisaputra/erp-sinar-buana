@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
   ChevronDown, ChevronUp, CalendarIcon, X,
-  Pencil, Check, Plus, ReceiptText,
+  Pencil, Check, Plus, ReceiptText, AtSign,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -26,6 +26,10 @@ import {
 } from "@/lib/query/proyek";
 import { useKaryawanList } from "@/lib/query/karyawan";
 import { useFakturList } from "@/lib/query/faktur";
+import { useSession } from "@/lib/query/session";
+import { isFinance as checkFinanceAccess, isClientPortal } from "@/lib/auth/rbac";
+import { useMentionableUsers } from "@/lib/query/mentionable-users";
+import { relativeTime } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Milestone, Proyek } from "@/lib/schemas/proyek";
 
@@ -42,16 +46,6 @@ function initials(name: string) {
   return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
-function relativeTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "baru saja";
-  if (mins < 60) return `${mins} menit lalu`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} jam lalu`;
-  return format(new Date(iso), "d MMM yyyy, HH:mm", { locale: idLocale });
-}
-
 /** Cell for the 2-column detail grid */
 function DetailCell({
   label, children, className,
@@ -65,9 +59,22 @@ function DetailCell({
 }
 
 function DateCell({
-  label, value, onChange, className,
-}: { label: string; value: string | null; onChange: (v: string | null) => void; className?: string }) {
+  label, value, onChange, className, readOnly,
+}: { label: string; value: string | null; onChange: (v: string | null) => void; className?: string; readOnly?: boolean }) {
   const selected = value ? new Date(value + "T00:00:00") : undefined;
+  const display = selected
+    ? format(selected, "d MMM yyyy", { locale: idLocale })
+    : <span className="text-muted-foreground">Belum ditentukan</span>;
+  if (readOnly) {
+    return (
+      <DetailCell label={label} className={className}>
+        <span className="flex items-center gap-1.5 text-sm">
+          <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />
+          {display}
+        </span>
+      </DetailCell>
+    );
+  }
   return (
     <DetailCell label={label} className={className}>
       <Popover>
@@ -75,9 +82,7 @@ function DateCell({
           <button type="button"
             className="flex items-center gap-1.5 text-sm hover:text-foreground -ml-0.5 transition-colors">
             <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />
-            {selected
-              ? format(selected, "d MMM yyyy", { locale: idLocale })
-              : <span className="text-muted-foreground">Belum ditentukan</span>}
+            {display}
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
@@ -96,6 +101,67 @@ function DateCell({
   );
 }
 
+/** Comment-composer @mention picker — same search+toggle popover shape as
+ * `AssigneeField` below, targeting user accounts (who gets notified) rather
+ * than employees (who gets assigned). */
+function MentionPicker({
+  mentionedIds,
+  onChange,
+}: {
+  mentionedIds: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const { data: users = [] } = useMentionableUsers();
+  const [open, setOpen] = React.useState(false);
+  const [q, setQ] = React.useState("");
+  const filtered = q.trim() ? users.filter((u) => u.nama.toLowerCase().includes(q.toLowerCase())) : users;
+
+  const toggle = (id: string) => {
+    onChange(mentionedIds.includes(id) ? mentionedIds.filter((x) => x !== id) : [...mentionedIds, id]);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setQ(""); }}>
+      <PopoverTrigger asChild>
+        <button type="button"
+          className={cn(
+            "flex items-center justify-center rounded-md border border-input size-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
+            mentionedIds.length > 0 && "border-primary/50 text-primary",
+          )}
+          title="Sebutkan seseorang">
+          <AtSign className="size-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-60 p-0" align="start" sideOffset={4}>
+        <div className="p-2 border-b border-border">
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Cari nama…"
+            className="w-full rounded-md bg-muted/50 px-2 py-1.5 text-xs outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        <div className="max-h-56 overflow-y-auto p-1">
+          {filtered.length === 0 && (
+            <p className="py-4 text-center text-xs text-muted-foreground">Tidak ditemukan</p>
+          )}
+          {filtered.map((u) => (
+            <button key={u.id} type="button" onClick={() => toggle(u.id)}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60 transition-colors">
+              <Avatar className="size-6 shrink-0">
+                <AvatarFallback className="text-[9px]">{initials(u.nama)}</AvatarFallback>
+              </Avatar>
+              <p className="min-w-0 flex-1 truncate text-xs leading-tight">{u.nama}</p>
+              {mentionedIds.includes(u.id) && <Check className="size-3 shrink-0 text-primary" />}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /** Real comments only now — the mock's fine-grained per-field activity log
  * (status/nama/assignee/date changes) had no DB equivalent and stays out of
  * scope (see docs/architecture.md's Proyek note); attachments on a comment
@@ -105,6 +171,8 @@ function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId
   const addComment = useAddMilestoneComment();
 
   const [text, setText] = React.useState("");
+  const [mentionedIds, setMentionedIds] = React.useState<string[]>([]);
+  const { data: mentionableUsers = [] } = useMentionableUsers();
   const bottomRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -115,8 +183,8 @@ function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId
     const trimmed = text.trim();
     if (!trimmed) return;
     addComment.mutate(
-      { proyekId, milestoneId, input: { body: trimmed, mentionedUserIds: [] } },
-      { onSuccess: () => setText("") },
+      { proyekId, milestoneId, input: { body: trimmed, mentionedUserIds: mentionedIds } },
+      { onSuccess: () => { setText(""); setMentionedIds([]); } },
     );
   };
 
@@ -141,6 +209,15 @@ function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId
                 <span className="text-[10px] text-muted-foreground">{relativeTime(c.createdAt)}</span>
               </div>
               <p className="text-xs leading-relaxed wrap-break-word whitespace-pre-wrap">{c.body}</p>
+              {c.mentionedUserNames.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {c.mentionedUserNames.map((nama, i) => (
+                    <span key={i} className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                      <AtSign className="size-2.5 mr-0.5" />{nama}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -149,7 +226,23 @@ function ActivityFeed({ proyekId, milestoneId }: { proyekId: string; milestoneId
 
       {/* Comment input */}
       <div className="border-t border-border p-3 space-y-2 shrink-0">
+        {mentionedIds.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {mentionedIds.map((id) => {
+              const nama = mentionableUsers.find((u) => u.id === id)?.nama ?? "—";
+              return (
+                <span key={id} className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                  <AtSign className="size-2.5" />{nama}
+                  <button type="button" onClick={() => setMentionedIds((prev) => prev.filter((x) => x !== id))} aria-label={`Hapus sebutan ${nama}`}>
+                    <X className="size-2.5" />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        )}
         <div className="flex items-stretch gap-2">
+          <MentionPicker mentionedIds={mentionedIds} onChange={setMentionedIds} />
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -174,10 +267,12 @@ function AssigneeField({
   assignees,
   personOptions,
   onChange,
+  readOnly,
 }: {
   assignees: { karyawanId: string; nama: string }[];
   personOptions: PersonOption[];
   onChange: (next: { karyawanId: string; nama: string }[]) => void;
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [q, setQ] = React.useState("");
@@ -193,6 +288,33 @@ function AssigneeField({
       : [...assignees, { karyawanId: person.id, nama: person.nama }];
     onChange(next);
   };
+
+  // Client portal: plain avatars, no popover/edit affordance at all.
+  if (readOnly) {
+    return (
+      <TooltipProvider>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {assignees.length === 0 && <span className="text-sm text-muted-foreground">—</span>}
+          {assignees.map((a, i) => {
+            const jabatan = personOptions.find((p) => p.id === a.karyawanId)?.jabatan;
+            return (
+              <Tooltip key={a.karyawanId}>
+                <TooltipTrigger asChild>
+                  <Avatar className="size-7 ring-2 ring-background cursor-default" style={{ marginLeft: i === 0 ? 0 : "-9px" }}>
+                    <AvatarFallback className="text-[10px]">{initials(a.nama)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <span className="font-medium">{a.nama}</span>
+                  {jabatan && <span className="text-background/60 ml-1">· {jabatan}</span>}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -269,12 +391,18 @@ export function MilestoneModal({
 }) {
   const router = useRouter();
   const updateMilestone = useUpdateMilestone();
+  const { data: session } = useSession();
+  const isFinance = checkFinanceAccess(session);
+  const isClient = isClientPortal(session);
   const { data: karyawanList = [] } = useKaryawanList();
   const personOptions: PersonOption[] = karyawanList
     .filter((k) => k.status === "aktif")
     .map((k) => ({ id: k.id, nama: k.nama, jabatan: k.jabatan }));
   const { data: statusOptions = [] } = useWorkflowStatuses("milestone");
-  const { data: fakturIndukList = [] } = useFakturList(proyek.id);
+  // Faktur is Keuangan-only now — Sales/Tim Teknis still see the "Menagih
+  // termin" checkbox (a workflow signal), just not the Faktur Induk picker
+  // or a link into the document itself.
+  const { data: fakturIndukList = [] } = useFakturList(proyek.id, isFinance);
 
   const [nama, setNama] = React.useState("");
   const [editingTitle, setEditingTitle] = React.useState(false);
@@ -351,21 +479,25 @@ export function MilestoneModal({
         <VisuallyHidden><DialogTitle>{nama || "Detail Milestone"}</DialogTitle></VisuallyHidden>
         {/* ── Header ── */}
         <div className="flex items-center gap-3 border-b border-border bg-background px-5 py-3 shrink-0">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="flex items-center gap-1 rounded px-1.5 py-1 hover:bg-muted/50 transition-colors shrink-0">
-                <Badge variant={statusVariant(currentStatus)} className="text-xs">{currentStatus?.label ?? "—"}</Badge>
-                <ChevronDown className="size-3 text-muted-foreground" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {statusOptions.map((s) => (
-                <DropdownMenuItem key={s.id} onSelect={() => save({ statusId: s.id })} className="gap-2">
-                  <Badge variant={statusVariant(s)} className="text-xs">{s.label}</Badge>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isClient ? (
+            <Badge variant={statusVariant(currentStatus)} className="text-xs shrink-0">{currentStatus?.label ?? "—"}</Badge>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="flex items-center gap-1 rounded px-1.5 py-1 hover:bg-muted/50 transition-colors shrink-0">
+                  <Badge variant={statusVariant(currentStatus)} className="text-xs">{currentStatus?.label ?? "—"}</Badge>
+                  <ChevronDown className="size-3 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {statusOptions.map((s) => (
+                  <DropdownMenuItem key={s.id} onSelect={() => save({ statusId: s.id })} className="gap-2">
+                    <Badge variant={statusVariant(s)} className="text-xs">{s.label}</Badge>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <div className="flex flex-1 min-w-0 items-center gap-1.5 group/title">
             {editingTitle ? (
@@ -385,12 +517,14 @@ export function MilestoneModal({
                 <span className="text-base font-semibold truncate">
                   {nama || <span className="text-muted-foreground font-normal italic">Tanpa judul</span>}
                 </span>
-                <button type="button"
-                  onClick={() => { setEditingTitle(true); setTimeout(() => titleInputRef.current?.focus(), 0); }}
-                  className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover/title:opacity-100 transition-opacity"
-                  title="Edit judul">
-                  <Pencil className="size-3.5" />
-                </button>
+                {!isClient && (
+                  <button type="button"
+                    onClick={() => { setEditingTitle(true); setTimeout(() => titleInputRef.current?.focus(), 0); }}
+                    className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover/title:opacity-100 transition-opacity"
+                    title="Edit judul">
+                    <Pencil className="size-3.5" />
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -416,18 +550,19 @@ export function MilestoneModal({
                     assignees={milestone.assignees}
                     personOptions={personOptions}
                     onChange={(next) => save({ assigneeIds: next.map((a) => a.karyawanId) })}
+                    readOnly={isClient}
                   />
                 </DetailCell>
                 <DetailCell label="Proyek" className="pl-6">
-                  <span className="font-mono text-sm text-muted-foreground">{proyek.id}</span>
+                  <span className="font-mono text-sm text-muted-foreground">{proyek.number ?? "—"}</span>
                 </DetailCell>
 
                 <DateCell label="Aktual" value={milestone.actualDate}
                   onChange={(v) => { if (v !== milestone.actualDate) save({ actualDate: v }); }}
-                  className="border-r border-border pr-6" />
+                  className="border-r border-border pr-6" readOnly={isClient} />
                 <DateCell label="Target" value={milestone.targetDate}
                   onChange={(v) => { if (v !== milestone.targetDate) save({ targetDate: v }); }}
-                  className="pl-6" />
+                  className="pl-6" readOnly={isClient} />
 
                 <DetailCell label="Perusahaan" className="border-r border-border pr-6 border-b-0">
                   <span className="text-sm">{proyek.perusahaanNama}</span>
@@ -446,10 +581,11 @@ export function MilestoneModal({
                     <Checkbox
                       checked={milestone.triggersTerm}
                       onCheckedChange={(c) => save({ triggersTerm: c === true })}
+                      disabled={isClient}
                     />
                     Menagih termin saat selesai
                   </label>
-                  {milestone.triggersTerm && (
+                  {milestone.triggersTerm && isFinance && (
                     <Select
                       value={milestone.linkedMasterInvoiceId ?? "none"}
                       onValueChange={(v) => save({ linkedMasterInvoiceId: v === "none" ? null : v })}
@@ -468,7 +604,7 @@ export function MilestoneModal({
                       Milestone selesai — saatnya menagih termin
                     </Badge>
                   )}
-                  {showSuggestion && linkedFaktur && (
+                  {showSuggestion && linkedFaktur && isFinance && (
                     <Button
                       size="sm" variant="outline" className="w-full"
                       onClick={() => router.push(`/faktur/${encodeURIComponent(linkedFaktur.id)}`)}
@@ -484,17 +620,23 @@ export function MilestoneModal({
             <div className="px-6 pt-3 pb-5">
               <p className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">Deskripsi</p>
 
-              {/* Auto-resize textarea — always rendered */}
+              {/* Auto-resize textarea — always rendered. readOnly (not disabled)
+                  for the client portal so it stays selectable/copyable, just
+                  not editable. */}
               <textarea
                 ref={textareaRef}
                 value={description}
+                readOnly={isClient}
                 onChange={(e) => { isAutoExpand.current = true; setDescription(e.target.value); }}
                 onBlur={() => {
                   if (description !== (milestone.description ?? "")) save({ description: description || null });
                 }}
-                placeholder="Tambahkan deskripsi…"
+                placeholder={isClient ? "Belum ada deskripsi" : "Tambahkan deskripsi…"}
                 style={{ height: `${MIN_DESC_HEIGHT}px` }}
-                className="w-full resize-none overflow-hidden rounded-lg border border-input bg-muted/20 px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className={cn(
+                  "w-full resize-none overflow-hidden rounded-lg border border-input bg-muted/20 px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring",
+                  isClient && "cursor-default focus:ring-0",
+                )}
               />
 
               {/* Expand/Collapse — only shown when content overflows min height */}
@@ -521,10 +663,14 @@ export function MilestoneModal({
             </div>
           </div>
 
-          {/* Right — Activity (flex-1, 30%) */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <ActivityFeed proyekId={proyek.id} milestoneId={milestone.id} />
-          </div>
+          {/* Right — Activity (flex-1, 30%). Not for the client portal —
+              comments are internal team discussion (matches project_comments'
+              RLS, which has no client_read policy at all). */}
+          {!isClient && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <ActivityFeed proyekId={proyek.id} milestoneId={milestone.id} />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

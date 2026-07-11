@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/format";
 import { useFakturList } from "@/lib/query/faktur";
+import { useSession } from "@/lib/query/session";
+import { isClientPortal } from "@/lib/auth/rbac";
 import type { FakturInduk } from "@/lib/schemas/faktur";
 
 function statusVariant(systemRole: string | null): "info" | "warning" | "success" | "secondary" | "destructive" {
@@ -22,20 +24,26 @@ function FakturPageInner() {
   const searchParams = useSearchParams();
   const proyekId = searchParams.get("proyekId") ?? undefined;
   const { data = [], isLoading, isError, refetch } = useFakturList(proyekId);
+  const { data: session } = useSession();
+  const isClient = isClientPortal(session);
 
   const columns: ColumnDef<FakturInduk>[] = [
     {
-      id: "proyek", header: "Proyek", meta: { className: "min-w-56" },
-      accessorKey: "proyekNama",
+      id: "number", header: "No. Faktur Induk", accessorKey: "number", meta: { mono: true },
       cell: ({ row }) => (
         <button
           type="button"
           onClick={() => router.push(`/faktur/${encodeURIComponent(row.original.id)}`)}
-          className="rounded-sm text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          {row.original.proyekNama}
+          {row.original.number ?? "—"}
         </button>
       ),
+    },
+    {
+      id: "proyek", header: "Proyek", meta: { className: "min-w-56" },
+      accessorKey: "proyekNama",
+      cell: ({ row }) => row.original.proyekNama,
     },
     { id: "perusahaan", header: "Perusahaan", accessorKey: "perusahaanNama", meta: { className: "min-w-56" } },
     {
@@ -62,7 +70,7 @@ function FakturPageInner() {
           <ReceiptText className="size-5 text-muted-foreground" />
           <h1 className="text-xl font-semibold tracking-tight">Faktur</h1>
         </div>
-        {proyekId && (
+        {proyekId && !isClient && (
           <Button size="sm" onClick={() => router.push(`/faktur/baru?proyekId=${encodeURIComponent(proyekId)}`)}>
             <Plus className="size-4" /> Buat Faktur Induk
           </Button>
@@ -76,8 +84,8 @@ function FakturPageInner() {
           columns={columns}
           data={data}
           loading={isLoading}
-          searchColumns={["proyekNama", "perusahaanNama"]}
-          searchPlaceholder="Cari proyek atau perusahaan…"
+          searchColumns={["number", "proyekNama", "perusahaanNama"]}
+          searchPlaceholder="Cari No. Faktur Induk, proyek, atau perusahaan…"
           emptyMessage="Belum ada Faktur Induk"
           rowActions={false}
         />

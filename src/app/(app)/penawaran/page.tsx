@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
   FileText, Plus, EllipsisIcon, SquarePenIcon, Trash2Icon,
   SendIcon, CircleCheckIcon, FileIcon, BanIcon, FolderKanban, SlidersHorizontal,
-  CalendarIcon,
+  CalendarIcon, EyeIcon,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
@@ -37,6 +37,8 @@ import {
 } from "@/lib/query/penawaran";
 import { useDeleteFakturBySph } from "@/lib/query/faktur";
 import { useProyekList, useDeleteProyekBySph } from "@/lib/query/proyek";
+import { useSession } from "@/lib/query/session";
+import { isClientPortal } from "@/lib/auth/rbac";
 import type { Sph, SphStatus } from "@/lib/schemas/penawaran";
 
 const STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "success" | "destructive" | "secondary" }> = {
@@ -68,6 +70,8 @@ const STATUS_OPTIONS: MultiSelectOption[] = (Object.keys(STATUS) as SphStatus[])
 export default function PenawaranPage() {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = usePenawaranList();
+  const { data: session } = useSession();
+  const isClient = isClientPortal(session);
   const updateStatus    = useUpdatePenawaranStatus();
   const deletePenawaran  = useDeletePenawaran();
   const deleteFakturBySph = useDeleteFakturBySph();
@@ -167,6 +171,20 @@ export default function PenawaranPage() {
         const isDitolak    = sph.status === "ditolak";
         const isLocked     = isDeal || isDibatalkan || isDitolak;
 
+        // Client portal — a single view-only action, no status/edit/delete
+        // menu at all (the write API already rejects all of it for viewer;
+        // this just keeps the UI honest about what's actually possible).
+        if (isClient) {
+          return (
+            <div className="flex justify-end">
+              <Button variant="ghost" size="icon" className="size-8" aria-label="Lihat"
+                onClick={() => router.push(`/penawaran/${encodeURIComponent(sph.id)}`)}>
+                <EyeIcon className="size-4" />
+              </Button>
+            </div>
+          );
+        }
+
         return (
           <div className="flex justify-end">
             <DropdownMenu>
@@ -263,9 +281,11 @@ export default function PenawaranPage() {
           <FileText className="size-5 text-muted-foreground" />
           <h1 className="text-xl font-semibold tracking-tight">Penawaran</h1>
         </div>
-        <Button onClick={() => router.push("/penawaran/baru")}>
-          <Plus className="size-4" /> Buat SPH
-        </Button>
+        {!isClient && (
+          <Button onClick={() => router.push("/penawaran/baru")}>
+            <Plus className="size-4" /> Buat SPH
+          </Button>
+        )}
       </div>
 
       {isError ? (

@@ -34,3 +34,9 @@ export const apiClient = {
     request<T>(path, { method: "PATCH", body: data ? JSON.stringify(data) : undefined }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
+
+/** Shared by every src/lib/query/*.ts mutation's onError — was reimplemented
+ * verbatim in 20 of those files before being pulled in here. */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError ? error.message : fallback;
+}

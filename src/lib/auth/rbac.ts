@@ -33,6 +33,12 @@ export function requireRole(
 
 const FINANCE_ROLES: AppRole[] = ["admin", "keuangan"];
 
+/** `| undefined` too — client components read session via TanStack Query's
+ * `data` (typed `T | undefined`, before it's loaded), while server code
+ * passes `getCurrentSession()`'s `SessionUser | null`. Both call `isFinance`/
+ * `isClientPortal` below, so both need to type-check here. */
+type SessionLike = SessionUser | null | undefined;
+
 /**
  * Mirrors db-schema/sql/rls/00_helpers.sql's is_finance(). Dasbor's PRD
  * describes 4 named permissions (view_profit/view_project_cost/
@@ -40,7 +46,7 @@ const FINANCE_ROLES: AppRole[] = ["admin", "keuangan"];
  * today (admin ✓, keuangan ✓, everyone else ✗) — kept as one check, not 4
  * identical booleans; split later if a role ever needs a real subset.
  */
-export function isFinance(session: SessionUser | null): boolean {
+export function isFinance(session: SessionLike): boolean {
   return !!session && FINANCE_ROLES.includes(session.role);
 }
 
@@ -48,4 +54,11 @@ export function requireFinance(session: SessionUser | null): SessionUser {
   if (!session) throw new UnauthorizedError();
   if (!isFinance(session)) throw new ForbiddenError();
   return session;
+}
+
+/** The client-portal role (external PIC accounts, see docs/architecture.md's
+ * client-portal note) — every write affordance in the UI checks this to stay
+ * hidden, on top of the server-side RLS/RBAC that's the real boundary. */
+export function isClientPortal(session: SessionLike): boolean {
+  return session?.role === "viewer";
 }

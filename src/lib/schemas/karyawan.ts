@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalEmail } from "@/lib/schemas/common";
 
 export const karyawanStatus = z.enum(["aktif", "terarsip"]);
 
@@ -22,7 +23,8 @@ export const ptkpStatus = z.enum(ptkpStatusValues);
  * employee_salary_components), not a stored column.
  */
 export const karyawanSchema = z.object({
-  id: z.string(), // uuid (employees.id) — no cosmetic KRY-xxxxx code anymore
+  id: z.string(), // uuid (employees.id)
+  number: z.string().nullable(), // e.g. KRY/00001 — assigned by trigger, never reset
   nama: z.string(),
   positionId: z.string().nullable(),
   jabatan: z.string(), // resolved positions.label ("—" when unset)
@@ -56,7 +58,7 @@ export const createKaryawanSchema = z.object({
   bankAtasNama: z.string().optional(),
   npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]).optional(),
   ptkpStatus: ptkpStatus.optional(),
-  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]).optional(),
+  email: optionalEmail,
   telepon: z.string().optional(),
   tanggalMasuk: z.string().min(1, "Tanggal masuk wajib diisi."),
 });
@@ -72,7 +74,7 @@ export const updateKaryawanSchema = z.object({
   bankAtasNama: z.string().optional(),
   npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]).optional(),
   ptkpStatus: ptkpStatus.optional(),
-  email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]).optional(),
+  email: optionalEmail,
   telepon: z.string().optional(),
   tanggalMasuk: z.string().min(1).optional(),
   status: karyawanStatus.optional(),

@@ -28,6 +28,7 @@ import {
 import { useKaryawanList } from "@/lib/query/karyawan";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
 import { useSession } from "@/lib/query/session";
+import { isFinance as checkFinanceAccess, isClientPortal } from "@/lib/auth/rbac";
 import { ProyekJadwal } from "@/components/proyek/proyek-jadwal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Proyek, Milestone } from "@/lib/schemas/proyek";
@@ -54,10 +55,12 @@ function MilestoneAssigneeField({
   assignees,
   personOptions,
   onChange,
+  readOnly,
 }: {
   assignees: { karyawanId: string; nama: string }[];
   personOptions: PersonOption[];
   onChange: (next: { karyawanId: string; nama: string }[]) => void;
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [q, setQ] = React.useState("");
@@ -73,6 +76,33 @@ function MilestoneAssigneeField({
       : [...assignees, { karyawanId: person.id, nama: person.nama }];
     onChange(next);
   };
+
+  // Client portal: plain avatars, no popover/edit affordance at all.
+  if (readOnly) {
+    if (assignees.length === 0) return <span className="text-xs text-muted-foreground px-1">—</span>;
+    return (
+      <TooltipProvider>
+        <div className="flex">
+          {assignees.map((a, i) => {
+            const jabatan = personOptions.find((p) => p.id === a.karyawanId)?.jabatan;
+            return (
+              <Tooltip key={a.karyawanId}>
+                <TooltipTrigger asChild>
+                  <Avatar className="size-6 ring-2 ring-background cursor-default" style={{ marginLeft: i === 0 ? 0 : "-7px" }}>
+                    <AvatarFallback className="text-[9px]">{initials(a.nama)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <span className="font-medium">{a.nama}</span>
+                  {jabatan && <span className="text-background/60 ml-1">· {jabatan}</span>}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -170,9 +200,17 @@ function initials(name: string) {
 }
 
 function MilestoneDatePicker({
-  value, onChange, placeholder = "Pilih tanggal",
-}: { value: string | null; onChange: (v: string | null) => void; placeholder?: string }) {
+  value, onChange, placeholder = "Pilih tanggal", readOnly,
+}: { value: string | null; onChange: (v: string | null) => void; placeholder?: string; readOnly?: boolean }) {
   const selected = value ? new Date(value + "T00:00:00") : undefined;
+  if (readOnly) {
+    return (
+      <span className="flex items-center gap-1 px-1.5 py-0.5 text-xs text-muted-foreground">
+        <CalendarIcon className="size-3 shrink-0" />
+        {selected ? format(selected, "dd MMM yy", { locale: idLocale }) : "—"}
+      </span>
+    );
+  }
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -221,6 +259,12 @@ function MilestoneRow({
   const updateMilestone = useUpdateMilestone();
   const moveMilestone   = useMoveMilestone();
   const deleteMilestone = useDeleteMilestone();
+  const { data: session } = useSession();
+  const isFinance = checkFinanceAccess(session);
+  // Client portal — read-only everywhere on this row: no reorder, no delete,
+  // no inline edits. Never fires in practice (write API already rejects
+  // viewer), this just keeps the UI honest about what's actually possible.
+  const isClient = isClientPortal(session);
 
   // When autoFocus (newly added, empty name) — show inline input; otherwise show clickable text
   const isNew = autoFocus && m.nama === "";
@@ -258,20 +302,24 @@ function MilestoneRow({
       >
         {/* Reorder */}
         <div className="flex flex-col gap-0">
-          <button
-            type="button" disabled={sibFirst || moveMilestone.isPending}
-            onClick={() => moveMilestone.mutate({ proyekId, milestoneId: m.id, direction: "up" })}
-            className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
-          >
-            <ChevronUp className="size-3" />
-          </button>
-          <button
-            type="button" disabled={sibLast || moveMilestone.isPending}
-            onClick={() => moveMilestone.mutate({ proyekId, milestoneId: m.id, direction: "down" })}
-            className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
-          >
-            <ChevronDown className="size-3" />
-          </button>
+          {!isClient && (
+            <>
+              <button
+                type="button" disabled={sibFirst || moveMilestone.isPending}
+                onClick={() => moveMilestone.mutate({ proyekId, milestoneId: m.id, direction: "up" })}
+                className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
+              >
+                <ChevronUp className="size-3" />
+              </button>
+              <button
+                type="button" disabled={sibLast || moveMilestone.isPending}
+                onClick={() => moveMilestone.mutate({ proyekId, milestoneId: m.id, direction: "down" })}
+                className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-20"
+              >
+                <ChevronDown className="size-3" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Nama */}
@@ -301,7 +349,7 @@ function MilestoneRow({
               {m.nama || <span className="text-muted-foreground italic">Tanpa judul</span>}
             </button>
           )}
-          {depth < 2 && onAddChild && (
+          {depth < 2 && onAddChild && !isClient && (
             <button
               type="button"
               onClick={onAddChild}
@@ -318,38 +366,45 @@ function MilestoneRow({
           assignees={m.assignees}
           personOptions={personOptions}
           onChange={(next) => save({ assigneeIds: next.map((a) => a.karyawanId) })}
+          readOnly={isClient}
         />
 
         {/* Target */}
-        <MilestoneDatePicker value={m.targetDate} onChange={(v) => { if (v !== m.targetDate) save({ targetDate: v }); }} placeholder="Target" />
+        <MilestoneDatePicker value={m.targetDate} onChange={(v) => { if (v !== m.targetDate) save({ targetDate: v }); }} placeholder="Target" readOnly={isClient} />
 
         {/* Aktual */}
-        <MilestoneDatePicker value={m.actualDate} onChange={(v) => { if (v !== m.actualDate) save({ actualDate: v }); }} placeholder="Aktual" />
+        <MilestoneDatePicker value={m.actualDate} onChange={(v) => { if (v !== m.actualDate) save({ actualDate: v }); }} placeholder="Aktual" readOnly={isClient} />
 
         {/* Status */}
         <div className="flex justify-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-muted/50 transition-colors">
-                <Badge variant={statusVariant(currentStatus)} className="text-xs">{currentStatus?.label ?? "—"}</Badge>
-                <ChevronDownIcon className="size-3 text-muted-foreground shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center">
-              {statusOptions.map((s) => (
-                <DropdownMenuItem key={s.id} onSelect={() => save({ statusId: s.id })} className="gap-2">
-                  <Badge variant={statusVariant(s)} className="text-xs">{s.label}</Badge>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isClient ? (
+            <Badge variant={statusVariant(currentStatus)} className="text-xs">{currentStatus?.label ?? "—"}</Badge>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-muted/50 transition-colors">
+                  <Badge variant={statusVariant(currentStatus)} className="text-xs">{currentStatus?.label ?? "—"}</Badge>
+                  <ChevronDownIcon className="size-3 text-muted-foreground shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center">
+                {statusOptions.map((s) => (
+                  <DropdownMenuItem key={s.id} onSelect={() => save({ statusId: s.id })} className="gap-2">
+                    <Badge variant={statusVariant(s)} className="text-xs">{s.label}</Badge>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Tagih termin — a suggestion only (PRD Bab 6.5), never automatic;
-            clickable straight to the linked Faktur Induk when one exists. */}
+            clickable straight to the linked Faktur Induk when one exists —
+            only for Admin/Keuangan, who are the only roles with any Faktur
+            access at all now. */}
         <div className="flex items-center">
           {currentStatus?.systemRole === "SELESAI" && m.triggersTerm && (
-            m.linkedMasterInvoiceId ? (
+            m.linkedMasterInvoiceId && isFinance ? (
               <button type="button" onClick={() => router.push(`/faktur/${encodeURIComponent(m.linkedMasterInvoiceId!)}`)}>
                 <Badge variant="warning" className="text-xs whitespace-nowrap hover:underline">
                   Tagih Termin
@@ -364,14 +419,16 @@ function MilestoneRow({
         </div>
 
         {/* Delete */}
-        <button
-          type="button"
-          onClick={() => setShowDelete(true)}
-          className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-          aria-label="Hapus milestone"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
+        {!isClient && (
+          <button
+            type="button"
+            onClick={() => setShowDelete(true)}
+            className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+            aria-label="Hapus milestone"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        )}
       </div>
 
       <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
@@ -409,6 +466,8 @@ function MilestoneTab({
 }) {
   const addMilestone = useAddMilestone();
   const [newId, setNewId] = React.useState<string | null>(null);
+  const { data: session } = useSession();
+  const isClient = isClientPortal(session);
 
   const { data: karyawanList = [] } = useKaryawanList();
   const personOptions: PersonOption[] = karyawanList
@@ -463,18 +522,20 @@ function MilestoneTab({
           />
         ))}
 
-        <button
-          type="button"
-          disabled={addMilestone.isPending}
-          onClick={() => doAdd(null)}
-          className={cn(
-            "flex w-full items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors",
-            flat.length > 0 && "border-t border-border",
-          )}
-        >
-          <Plus className="size-3.5" />
-          Tambah milestone
-        </button>
+        {!isClient && (
+          <button
+            type="button"
+            disabled={addMilestone.isPending}
+            onClick={() => doAdd(null)}
+            className={cn(
+              "flex w-full items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors",
+              flat.length > 0 && "border-t border-border",
+            )}
+          >
+            <Plus className="size-3.5" />
+            Tambah milestone
+          </button>
+        )}
       </div>
     </div>
   );
@@ -518,7 +579,8 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
   const [modalMilestone, setModalMilestone] = React.useState<Milestone | null>(null);
   const [realisasiOpen, setRealisasiOpen] = React.useState(false);
   const { data: session } = useSession();
-  const canSeeCost = session?.role === "admin" || session?.role === "keuangan";
+  const canSeeCost = checkFinanceAccess(session);
+  const isClient = isClientPortal(session);
   const { data: realisasiList = [] } = useRealisasiRabByProyek(proyek.id);
   const totalRealisasi = realisasiList.reduce((s, r) => s + r.jumlah, 0);
   const currentStatus = statusOptions.find((s) => s.id === proyek.statusId);
@@ -550,7 +612,7 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
               <FolderKanban className="size-5 text-muted-foreground shrink-0" />
-              <span className="font-mono text-sm text-muted-foreground">{proyek.id}</span>
+              <span className="font-mono text-sm text-muted-foreground">{proyek.number ?? "—"}</span>
               <Badge variant={statusVariant(currentStatus)}>{proyek.status}</Badge>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -560,18 +622,20 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
             </div>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">Ubah Status</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {statusOptions.filter((s) => s.id !== proyek.statusId).map((s) => (
-                <DropdownMenuItem key={s.id} onSelect={() => setStatusTarget(s)}>
-                  {s.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!isClient && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">Ubah Status</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {statusOptions.filter((s) => s.id !== proyek.statusId).map((s) => (
+                  <DropdownMenuItem key={s.id} onSelect={() => setStatusTarget(s)}>
+                    {s.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         <PerusahaanPic perusahaanId={proyek.perusahaanId} />

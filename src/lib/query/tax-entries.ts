@@ -1,7 +1,7 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { apiClient, ApiError } from "@/lib/api-client";
+import { apiClient, apiErrorMessage } from "@/lib/api-client";
 import type { SettleTaxEntryInput, TaxEntry } from "@/lib/schemas/tax-entries";
 
 /** Rows are produced by Faktur's LUNAS automation; manual entry and file
@@ -15,10 +15,6 @@ export function useTaxEntryList(enabled = true) {
     enabled,
     retry: false,
   });
-}
-
-function apiErrorMessage(error: unknown, fallback: string) {
-  return error instanceof ApiError ? error.message : fallback;
 }
 
 export function useSettleTaxEntry() {

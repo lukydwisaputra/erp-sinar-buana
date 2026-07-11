@@ -1,13 +1,13 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { CalendarIcon, Download, Send, Plus, Ban, CheckCircle2 } from "lucide-react";
+import { CalendarIcon, Download, Send, Plus, Ban, CheckCircle2, Pencil, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -33,9 +33,11 @@ import { useGenerateTermin, useUpdateTermin } from "@/lib/query/faktur";
 import { useWorkflowStatuses } from "@/lib/query/proyek";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
+import { useSession } from "@/lib/query/session";
+import { isClientPortal } from "@/lib/auth/rbac";
 import type { FakturInduk, InvoiceTermin } from "@/lib/schemas/faktur";
 
-function statusVariant(systemRole: string | null): "info" | "warning" | "success" | "secondary" | "destructive" {
+export function statusVariant(systemRole: string | null): "info" | "warning" | "success" | "secondary" | "destructive" {
   if (systemRole === "LUNAS") return "success";
   if (systemRole === "BATAL") return "secondary";
   return "warning";
@@ -151,29 +153,38 @@ function TerminDocumentDialog({ induk, termin, open, onOpenChange }: {
   const [mounted, setMounted] = React.useState(false);
   const [kirimOpen, setKirimOpen] = React.useState(false);
   const { data: perusahaanOptions = [] } = usePerusahaanList();
+  const { data: session } = useSession();
+  const isClient = isClientPortal(session);
   React.useEffect(() => setMounted(true), []);
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between gap-2 pr-6">
-              <span>{termin.label} — {termin.number ?? "Belum bernomor"}</span>
-              <span className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => window.print()}>
-                  <Download className="size-4" /> Unduh
-                </Button>
+        <DialogContent showCloseButton={false} className="flex h-[80vh] w-[80vw] flex-col overflow-hidden p-0 max-w-[80vw]!">
+          <DialogTitle className="sr-only">{termin.label} — {termin.number ?? "Belum bernomor"}</DialogTitle>
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-background px-4 py-3">
+            <span className="font-semibold">{termin.label} — {termin.number ?? "Belum bernomor"}</span>
+            <span className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Download className="size-4" /> Unduh
+              </Button>
+              {/* Kirim — not for the client portal, they're the recipient, not the sender. */}
+              {!isClient && (
                 <Button size="sm" onClick={() => setKirimOpen(true)}>
                   <Send className="size-4" /> Kirim
                 </Button>
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[70vh] overflow-y-auto rounded-md border border-border">
-            <ScaleToFit>
-              <FakturDocument induk={induk} termin={termin} />
-            </ScaleToFit>
+              )}
+              <Button variant="ghost" size="icon" aria-label="Tutup" onClick={() => onOpenChange(false)}>
+                <X className="size-4" />
+              </Button>
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-muted/40 p-4 sm:p-6">
+            <div className="mx-auto max-w-[210mm]">
+              <ScaleToFit>
+                <FakturDocument induk={induk} termin={termin} />
+              </ScaleToFit>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -211,6 +222,8 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
   const [docOpen, setDocOpen] = React.useState(false);
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const isFinal = termin.statusSystemRole === "LUNAS" || termin.statusSystemRole === "BATAL";
+  const { data: session } = useSession();
+  const isClient = isClientPortal(session);
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm">
@@ -221,7 +234,7 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
       <Badge variant={statusVariant(termin.statusSystemRole)}>{termin.status}</Badge>
       <div className="ml-auto flex items-center gap-2">
         <Button size="xs" variant="outline" onClick={() => setDocOpen(true)}>Lihat Dokumen</Button>
-        {!isFinal && (lunasStatusId || batalStatusId) && (
+        {!isClient && !isFinal && (lunasStatusId || batalStatusId) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="xs" variant="outline">Aksi</Button>
@@ -275,10 +288,13 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
 // ─── Public entry point ───────────────────────────────────────────────────────
 
 export function FakturIndukDetail({ induk }: { induk: FakturInduk }) {
+  const router = useRouter();
   const { data: statusOptions = [] } = useWorkflowStatuses("faktur");
   const lunasStatusId = statusOptions.find((s) => s.systemRole === "LUNAS")?.id;
   const batalStatusId = statusOptions.find((s) => s.systemRole === "BATAL")?.id;
   const [generateOpen, setGenerateOpen] = React.useState(false);
+  const { data: session } = useSession();
+  const isClient = isClientPortal(session);
 
   const nextTerm = induk.terminScheme[induk.termins.length];
   const isIndukFinal = induk.statusSystemRole === "LUNAS" || induk.statusSystemRole === "BATAL";
@@ -289,14 +305,22 @@ export function FakturIndukDetail({ induk }: { induk: FakturInduk }) {
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-muted/30 p-4">
           <div>
             <div className="flex items-center gap-2">
+              <span className="font-mono text-sm text-muted-foreground">{induk.number ?? "—"}</span>
               <span className="font-semibold">{induk.proyekNama}</span>
               <Badge variant={statusVariant(induk.statusSystemRole)}>{induk.status}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">{induk.perusahaanNama}</p>
           </div>
-          <div className="text-right">
-            <p className="font-mono text-lg tabular-nums">{formatRupiah(induk.totalBiaya)}</p>
-            <p className="text-xs text-muted-foreground">Total Biaya</p>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="font-mono text-lg tabular-nums">{formatRupiah(induk.totalBiaya)}</p>
+              <p className="text-xs text-muted-foreground">Total Biaya</p>
+            </div>
+            {!isClient && !isIndukFinal && (
+              <Button variant="outline" size="sm" onClick={() => router.push(`/faktur/${encodeURIComponent(induk.id)}/edit`)}>
+                <Pencil className="size-4" /> Edit
+              </Button>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-1 p-4">
@@ -332,7 +356,7 @@ export function FakturIndukDetail({ induk }: { induk: FakturInduk }) {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-muted-foreground">Invoice Termin</h2>
-          {nextTerm && !isIndukFinal && (
+          {!isClient && nextTerm && !isIndukFinal && (
             <Button size="sm" onClick={() => setGenerateOpen(true)}>
               <Plus className="size-4" /> Buat {nextTerm.label}
             </Button>

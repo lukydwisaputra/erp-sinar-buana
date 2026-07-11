@@ -1,12 +1,8 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { apiClient, ApiError } from "@/lib/api-client";
+import { apiClient, apiErrorMessage } from "@/lib/api-client";
 import type { PdfTemplate, CreatePdfTemplateInput, UpdatePdfTemplateInput } from "@/lib/schemas/pdf-templates";
-
-function apiErrorMessage(error: unknown, fallback: string) {
-  return error instanceof ApiError ? error.message : fallback;
-}
 
 export function usePdfTemplateList() {
   return useQuery({

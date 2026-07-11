@@ -1,12 +1,8 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { apiClient, ApiError } from "@/lib/api-client";
+import { apiClient, apiErrorMessage } from "@/lib/api-client";
 import type { Layanan, CreateLayananInput, UpdateLayananInput } from "@/lib/schemas/katalog";
-
-function apiErrorMessage(error: unknown, fallback: string) {
-  return error instanceof ApiError ? error.message : fallback;
-}
 
 export function useKatalogList() {
   return useQuery({

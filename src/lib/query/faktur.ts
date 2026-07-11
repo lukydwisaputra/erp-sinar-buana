@@ -1,18 +1,20 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { apiClient, ApiError } from "@/lib/api-client";
-import type { FakturInduk, CreateFakturIndukInput, GenerateTerminInput, UpdateTerminInput } from "@/lib/schemas/faktur";
+import { apiClient, apiErrorMessage } from "@/lib/api-client";
+import type { FakturInduk, CreateFakturIndukInput, UpdateFakturIndukInput, GenerateTerminInput, UpdateTerminInput } from "@/lib/schemas/faktur";
 
-function apiErrorMessage(error: unknown, fallback: string) {
-  return error instanceof ApiError ? error.message : fallback;
-}
-
-export function useFakturList(proyekId?: string) {
+// Faktur is Keuangan-only end to end now — callers outside the Faktur module
+// itself (Dasbor, the milestone→Faktur Induk linking picker) must pass
+// `enabled: isFinance` so a Sales/Tim Teknis/Viewer session doesn't fire a
+// request the API will just 403 anyway.
+export function useFakturList(proyekId?: string, enabled = true) {
   const qs = proyekId ? `?proyekId=${encodeURIComponent(proyekId)}` : "";
   return useQuery({
     queryKey: ["faktur", { proyekId }],
     queryFn: () => apiClient.get<FakturInduk[]>(`/api/faktur${qs}`),
+    enabled,
+    retry: false,
   });
 }
 
@@ -34,6 +36,20 @@ export function useCreateFakturInduk() {
       toast.success("Faktur Induk berhasil dibuat.");
     },
     onError: (error) => toast.error(apiErrorMessage(error, "Gagal membuat Faktur Induk.")),
+  });
+}
+
+export function useUpdateFakturInduk() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateFakturIndukInput }) =>
+      apiClient.patch<FakturInduk>(`/api/faktur/${id}`, input),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: ["faktur", id] });
+      qc.invalidateQueries({ queryKey: ["faktur"] });
+      toast.success("Faktur Induk berhasil diperbarui.");
+    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal memperbarui Faktur Induk.")),
   });
 }
 
