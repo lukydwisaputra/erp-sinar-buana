@@ -5,7 +5,8 @@ export const kelengkapanItemSchema = z.object({
 });
 
 export const kelengkapanTemplateSchema = z.object({
-  id: z.string(), // uuid (kelengkapan_templates.id) — no cosmetic KLG-xxxxx code anymore
+  id: z.string(), // uuid (kelengkapan_templates.id)
+  number: z.string().nullable(), // e.g. KLG/00001 — assigned by trigger, never reset
   nama: z.string(),
   items: z.array(kelengkapanItemSchema),
 });

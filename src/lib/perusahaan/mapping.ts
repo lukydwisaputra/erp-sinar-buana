@@ -37,6 +37,7 @@ export function toPerusahaan(
 ): Perusahaan {
   return {
     id: company.id,
+    number: company.number,
     nama: company.name,
     npwp: company.npwp,
     alamat: company.address,

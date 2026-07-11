@@ -4,6 +4,9 @@ import { toKaryawan, computeTunjangan } from "@/lib/karyawan/mapping";
 function employee(overrides: Partial<Parameters<typeof toKaryawan>[0]> = {}) {
   return {
     id: "emp-1",
+    number: null,
+    numberYear: null,
+    numberMonth: null,
     name: "Budi Santoso",
     positionId: "pos-1",
     employmentStatusId: "status-1",

@@ -31,9 +31,9 @@ interface ProyekSummaryPanelProps {
 /** FR-09.4 — Ringkasan Proyek. Rendered for all roles (Tim Teknis sees only assigned projects, via rbac-view.ts). */
 export function ProyekSummaryPanel({ summary, isLoading }: ProyekSummaryPanelProps) {
   return (
-    <Card size="sm">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-sm">Ringkasan Proyek</CardTitle>
+        <CardTitle>Ringkasan Proyek</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading || !summary ? (

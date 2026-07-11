@@ -34,11 +34,11 @@ function makeColumns(
 ): ColumnDef<KelengkapanTemplate>[] {
   return [
     {
-      accessorKey: "id", header: "ID", meta: { mono: true },
+      accessorKey: "number", header: "No. Kelengkapan", meta: { mono: true },
       cell: ({ row }) => (
         <button type="button" onClick={() => onNavigate(row.original)}
           className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          {row.original.id}
+          {row.original.number ?? "—"}
         </button>
       ),
     },
@@ -315,10 +315,10 @@ export default function KelengkapanPage() {
           columns={columns}
           data={data ?? []}
           loading={isLoading}
-          searchColumns={["id", "nama"]}
-          searchPlaceholder="Cari ID atau nama template…"
+          searchColumns={["number", "nama"]}
+          searchPlaceholder="Cari No. Kelengkapan atau nama template…"
           emptyMessage="Belum ada template kelengkapan"
-          defaultSorting={[{ id: "id", desc: true }]}
+          defaultSorting={[{ id: "number", desc: true }]}
           rowActions={false}
         />
       )}

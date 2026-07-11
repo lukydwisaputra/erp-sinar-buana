@@ -5,14 +5,13 @@ import { getDashboardSettings, updateDashboardSettings } from "@/lib/dasbor/sett
 import { dashboardParamsSchema } from "@/lib/schemas/dashboard-params";
 import { errorResponse } from "@/lib/api-error";
 
-/** GET: same 5-role set as the other dasbor routes — every orchestrator
- * (profitabilitas/forecast/alerts) needs these values regardless of caller
- * role. PATCH: Admin/Keuangan only — this is a Konfigurasi write. */
+/** GET: same staff role set as the other dasbor routes (not Viewer — Dasbor
+ * isn't part of the client portal). PATCH: Admin/Keuangan only. */
 export async function GET() {
   try {
     const session = requireRole(
       await getCurrentSession(),
-      "admin", "keuangan", "sales", "tim_teknis", "viewer",
+      "admin", "keuangan", "sales", "tim_teknis",
     );
     const settings = await getDashboardSettings(session.id);
     return NextResponse.json(settings);

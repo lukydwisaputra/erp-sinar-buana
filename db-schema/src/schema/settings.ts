@@ -96,14 +96,35 @@ export const dashboardSettings = pgTable("dashboard_settings", {
 });
 
 /**
+ * Privacy mode — masks sensitive financial figures (Dasbor, Penggajian,
+ * Faktur, Proyek) behind a global reveal toggle. Singleton, enabled by
+ * default; only the feature on/off lives in the DB — the reveal/hide state
+ * itself is client-side session state, not persisted.
+ */
+export const privacySettings = pgTable("privacy_settings", {
+  singleton: singletonGuard,
+  enabled: boolean("enabled").notNull().default(true),
+  ...timestamps,
+});
+
+/**
  * Numbering formats (PRD Bab 9.5), e.g. SPH/{seq}/{month}.{year} and
  * INV/{seq}/{month}.{year}. Tokens are substituted by the numbering trigger.
+ * pry/prs/klg/fki/lyn/kry never reset monthly (see numberedDocType), so
+ * their formats carry only {seq} by default — {month}/{year} tokens would
+ * just be no-ops if added, the trigger doesn't special-case their absence.
  */
 export const numberingSettings = pgTable("numbering_settings", {
   singleton: singletonGuard,
   sphFormat: text("sph_format").notNull().default("SPH/{seq}/{month}.{year}"),
-  invFormat: text("inv_format").notNull().default("INV/{seq}/{month}.{year}"),
+  invFormat: text("inv_format").notNull().default("INV/{seq}/{year}"), // Faktur Induk resets yearly, not monthly
   gajFormat: text("gaj_format").notNull().default("GAJ/{seq}/{month}.{year}"),
+  pryFormat: text("pry_format").notNull().default("PRY/{seq}"),
+  prsFormat: text("prs_format").notNull().default("PRS/{seq}"),
+  klgFormat: text("klg_format").notNull().default("KLG/{seq}"),
+  fkiFormat: text("fki_format").notNull().default("FKI/{seq}"),
+  lynFormat: text("lyn_format").notNull().default("LYN/{seq}"),
+  kryFormat: text("kry_format").notNull().default("KRY/{seq}"),
   seqPadding: smallint("seq_padding").notNull().default(3), // 001
   ...timestamps,
 });

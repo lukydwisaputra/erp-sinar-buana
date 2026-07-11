@@ -10,7 +10,8 @@ export const katalogStatus = z.enum(["aktif", "terarsip"]);
  * client-side (Penawaran/Proyek still mock fixtures), not a stored column.
  */
 export const layananSchema = z.object({
-  id: z.string(), // uuid (service_catalog.id) — no cosmetic LYN-xxxxx code anymore
+  id: z.string(), // uuid (service_catalog.id)
+  number: z.string().nullable(), // e.g. LYN/00001 — assigned by trigger, never reset
   nama: z.string(),
   documentTypeId: z.string().nullable(),
   jenisDokumen: z.string(), // resolved document_types.label ("—" when unset)

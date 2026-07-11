@@ -20,6 +20,7 @@ describe("toPdfTemplate", () => {
       documentType: "invoice",
       headerNote: "Mohon melakukan pembayaran.",
       footerNote: "Terima kasih.",
+      isActive: true,
     });
   });
 });

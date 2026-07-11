@@ -54,8 +54,8 @@ function makeColumns(
 ): ColumnDef<Perusahaan>[] {
   return [
     {
-      accessorKey: "id",
-      header: "ID",
+      accessorKey: "number",
+      header: "No. Perusahaan",
       meta: { mono: true },
       cell: ({ row }) => (
         <button
@@ -63,7 +63,7 @@ function makeColumns(
           onClick={() => onOpen(row.original)}
           className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          {row.original.id}
+          {row.original.number ?? "—"}
         </button>
       ),
     },
@@ -320,7 +320,7 @@ function PerusahaanEditForm({
       open={open}
       onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
       title="Ubah Perusahaan"
-      description={`Perbarui data perusahaan ${perusahaan.id}.`}
+      description={`Perbarui data perusahaan ${perusahaan.number ?? perusahaan.id}.`}
       onSubmit={onSubmit}
       submitLabel={isPending ? "Menyimpan…" : "Simpan Perubahan"}
     >
@@ -549,10 +549,10 @@ export default function PerusahaanPage() {
           columns={columns}
           data={filteredData}
           loading={isLoading}
-          searchColumns={["id", "nama"]}
-          searchPlaceholder="Cari ID atau nama perusahaan…"
+          searchColumns={["number", "nama"]}
+          searchPlaceholder="Cari No. Perusahaan atau nama…"
           emptyMessage="Belum ada perusahaan"
-          defaultSorting={[{ id: "id", desc: true }]}
+          defaultSorting={[{ id: "number", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>

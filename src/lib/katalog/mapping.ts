@@ -31,6 +31,7 @@ export function toLayanan(
 ): Layanan {
   return {
     id: service.id,
+    number: service.number,
     nama: service.name,
     documentTypeId: service.documentTypeId,
     jenisDokumen: documentType?.label ?? "—",

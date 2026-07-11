@@ -12,6 +12,7 @@ insert into tax_settings default values on conflict (singleton) do nothing;
 insert into numbering_settings default values on conflict (singleton) do nothing;
 insert into dashboard_settings default values on conflict (singleton) do nothing;
 insert into email_accounts default values on conflict (singleton) do nothing;
+insert into privacy_settings default values on conflict (singleton) do nothing;
 
 -- ── Cashflow categories (4 locked system + BPJS) ────────────────────────────
 -- expense_nature drives the Dashboard P&L (PRD Bab 8.2). PAJAK = NON_LABA_RUGI

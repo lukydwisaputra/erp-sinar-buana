@@ -11,6 +11,8 @@ import { navForRole } from "@/lib/nav";
 import { useSession } from "@/lib/query/session";
 import { useCompanyProfile } from "@/lib/query/company-profile";
 import { companyProfileCache } from "@/lib/company-profile/cache";
+import { usePdfTemplateList } from "@/lib/query/pdf-templates";
+import { pdfTemplateNotesCache, pickActiveNotes } from "@/lib/pdf-templates/cache";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -24,6 +26,10 @@ export function AppSidebar() {
   React.useEffect(() => {
     if (profile) companyProfileCache.current = profile;
   }, [profile]);
+  const { data: pdfTemplates } = usePdfTemplateList();
+  React.useEffect(() => {
+    if (pdfTemplates) pdfTemplateNotesCache.current = pickActiveNotes(pdfTemplates);
+  }, [pdfTemplates]);
   const nav = navForRole(session?.role);
   return (
     <Sidebar collapsible="icon">

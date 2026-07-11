@@ -30,13 +30,19 @@ export type ToInvoiceTerminInput = {
    * creation — the previous-term deduction list is always recomputed for
    * display, never stored (matches the DB's own design comment). */
   previousInstallments: InstallmentInvoiceRow[];
+  /** Parent Faktur Induk's own number (e.g. "INV/001/04.2026") — a termin has
+   * no numbering identity of its own; its displayed number is derived as
+   * "{indukNumber}-T{terminIndex}", never independently trigger-assigned. */
+  indukNumber: string | null;
+  /** 0-based position among this induk's termins, ordered by creation (T1, T2, ...). */
+  terminIndex: number;
 };
 
 export function toInvoiceTermin(input: ToInvoiceTerminInput): InvoiceTermin {
   const r = input.installment;
   return {
     id: r.id,
-    number: r.number,
+    number: input.indukNumber ? `${input.indukNumber}-T${input.terminIndex + 1}` : null,
     masterInvoiceId: r.masterInvoiceId,
     termId: r.termId,
     label: r.label,
@@ -85,6 +91,8 @@ export type FakturTerminRow = {
   id: string;
   /** Faktur Induk (master invoice) id — the /faktur/[id] route target, distinct from `id` (the termin itself). */
   indukId: string;
+  /** Displayed number, e.g. "INV/001/2026-T1" — null only if the Induk itself has no number yet. */
+  number: string | null;
   proyekId: string;
   perusahaanNama: string;
   tanggal: string;
@@ -100,6 +108,7 @@ export function flattenTermins(induks: FakturInduk[]): FakturTerminRow[] {
   return induks.flatMap((f) => f.termins.map((t) => ({
     id: t.id,
     indukId: f.id,
+    number: t.number,
     proyekId: f.proyekId,
     perusahaanNama: f.perusahaanNama,
     tanggal: t.tanggal,
@@ -116,6 +125,7 @@ export function toFakturInduk(input: ToFakturIndukInput): FakturInduk {
   const m = input.masterInvoice;
   return {
     id: m.id,
+    number: m.number,
     proyekId: m.projectId,
     proyekNama: input.proyekNama,
     perusahaanId: m.companyId,

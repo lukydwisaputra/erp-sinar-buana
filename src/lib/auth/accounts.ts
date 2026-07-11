@@ -25,6 +25,7 @@ export type Account = {
   fullName: string;
   role: AppRole;
   employeeId: string | null;
+  clientCompanyId: string | null;
   isActive: boolean;
   hasPasswordSet: boolean;
 };
@@ -35,6 +36,7 @@ const accountColumns = {
   fullName: schema.userProfiles.fullName,
   role: schema.userProfiles.role,
   employeeId: schema.userProfiles.employeeId,
+  clientCompanyId: schema.userProfiles.clientCompanyId,
   isActive: schema.userProfiles.isActive,
   passwordHash: schema.userProfiles.passwordHash,
 };
@@ -45,6 +47,7 @@ type AccountRow = {
   fullName: string;
   role: AppRole;
   employeeId: string | null;
+  clientCompanyId: string | null;
   isActive: boolean;
   passwordHash: string | null;
 };
@@ -113,6 +116,7 @@ export async function createAccount(input: {
   email: string;
   role: AppRole;
   employeeId: string | null;
+  clientCompanyId: string | null;
 }): Promise<Account> {
   return withServiceRole(async (tx) => {
     const [emailTaken] = await tx
@@ -138,6 +142,7 @@ export async function createAccount(input: {
       fullName: input.fullName,
       role: input.role,
       employeeId: input.employeeId,
+      clientCompanyId: input.clientCompanyId,
       isActive: true,
     });
 
@@ -147,6 +152,7 @@ export async function createAccount(input: {
       fullName: input.fullName,
       role: input.role,
       employeeId: input.employeeId,
+      clientCompanyId: input.clientCompanyId,
       isActive: true,
       hasPasswordSet: false,
     };
@@ -155,7 +161,7 @@ export async function createAccount(input: {
 
 export async function updateAccount(
   id: string,
-  input: { role?: AppRole; employeeId?: string | null },
+  input: { role?: AppRole; employeeId?: string | null; clientCompanyId?: string | null },
 ): Promise<void> {
   await withServiceRole(async (tx) => {
     if (input.employeeId) {

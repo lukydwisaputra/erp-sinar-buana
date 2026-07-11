@@ -1,6 +1,7 @@
 "use client";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MaskedValue } from "@/components/shared/masked-value";
 import { formatRupiahCompact } from "@/lib/format";
 import type { LabaRugi, ForecastView } from "@/lib/dasbor/types";
 
@@ -11,7 +12,7 @@ interface KpiStripProps {
   taxDue: number;
 }
 
-function KpiCard({ label, value, sub }: { label: string; value: string | undefined; sub?: string }) {
+function KpiCard({ label, value, sub, sensitive = true }: { label: string; value: string | undefined; sub?: string; sensitive?: boolean }) {
   return (
     <Card>
       <CardHeader>
@@ -21,7 +22,9 @@ function KpiCard({ label, value, sub }: { label: string; value: string | undefin
         {value === undefined ? (
           <Skeleton className="h-7 w-28" />
         ) : (
-          <p className="font-mono text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+          <p className="font-mono text-2xl font-semibold tabular-nums text-foreground">
+            {sensitive ? <MaskedValue>{value}</MaskedValue> : value}
+          </p>
         )}
         {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
       </CardContent>
@@ -49,6 +52,7 @@ export function KpiStrip({ labaRugi, forecastView, arOutstanding, taxDue }: KpiS
             : `${runway} bln`
         }
         sub="estimasi pembayaran gaji"
+        sensitive={false}
       />
       <KpiCard label="AR Terutang" value={fmt(arOutstanding)} sub="faktur belum dibayar" />
       <KpiCard label="Pajak Terutang" value={fmt(taxDue)} sub="belum disetor" />

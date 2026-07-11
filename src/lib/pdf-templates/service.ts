@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { withUserTransaction } from "@/lib/db/tx";
+import { withUserTransaction, withServiceRole } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/api-error";
 import { toPdfTemplate } from "@/lib/pdf-templates/mapping";
@@ -9,6 +9,18 @@ export { toPdfTemplate } from "@/lib/pdf-templates/mapping";
 
 export async function listPdfTemplates(userId: string): Promise<PdfTemplate[]> {
   return withUserTransaction(userId, async (tx) => {
+    const rows = await tx
+      .select()
+      .from(schema.pdfTemplates)
+      .orderBy(desc(schema.pdfTemplates.createdAt));
+    return rows.map(toPdfTemplate);
+  });
+}
+
+/** Used only by the internal PDF-render pipeline (`src/app/print/**`) — no
+ * user session exists there to scope `withUserTransaction` to. */
+export async function listPdfTemplatesForPrint(): Promise<PdfTemplate[]> {
+  return withServiceRole(async (tx) => {
     const rows = await tx
       .select()
       .from(schema.pdfTemplates)

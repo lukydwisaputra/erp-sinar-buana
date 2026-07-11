@@ -5,7 +5,7 @@ import { z } from "zod";
  * same free-dropdown pattern as Penawaran/Proyek. */
 export const invoiceTerminSchema = z.object({
   id: z.string(),
-  number: z.string().nullable(), // e.g. INV/002/05.2026 — null until assigned
+  number: z.string().nullable(), // derived from the Induk's number, e.g. "INV/001/2026-T1" — not independently assigned
   masterInvoiceId: z.string(),
   termId: z.string().nullable(),
   label: z.string(),
@@ -45,6 +45,7 @@ export type FakturTermSchemeItem = z.infer<typeof fakturTermSchemeItemSchema>;
 
 export const fakturIndukSchema = z.object({
   id: z.string(),
+  number: z.string().nullable(), // e.g. INV/001/2026 — assigned by trigger, resets yearly
   proyekId: z.string(),
   proyekNama: z.string(),
   perusahaanId: z.string(),
@@ -72,6 +73,16 @@ export const createFakturIndukSchema = z.object({
   terminScheme: z.array(fakturTermSchemeItemSchema).min(1, "Skema termin tidak boleh kosong."),
 });
 export type CreateFakturIndukInput = z.infer<typeof createFakturIndukSchema>;
+
+/** Edit an existing Faktur Induk — same billable-service/total-biaya/catatan
+ * fields as create, minus `proyekId` (fixed at creation) and `terminScheme`
+ * (immutable once set — termins are already generated against it). */
+export const updateFakturIndukSchema = z.object({
+  serviceIds: z.array(z.string()).default([]),
+  totalBiaya: z.coerce.number().positive("Total biaya harus > 0."),
+  notes: z.string().optional(),
+});
+export type UpdateFakturIndukInput = z.infer<typeof updateFakturIndukSchema>;
 
 /** Generate the next Invoice Termin in sequence — the DB trigger
  * (fn_installment_validate) enforces the sum-vs-total-biaya guard; the app

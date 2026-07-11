@@ -188,20 +188,38 @@ function TarifCard({ config }: { config: TaxSettings }) {
 
 // ── Format Penomoran ────────────────────────────────────────────────────────
 
-const DOC_TYPE_LABEL: Record<DocTypeNumbering, string> = { sph: "SPH", inv: "Invoice", gaj: "Slip Gaji" };
+const DOC_TYPE_LABEL: Record<DocTypeNumbering, string> = {
+  sph: "SPH", inv: "Invoice", gaj: "Slip Gaji",
+  pry: "Proyek", prs: "Perusahaan", klg: "Kelengkapan Administrasi", fki: "Faktur Induk",
+  lyn: "Katalog Layanan", kry: "Karyawan",
+};
 
 const numberingFormSchema = z.object({
   sphFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
   invFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
   gajFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  pryFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  prsFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  klgFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  fkiFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  lynFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
+  kryFormat: z.string().refine((s) => s.includes("{seq}"), "Format nomor harus memuat {seq}."),
   seqPadding: z.coerce.number().int().min(1).max(10),
 });
 type NumberingForm = z.input<typeof numberingFormSchema>;
 
-const NUMBERING_FIELDS: { key: "sphFormat" | "invFormat" | "gajFormat"; docType: DocTypeNumbering }[] = [
+type NumberingFieldKey = "sphFormat" | "invFormat" | "gajFormat" | "pryFormat" | "prsFormat" | "klgFormat" | "fkiFormat" | "lynFormat" | "kryFormat";
+
+const NUMBERING_FIELDS: { key: NumberingFieldKey; docType: DocTypeNumbering }[] = [
   { key: "sphFormat", docType: "sph" },
   { key: "invFormat", docType: "inv" },
   { key: "gajFormat", docType: "gaj" },
+  { key: "pryFormat", docType: "pry" },
+  { key: "prsFormat", docType: "prs" },
+  { key: "klgFormat", docType: "klg" },
+  { key: "fkiFormat", docType: "fki" },
+  { key: "lynFormat", docType: "lyn" },
+  { key: "kryFormat", docType: "kry" },
 ];
 
 function PenomoranCard({ settings }: { settings: NumberingSettings }) {
@@ -219,6 +237,12 @@ function PenomoranCard({ settings }: { settings: NumberingSettings }) {
       sphFormat: values.sphFormat,
       invFormat: values.invFormat,
       gajFormat: values.gajFormat,
+      pryFormat: values.pryFormat,
+      prsFormat: values.prsFormat,
+      klgFormat: values.klgFormat,
+      fkiFormat: values.fkiFormat,
+      lynFormat: values.lynFormat,
+      kryFormat: values.kryFormat,
       seqPadding: Number(values.seqPadding),
     });
     setEditing(false);

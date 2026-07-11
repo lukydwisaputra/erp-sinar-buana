@@ -7,11 +7,14 @@ import { errorResponse } from "@/lib/api-error";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Not Viewer — unlike the list endpoint, nothing in the client portal calls
+// this single-company lookup (confirmed: no live caller of usePerusahaan(id)
+// anywhere in the app).
 export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const session = requireRole(
       await getCurrentSession(),
-      "admin", "keuangan", "sales", "tim_teknis", "viewer",
+      "admin", "keuangan", "sales", "tim_teknis",
     );
     const { id } = await params;
     const company = await getCompany(session.id, id);

@@ -9,6 +9,12 @@ export type NumberingSettingsRow = {
   sphFormat: string;
   invFormat: string;
   gajFormat: string;
+  pryFormat: string;
+  prsFormat: string;
+  klgFormat: string;
+  fkiFormat: string;
+  lynFormat: string;
+  kryFormat: string;
   seqPadding: number;
 };
 
@@ -17,6 +23,12 @@ export function toNumberingSettings(row: NumberingSettingsRow): NumberingSetting
     sphFormat: row.sphFormat,
     invFormat: row.invFormat,
     gajFormat: row.gajFormat,
+    pryFormat: row.pryFormat,
+    prsFormat: row.prsFormat,
+    klgFormat: row.klgFormat,
+    fkiFormat: row.fkiFormat,
+    lynFormat: row.lynFormat,
+    kryFormat: row.kryFormat,
     seqPadding: row.seqPadding,
   };
 }

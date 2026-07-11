@@ -3,6 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/shared/data-table";
+import { MaskedValue } from "@/components/shared/masked-value";
 import { formatRupiah } from "@/lib/format";
 import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
 
@@ -22,7 +23,7 @@ const columns: ColumnDef<ArusKasEntry>[] = [
     accessorFn: (row) => row.jumlah,
     cell: ({ row }) => (
       <span className={row.original.jenis === "kredit" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
-        {row.original.jenis === "debit" ? "-" : ""}{formatRupiah(row.original.jumlah)}
+        <MaskedValue>{row.original.jenis === "debit" ? "-" : ""}{formatRupiah(row.original.jumlah)}</MaskedValue>
       </span>
     ),
   },
@@ -36,12 +37,12 @@ interface CashflowTableProps {
 /** FR-09.3 — filterable cashflow table, a lighter read-only summary view (full filter dialog lives on /arus-kas itself). */
 export function CashflowTable({ entries, isLoading }: CashflowTableProps) {
   return (
-    <Card size="sm">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-sm">Riwayat Arus Kas</CardTitle>
-        <CardAction className="text-xs text-muted-foreground">Periode terpilih</CardAction>
+        <CardTitle>Riwayat Arus Kas</CardTitle>
+        <CardAction className="text-sm text-muted-foreground">Periode terpilih</CardAction>
       </CardHeader>
-      <CardContent className="[&_td]:text-xs [&_td]:py-2">
+      <CardContent>
         <DataTable
           columns={columns}
           data={entries}

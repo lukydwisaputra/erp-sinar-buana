@@ -41,14 +41,14 @@ export function alertsFaktur(fakturs: FakturTerminRow[], today: string): AlertIt
     if (diff < 0) {
       items.push(makeItem(
         "faktur-terlambat-" + f.id, "faktur_terlambat", "tinggi",
-        "Faktur Terlambat: " + f.id,
+        "Faktur Terlambat: " + (f.number ?? f.id),
         f.perusahaanNama + " – jatuh tempo " + f.jatuhTempo,
         f.indukId, "faktur", f.jatuhTempo,
       ));
     } else if (diff <= FAKTUR_DUE_SOON_DAYS) {
       items.push(makeItem(
         "faktur-jatuh-tempo-" + f.id, "faktur_jatuh_tempo", "sedang",
-        "Faktur Jatuh Tempo: " + f.id,
+        "Faktur Jatuh Tempo: " + (f.number ?? f.id),
         f.perusahaanNama + " – jatuh tempo " + f.jatuhTempo,
         f.indukId, "faktur", f.jatuhTempo,
       ));

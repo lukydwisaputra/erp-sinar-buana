@@ -173,13 +173,13 @@ function BuktiPotongCell({ entry }: { entry: TaxEntry }) {
 function AksiCell({ entry, onSettle, onUnsettle }: { entry: TaxEntry; onSettle: () => void; onUnsettle: () => void }) {
   if (entry.settlementStatus === "sudah_disetor") {
     return (
-      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={onUnsettle}>
+      <Button variant="ghost" size="sm" onClick={onUnsettle}>
         <Undo2 className="size-3.5" /> Batalkan
       </Button>
     );
   }
   return (
-    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={onSettle}>
+    <Button variant="outline" size="sm" onClick={onSettle}>
       <Check className="size-3.5" /> Tandai Selesai
     </Button>
   );
@@ -190,7 +190,7 @@ function buildColumns(
   onUnsettle: (entry: TaxEntry) => void,
 ): ColumnDef<TaxEntry>[] {
   return [
-    { accessorKey: "id", header: "ID", meta: { mono: true }, cell: ({ row }) => <span className="font-mono text-xs">{row.original.id.slice(0, 8)}</span> },
+    { accessorKey: "id", header: "ID", meta: { mono: true }, cell: ({ row }) => <span className="font-mono">{row.original.id.slice(0, 8)}</span> },
     { accessorKey: "taxType", header: "Jenis", cell: ({ row }) => <JenisBadge jenis={row.original.taxType} /> },
     { accessorKey: "taxPeriod", header: "Periode", meta: { mono: true }, cell: ({ row }) => <span className="font-mono">{row.original.taxPeriod.slice(0, 7)}</span> },
     {
@@ -220,11 +220,11 @@ interface KpiCardProps { label: string; value: string; sub?: string; icon: React
 
 function KpiCard({ label, value, sub, icon: Icon, danger, warn }: KpiCardProps) {
   return (
-    <Card size="sm">
-      <CardContent className="flex items-start justify-between gap-2 pt-0">
+    <Card>
+      <CardContent className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">{label}</p>
-          <p className={`font-mono text-lg font-semibold leading-tight ${danger ? "text-destructive" : warn ? "text-amber-600 dark:text-amber-400" : ""}`}>{value}</p>
+          <p className={`font-mono text-2xl font-semibold tabular-nums leading-tight ${danger ? "text-destructive" : warn ? "text-amber-600 dark:text-amber-400" : ""}`}>{value}</p>
           {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
         </div>
         <Icon className={`mt-0.5 size-5 shrink-0 ${danger ? "text-destructive" : warn ? "text-amber-500" : "text-muted-foreground"}`} />
@@ -283,12 +283,12 @@ function KonfigurasiCard({ config }: { config: PajakConfig }) {
   const tarifLabel = config.metode === "final_05" ? `${config.tarifFinalPersen}% dari omzet` : `${config.tarifBadanPersen}% dari laba kena pajak`;
 
   return (
-    <Card size="sm">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-sm">Konfigurasi PPh Badan</CardTitle>
+        <CardTitle>Konfigurasi PPh Badan</CardTitle>
         <CardAction className="flex items-center gap-1">
           {!editing && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setEditing(true); setOpen(true); }}>Ubah</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setEditing(true); setOpen(true); }}>Ubah</Button>
           )}
           <Button variant="ghost" size="icon" className="size-7" onClick={() => setOpen((o) => !o)}>
             {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}

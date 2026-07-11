@@ -4,7 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onFormInvalid } from "@/lib/form-toast";
 import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
-  useOptionList, useCreateOption, useUpdateOption, useDeleteOption, useMoveOption,
+  useOptionList, useCreateOption, useUpdateOption, useDeleteOption,
 } from "@/lib/query/daftar-pilihan";
 import {
   calcMethod, komponenGajiKind, daftarPilihanKategori,
@@ -57,7 +57,6 @@ function makeColumns(
   onEdit: (item: OptionItem) => void,
   onDelete: (item: OptionItem) => void,
   onToggleAktif: (item: OptionItem, aktif: boolean) => void,
-  onMove: (item: OptionItem, direction: "up" | "down") => void,
 ): ColumnDef<OptionItem>[] {
   const columns: ColumnDef<OptionItem>[] = [
     rowNumberColumn<OptionItem>(),
@@ -104,10 +103,12 @@ function makeColumns(
     {
       id: "aktif", header: "Aktif", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => (
-        <Checkbox
-          checked={row.original.aktif}
-          onCheckedChange={(checked) => onToggleAktif(row.original, checked === true)}
-        />
+        <div className="flex justify-center">
+          <Checkbox
+            checked={row.original.aktif}
+            onCheckedChange={(checked) => onToggleAktif(row.original, checked === true)}
+          />
+        </div>
       ),
     },
     {
@@ -120,12 +121,6 @@ function makeColumns(
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => onEdit(row.original)}>
               <Pencil className="size-3.5" /> Ubah
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onMove(row.original, "up")}>
-              <ArrowUp className="size-3.5" /> Pindah ke Atas
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onMove(row.original, "down")}>
-              <ArrowDown className="size-3.5" /> Pindah ke Bawah
             </DropdownMenuItem>
             {!row.original.locked && (
               <>
@@ -377,7 +372,6 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
   const { data, isLoading } = useOptionList(kategori, { includeInactive: true });
   const { mutate: updateOption } = useUpdateOption();
   const { mutate: deleteOption, isPending: isDeleting } = useDeleteOption();
-  const { mutate: moveOption } = useMoveOption();
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<OptionItem | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<OptionItem | null>(null);
@@ -387,7 +381,6 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
     setEditTarget,
     setDeleteTarget,
     (item, aktif) => updateOption({ id: item.id, kategori, patch: { aktif } }),
-    (item, direction) => moveOption({ id: item.id, kategori, direction }),
   );
 
   return (

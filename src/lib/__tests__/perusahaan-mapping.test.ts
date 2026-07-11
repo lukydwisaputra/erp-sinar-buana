@@ -5,6 +5,9 @@ import { seedPerusahaanId } from "@/lib/perusahaan-seed-ids";
 function company(overrides: Partial<Parameters<typeof toPerusahaan>[0]> = {}) {
   return {
     id: seedPerusahaanId(1),
+    number: "PRS/001",
+    numberYear: null,
+    numberMonth: null,
     name: "PT Contoh",
     address: "Jl. Contoh No. 1",
     city: "Jakarta",

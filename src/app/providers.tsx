@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PrivacyModeProvider } from "@/components/providers/privacy-mode-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -14,9 +15,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={client}>
-        <TooltipProvider delayDuration={200} disableHoverableContent>
-          {children}
-        </TooltipProvider>
+        <PrivacyModeProvider>
+          <TooltipProvider delayDuration={200} disableHoverableContent>
+            {children}
+          </TooltipProvider>
+        </PrivacyModeProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

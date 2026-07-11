@@ -1,4 +1,5 @@
 import { companyProfileCache } from "@/lib/company-profile/cache";
+import { pdfTemplateNotesCache } from "@/lib/pdf-templates/cache";
 import { formatRupiah, formatTanggalPanjang as tglPanjang, titleCase } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import type { FakturInduk, InvoiceTermin } from "@/lib/schemas/faktur";
@@ -12,6 +13,7 @@ import { DocumentLetterhead } from "@/components/shared/document/document-letter
  * total sourced from the Faktur Induk's stored `totalBiaya`. */
 export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: InvoiceTermin }): React.JSX.Element {
   const companyProfile = companyProfileCache.current;
+  const { headerNote, footerNote } = pdfTemplateNotesCache.current.invoice;
   const cell = "border border-[var(--doc-rule)] px-2 py-1";
   const sumLabel = `${cell} text-right font-bold`;
   const sumVal = `${cell} text-right font-mono tabular-nums whitespace-nowrap`;
@@ -30,6 +32,9 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
             {companyProfile.kota}, {tglPanjang(termin.tanggal)}
           </div>
         </div>
+
+        {/* Header note — Konfigurasi > Template > PDF. */}
+        {headerNote && <p className="mt-3 text-justify whitespace-pre-line">{headerNote}</p>}
 
         {/* Title */}
         <div className="mt-4 text-center">
@@ -85,6 +90,7 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
             {termin.catatan && <li>{termin.catatan}</li>}
           </ul>
           <p className="mt-2 font-bold">Invoice ini berlaku sebagai kwitansi</p>
+          {footerNote && <p className="mt-2 whitespace-pre-line">{footerNote}</p>}
         </div>
 
         {/* Signature */}
@@ -99,7 +105,7 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
   );
 }
 
-function SummaryRow({ label, value, labelCls, valCls }: { label: string; value: string; labelCls: string; valCls: string; colSpan: number }) {
+function SummaryRow({ label, value, labelCls, valCls }: { label: string; value: React.ReactNode; labelCls: string; valCls: string; colSpan: number }) {
   return (
     <tr>
       <td className={labelCls} colSpan={1}>{label}</td>

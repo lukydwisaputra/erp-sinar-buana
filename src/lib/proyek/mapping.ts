@@ -66,6 +66,7 @@ export function toProyek(input: ToProyekInput): Proyek {
   const p = input.project;
   return {
     id: p.id,
+    number: p.number,
     nama: p.name,
     perusahaanId: p.companyId,
     perusahaanNama: input.companyName,

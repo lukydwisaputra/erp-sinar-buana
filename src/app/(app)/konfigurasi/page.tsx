@@ -7,6 +7,7 @@ import { DaftarPilihanTab } from "@/components/konfigurasi/daftar-pilihan-tab";
 import { TarifPenomoranTab } from "@/components/konfigurasi/tarif-penomoran-tab";
 import { TemplateTab } from "@/components/konfigurasi/template-tab";
 import { WorkflowStatusTab } from "@/components/konfigurasi/workflow-status-tab";
+import { PrivasiTab } from "@/components/konfigurasi/privasi-tab";
 
 export default function KonfigurasiPage() {
   return (
@@ -23,6 +24,7 @@ export default function KonfigurasiPage() {
           <TabsTrigger value="tarif-penomoran">Tarif & Penomoran</TabsTrigger>
           <TabsTrigger value="template">Template</TabsTrigger>
           <TabsTrigger value="pengiriman">Pengiriman</TabsTrigger>
+          <TabsTrigger value="privasi">Privasi</TabsTrigger>
         </TabsList>
         <TabsContent value="daftar-pilihan"><DaftarPilihanTab /></TabsContent>
         <TabsContent value="workflow-status"><WorkflowStatusTab /></TabsContent>
@@ -30,6 +32,7 @@ export default function KonfigurasiPage() {
         <TabsContent value="tarif-penomoran"><TarifPenomoranTab /></TabsContent>
         <TabsContent value="template"><TemplateTab /></TabsContent>
         <TabsContent value="pengiriman"><PengirimanTab /></TabsContent>
+        <TabsContent value="privasi"><PrivasiTab /></TabsContent>
       </Tabs>
     </div>
   );

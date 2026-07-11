@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { onFormInvalid } from "@/lib/form-toast";
 import { useLogin } from "@/lib/query/session";
@@ -64,9 +65,8 @@ function LoginForm() {
           </Field>
           <Field>
             <FieldLabel htmlFor="login-password">Sandi</FieldLabel>
-            <Input
+            <PasswordInput
               id="login-password"
-              type="password"
               autoComplete="current-password"
               {...register("password")}
             />

@@ -4,6 +4,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronDownIcon } from "lucide-react";
+import { MaskedValue } from "@/components/shared/masked-value";
 import { formatRupiah } from "@/lib/format";
 import type { LabaRugi } from "@/lib/dasbor/types";
 
@@ -19,7 +20,7 @@ function Row({ label, value, bold, indent }: { label: string; value: number | un
       {value === undefined ? (
         <Skeleton className="h-4 w-28" />
       ) : (
-        <span className={value < 0 ? "text-destructive" : ""}>{formatRupiah(value)}</span>
+        <span className={value < 0 ? "text-destructive" : ""}><MaskedValue>{formatRupiah(value)}</MaskedValue></span>
       )}
     </div>
   );

@@ -9,6 +9,9 @@ export const pdfTemplateSchema = z.object({
   documentType: pdfTemplateDocumentType,
   headerNote: z.string(),
   footerNote: z.string(),
+  // Real DB column, was unmapped — printed documents pick the most recently
+  // created active template per documentType to render (src/lib/pdf-templates/cache.ts).
+  isActive: z.boolean(),
 });
 export type PdfTemplate = z.infer<typeof pdfTemplateSchema>;
 

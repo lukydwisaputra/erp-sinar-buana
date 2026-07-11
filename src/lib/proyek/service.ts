@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
-import { withUserTransaction, type Tx } from "@/lib/db/tx";
+import { withUserTransaction, withServiceRole, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/api-error";
 import {
@@ -8,6 +8,7 @@ import {
   type MilestoneAssigneeRow,
 } from "@/lib/proyek/mapping";
 import { linkQuotationSchedulesToProject } from "@/lib/proyek/jadwal-service";
+import { createMentionNotifications } from "@/lib/notifications/service";
 import { getDefaultStatusId, loadStatus, loadStatusLabelsByIds } from "@/lib/workflow-status";
 import type {
   Proyek,
@@ -114,6 +115,39 @@ export async function getProyek(userId: string, id: string): Promise<Proyek> {
   });
 }
 
+/** Auto-loads a milestone template's steps as the new project's initial
+ * milestones (PRD Bab 3.2's `service_catalog.milestone_template_id`, seeded
+ * since the Proyek pass but never read by project creation until now).
+ * Deliberately conservative: only auto-loads when the bundled services agree
+ * on exactly one template — 0 or ambiguous (multiple different templates
+ * across services) both skip silently rather than guess. */
+async function loadMilestonesFromTemplate(tx: Tx, projectId: string, serviceIds: string[]): Promise<void> {
+  const services = await tx
+    .select({ milestoneTemplateId: schema.serviceCatalog.milestoneTemplateId })
+    .from(schema.serviceCatalog)
+    .where(inArray(schema.serviceCatalog.id, serviceIds));
+  const templateIds = [...new Set(services.map((s) => s.milestoneTemplateId).filter((x): x is string => !!x))];
+  if (templateIds.length !== 1) return;
+
+  const steps = await tx
+    .select()
+    .from(schema.milestoneTemplateSteps)
+    .where(eq(schema.milestoneTemplateSteps.templateId, templateIds[0]))
+    .orderBy(asc(schema.milestoneTemplateSteps.sortOrder));
+  if (!steps.length) return;
+
+  const statusId = await getDefaultStatusId(tx, "milestone");
+  await tx.insert(schema.milestones).values(
+    steps.map((step) => ({
+      projectId,
+      name: step.name,
+      statusId,
+      sortOrder: step.sortOrder,
+      triggersTerm: step.triggersTerm,
+    })),
+  );
+}
+
 export async function createProyek(userId: string, input: CreateProyekInput): Promise<Proyek> {
   return withUserTransaction(userId, async (tx) => {
     const statusId = await getDefaultStatusId(tx, "proyek");
@@ -147,6 +181,7 @@ export async function createProyek(userId: string, input: CreateProyekInput): Pr
 
     if (serviceIds.length) {
       await tx.insert(schema.projectServices).values(serviceIds.map((serviceId) => ({ projectId: project.id, serviceId })));
+      await loadMilestonesFromTemplate(tx, project.id, serviceIds);
     }
     if (input.assigneeIds.length) {
       await tx.insert(schema.projectAssignees).values(input.assigneeIds.map((employeeId) => ({ projectId: project.id, employeeId, role: "anggota" as const })));
@@ -339,12 +374,9 @@ export async function listComments(userId: string, projectId: string, milestoneI
 
     const commentIds = rows.map((r) => r.id);
     const authorIds = rows.map((r) => r.authorId).filter((x): x is string => !!x);
-    const [authorNamesById, mentionRows] = await Promise.all([
-      loadUserNames(tx, authorIds),
-      commentIds.length
-        ? tx.select().from(schema.commentMentions).where(inArray(schema.commentMentions.commentId, commentIds))
-        : Promise.resolve([] as { commentId: string; mentionedUserId: string }[]),
-    ]);
+    const mentionRows = commentIds.length
+      ? await tx.select().from(schema.commentMentions).where(inArray(schema.commentMentions.commentId, commentIds))
+      : [];
 
     const mentionsByComment = new Map<string, string[]>();
     for (const m of mentionRows) {
@@ -353,28 +385,44 @@ export async function listComments(userId: string, projectId: string, milestoneI
       mentionsByComment.set(m.commentId, list);
     }
 
-    return rows.map((r) => ({
-      id: r.id,
-      proyekId: r.projectId,
-      milestoneId: r.milestoneId ?? "",
-      authorId: r.authorId,
-      authorNama: (r.authorId && authorNamesById.get(r.authorId)) || "—",
-      body: r.body,
-      mentionedUserIds: mentionsByComment.get(r.id) ?? [],
-      createdAt: r.createdAt.toISOString(),
-    }));
+    const namesById = await loadUserNames([...authorIds, ...mentionRows.map((m) => m.mentionedUserId)]);
+
+    return rows.map((r) => {
+      const mentionedUserIds = mentionsByComment.get(r.id) ?? [];
+      return {
+        id: r.id,
+        proyekId: r.projectId,
+        milestoneId: r.milestoneId ?? "",
+        authorId: r.authorId,
+        authorNama: (r.authorId && namesById.get(r.authorId)) || "—",
+        body: r.body,
+        mentionedUserIds,
+        mentionedUserNames: mentionedUserIds.map((id) => namesById.get(id) || "—"),
+        createdAt: r.createdAt.toISOString(),
+      };
+    });
   });
 }
 
-async function loadUserNames(tx: Tx, userIds: string[]): Promise<Map<string, string>> {
+/** `user_profiles`' own RLS (`profiles_sel`) only lets a session read its own
+ * row (`id = auth.uid() or is_admin()`) — but comment authorship/mentions/
+ * status-change-actor are already visible to any role that can read the
+ * comment or log entry itself (broad `read_auth` on project_comments/
+ * project_status_log). Same shape as Profil Perusahaan's signer-name lookup:
+ * a narrow, deliberate RLS bypass for data already exposed via the caller's
+ * own RBAC gate, not a real hole. Runs its own transaction since it needs a
+ * different role than the caller's `withUserTransaction`. */
+async function loadUserNames(userIds: string[]): Promise<Map<string, string>> {
   const ids = [...new Set(userIds)];
   if (!ids.length) return new Map();
-  const rows = await tx.select({ id: schema.userProfiles.id, fullName: schema.userProfiles.fullName }).from(schema.userProfiles).where(inArray(schema.userProfiles.id, ids));
-  return new Map(rows.map((r) => [r.id, r.fullName]));
+  return withServiceRole(async (tx) => {
+    const rows = await tx.select({ id: schema.userProfiles.id, fullName: schema.userProfiles.fullName }).from(schema.userProfiles).where(inArray(schema.userProfiles.id, ids));
+    return new Map(rows.map((r) => [r.id, r.fullName]));
+  });
 }
 
 export async function addComment(userId: string, projectId: string, milestoneId: string, input: AddCommentInput): Promise<ProyekComment> {
-  return withUserTransaction(userId, async (tx) => {
+  const result = await withUserTransaction(userId, async (tx) => {
     const [comment] = await tx
       .insert(schema.projectComments)
       .values({ projectId, milestoneId, authorId: userId, body: input.body })
@@ -382,18 +430,33 @@ export async function addComment(userId: string, projectId: string, milestoneId:
     if (input.mentionedUserIds.length) {
       await tx.insert(schema.commentMentions).values(input.mentionedUserIds.map((mentionedUserId) => ({ commentId: comment.id, mentionedUserId })));
     }
-    const [authorNamesById] = await Promise.all([loadUserNames(tx, [userId])]);
-    return {
-      id: comment.id,
-      proyekId: projectId,
-      milestoneId,
-      authorId: userId,
-      authorNama: authorNamesById.get(userId) || "—",
-      body: comment.body,
-      mentionedUserIds: input.mentionedUserIds,
-      createdAt: comment.createdAt.toISOString(),
-    };
+    const [milestone] = await tx.select({ name: schema.milestones.name }).from(schema.milestones).where(eq(schema.milestones.id, milestoneId)).limit(1);
+    return { comment, milestoneName: milestone?.name ?? "milestone" };
   });
+
+  const namesById = await loadUserNames([userId, ...input.mentionedUserIds]);
+  const authorNama = namesById.get(userId) || "—";
+
+  if (input.mentionedUserIds.length) {
+    await createMentionNotifications(input.mentionedUserIds, {
+      actorName: authorNama,
+      milestoneName: result.milestoneName,
+      commentBody: input.body,
+      linkPath: `/proyek/${projectId}`,
+    });
+  }
+
+  return {
+    id: result.comment.id,
+    proyekId: projectId,
+    milestoneId,
+    authorId: userId,
+    authorNama,
+    body: result.comment.body,
+    mentionedUserIds: input.mentionedUserIds,
+    mentionedUserNames: input.mentionedUserIds.map((id) => namesById.get(id) || "—"),
+    createdAt: result.comment.createdAt.toISOString(),
+  };
 }
 
 // ── Project status log (real, trigger-written) ─────────────────────────────
@@ -410,7 +473,7 @@ export async function listProyekLog(userId: string, projectId: string): Promise<
     const changedByIds = rows.map((r) => r.changedBy).filter((x): x is string => !!x);
     const [statusLabelsById, userNamesById] = await Promise.all([
       loadStatusLabelsByIds(tx, statusIds),
-      loadUserNames(tx, changedByIds),
+      loadUserNames(changedByIds),
     ]);
 
     return rows.map((r) => ({

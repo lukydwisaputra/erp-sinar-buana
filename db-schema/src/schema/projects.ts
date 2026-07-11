@@ -29,6 +29,9 @@ export const projects = pgTable(
   "projects",
   {
     id: pk(),
+    number: text("number"), // e.g. PRY/00001 — assigned by trigger, never reset, immutable
+    numberYear: integer("number_year"),
+    numberMonth: integer("number_month"),
     name: text("name").notNull(),
     companyId: uuid("company_id")
       .notNull()

@@ -65,6 +65,7 @@ export const userProfiles = pgTable("user_profiles", {
   passwordHash: text("password_hash"),
   role: appRole("role").notNull().default("viewer"),
   employeeId: uuid("employee_id").unique(),
+  clientCompanyId: uuid("client_company_id"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: createdAt(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -110,6 +111,9 @@ const bookkeeping = {
 
 export const companies = pgTable("companies", {
   id: pk(),
+  number: text("number"), // assigned by trg_companies_number — never set from the app
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   name: text("name").notNull(),
   address: text("address").notNull(),
   city: text("city").notNull(),
@@ -234,6 +238,9 @@ export const milestoneTemplateSteps = pgTable("milestone_template_steps", {
 
 export const serviceCatalog = pgTable("service_catalog", {
   id: pk(),
+  number: text("number"), // assigned by trg_service_catalog_number — never set from the app
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   name: text("name").notNull(),
   documentTypeId: uuid("document_type_id").references(() => documentTypes.id, { onDelete: "set null" }),
   authorityId: uuid("authority_id").references(() => authorities.id, { onDelete: "set null" }),
@@ -249,6 +256,9 @@ export const serviceCatalog = pgTable("service_catalog", {
 
 export const employees = pgTable("employees", {
   id: pk(),
+  number: text("number"), // assigned by trg_employees_number — never set from the app
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   name: text("name").notNull(),
   positionId: uuid("position_id").references(() => positions.id, { onDelete: "set null" }),
   employmentStatusId: uuid("employment_status_id").references(
@@ -289,6 +299,9 @@ export const employeeSalaryComponents = pgTable(
 
 export const kelengkapanTemplates = pgTable("kelengkapan_templates", {
   id: pk(),
+  number: text("number"), // assigned by trg_kelengkapan_templates_number — never set from the app
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   name: text("name").notNull(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -441,6 +454,9 @@ export const projects = pgTable(
   "projects",
   {
     id: pk(),
+    number: text("number"), // assigned by trg_projects_number — never set from the app
+    numberYear: integer("number_year"),
+    numberMonth: integer("number_month"),
     name: text("name").notNull(),
     companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "restrict" }),
     adminAreaId: uuid("admin_area_id").references(() => adminAreas.id, { onDelete: "set null" }),
@@ -565,6 +581,9 @@ export const rabActuals = pgTable("rab_actuals", {
 
 export const masterInvoices = pgTable("master_invoices", {
   id: pk(),
+  number: text("number"), // assigned by trg_master_invoices_number — never set from the app
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
   companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "restrict" }),
   totalCost: money("total_cost").notNull().default("0"),
@@ -594,7 +613,7 @@ export const masterInvoiceTerms = pgTable("master_invoice_terms", {
 
 export const installmentInvoices = pgTable("installment_invoices", {
   id: pk(),
-  number: text("number"), // assigned by trg_installments_number — never set from the app
+  number: text("number"), // legacy/unused — a termin's displayed number is derived app-side from its Induk, not trigger-assigned
   numberYear: integer("number_year"),
   numberMonth: integer("number_month"),
   masterInvoiceId: uuid("master_invoice_id").notNull().references(() => masterInvoices.id, { onDelete: "cascade" }),
@@ -868,12 +887,55 @@ export const dashboardSettings = pgTable("dashboard_settings", {
   updatedAt: updatedAt(),
 });
 
+export const privacySettings = pgTable("privacy_settings", {
+  singleton: boolean("singleton").notNull().default(true).primaryKey(),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
 export const numberingSettings = pgTable("numbering_settings", {
   singleton: boolean("singleton").notNull().default(true).primaryKey(),
   sphFormat: text("sph_format").notNull().default("SPH/{seq}/{month}.{year}"),
-  invFormat: text("inv_format").notNull().default("INV/{seq}/{month}.{year}"),
+  invFormat: text("inv_format").notNull().default("INV/{seq}/{year}"), // Faktur Induk resets yearly, not monthly
   gajFormat: text("gaj_format").notNull().default("GAJ/{seq}/{month}.{year}"),
+  pryFormat: text("pry_format").notNull().default("PRY/{seq}"),
+  prsFormat: text("prs_format").notNull().default("PRS/{seq}"),
+  klgFormat: text("klg_format").notNull().default("KLG/{seq}"),
+  fkiFormat: text("fki_format").notNull().default("FKI/{seq}"),
+  lynFormat: text("lyn_format").notNull().default("LYN/{seq}"),
+  kryFormat: text("kry_format").notNull().default("KRY/{seq}"),
   seqPadding: smallint("seq_padding").notNull().default(3),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+// notification_type has more kinds seeded (tax_due/invoice_due/...) than the
+// app currently produces — only "mention" is wired (src/lib/notifications/
+// service.ts); the rest stay dormant until those Dasbor alert kinds are ever
+// migrated from live-computed to persisted+pushed.
+export const notificationType = pgEnum("notification_type", [
+  "tax_due",
+  "invoice_due",
+  "mention",
+  "semester_report_due",
+  "milestone_term_ready",
+  "project_over_budget",
+  "milestone_slipping",
+  "project_stalled",
+  "pph23_bukti_potong_missing",
+]);
+
+export const notifications = pgTable("notifications", {
+  id: pk(),
+  userId: uuid("user_id").notNull().references(() => userProfiles.id, { onDelete: "cascade" }),
+  type: notificationType("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+  linkPath: text("link_path"),
+  isRead: boolean("is_read").notNull().default(false),
+  scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+  sentEmailAt: timestamp("sent_email_at", { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

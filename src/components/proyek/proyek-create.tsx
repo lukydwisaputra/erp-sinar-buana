@@ -79,7 +79,7 @@ export function ProyekCreate({ sph }: { sph: Sph }) {
       <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
         <SectionLabel>Dari SPH</SectionLabel>
         <p className="text-sm font-medium">{sph.perusahaanNama}</p>
-        <p className="text-sm text-muted-foreground font-mono">{sph.id} · {formatRupiah(nilaiKontrak)}</p>
+        <p className="text-sm text-muted-foreground font-mono">{sph.number ?? sph.id} · {formatRupiah(nilaiKontrak)}</p>
         <div className="flex flex-wrap gap-1 pt-1">
           {layananNama.map((n) => <Badge key={n} variant="info" className="text-xs">{n}</Badge>)}
         </div>

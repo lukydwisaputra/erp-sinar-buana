@@ -4,6 +4,9 @@ import { toLayanan, computeMetrik } from "@/lib/katalog/mapping";
 function service(overrides: Partial<Parameters<typeof toLayanan>[0]> = {}) {
   return {
     id: "svc-1",
+    number: null,
+    numberYear: null,
+    numberMonth: null,
     name: "Penyusunan Pertek Air Limbah",
     documentTypeId: "doc-1",
     authorityId: "auth-1",

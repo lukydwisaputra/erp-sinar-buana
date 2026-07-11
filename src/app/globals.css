@@ -211,6 +211,14 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  /* Explicit selection colors — without this, some browsers (notably Safari,
+   * which auto-selects an input's text when it's focused programmatically,
+   * e.g. a Sheet/Dialog's autofocus) fall back to the OS "Highlight" system
+   * color, which reads as a low-contrast grey box against dark-mode inputs. */
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
   html {
     @apply font-sans;
   }

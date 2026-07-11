@@ -169,11 +169,11 @@ function TrendLineChart({ entries, dateRange }: { entries: ArusKasEntry[]; dateR
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
         Kurva Arus Kas {CURRENT_YEAR}
       </p>
-      <ChartContainer config={lineChartConfig} className="h-52 w-full">
+      <ChartContainer config={lineChartConfig} className="h-52 w-full text-sm">
         <LineChart data={lineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
-          <XAxis dataKey="bulan" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-          <YAxis tickFormatter={jutaFmt} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={40} />
+          <XAxis dataKey="bulan" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+          <YAxis tickFormatter={jutaFmt} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={40} />
           <ChartTooltip
             content={<ChartTooltipContent formatter={(value) => (typeof value === "number" ? formatRupiah(value) : String(value))} />}
           />
@@ -182,7 +182,7 @@ function TrendLineChart({ entries, dateRange }: { entries: ArusKasEntry[]; dateR
           <Line type="monotone" dataKey="pengeluaran" stroke="var(--color-pengeluaran)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
         </LineChart>
       </ChartContainer>
-      <p className="mt-1 text-center text-[10px] text-muted-foreground">Nilai dalam juta rupiah (Rp juta)</p>
+      <p className="mt-1 text-center text-xs text-muted-foreground">Nilai dalam juta rupiah (Rp juta)</p>
     </div>
   );
 }
@@ -361,25 +361,23 @@ function ArusKasPageContent() {
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : (
-        <div className="[&_td]:text-xs [&_td]:py-2">
-          <DataTable
-            columns={columns}
-            data={allEntries}
-            loading={isLoading}
-            searchColumns={["keterangan"]}
-            searchPlaceholder="Cari keterangan…"
-            emptyMessage="Belum ada transaksi"
-            defaultSorting={[{ id: "tanggal", desc: true }]}
-            rowActions={false}
-            toolbarActions={
-              <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
-                <SlidersHorizontal className="size-3.5" />
-                Filter
-                {hasFilter && <Badge variant="secondary" className="px-1.5 py-0 text-xs">{filterCount}</Badge>}
-              </Button>
-            }
-          />
-        </div>
+        <DataTable
+          columns={columns}
+          data={allEntries}
+          loading={isLoading}
+          searchColumns={["keterangan"]}
+          searchPlaceholder="Cari keterangan…"
+          emptyMessage="Belum ada transaksi"
+          defaultSorting={[{ id: "tanggal", desc: true }]}
+          rowActions={false}
+          toolbarActions={
+            <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
+              <SlidersHorizontal className="size-3.5" />
+              Filter
+              {hasFilter && <Badge variant="secondary" className="px-1.5 py-0 text-xs">{filterCount}</Badge>}
+            </Button>
+          }
+        />
       )}
 
       <Dialog open={filterOpen} onOpenChange={setFilterOpen}>

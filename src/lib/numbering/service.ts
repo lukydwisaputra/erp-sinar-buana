@@ -24,6 +24,12 @@ export async function updateNumberingSettings(
         sphFormat: input.sphFormat,
         invFormat: input.invFormat,
         gajFormat: input.gajFormat,
+        pryFormat: input.pryFormat,
+        prsFormat: input.prsFormat,
+        klgFormat: input.klgFormat,
+        fkiFormat: input.fkiFormat,
+        lynFormat: input.lynFormat,
+        kryFormat: input.kryFormat,
         seqPadding: input.seqPadding,
         updatedAt: new Date(),
       })

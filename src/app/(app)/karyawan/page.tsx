@@ -80,11 +80,11 @@ function makeColumns(
 ): ColumnDef<Karyawan>[] {
   return [
     {
-      accessorKey: "id", header: "ID", meta: { mono: true },
+      accessorKey: "number", header: "No. Karyawan", meta: { mono: true },
       cell: ({ row }) => (
         <button type="button" onClick={() => onOpen(row.original)}
           className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-          {row.original.id.slice(0, 8)}
+          {row.original.number ?? "—"}
         </button>
       ),
     },
@@ -602,8 +602,8 @@ export default function KaryawanPage() {
           columns={columns}
           data={filteredData}
           loading={isLoading}
-          searchColumns={["id", "nama"]}
-          searchPlaceholder="Cari ID atau nama karyawan…"
+          searchColumns={["number", "nama"]}
+          searchPlaceholder="Cari nomor atau nama karyawan…"
           emptyMessage="Belum ada karyawan"
           rowActions={false}
           toolbarActions={
@@ -672,7 +672,7 @@ export default function KaryawanPage() {
                 <Avatar className="mb-1 size-10"><AvatarFallback>{initials(selected.nama)}</AvatarFallback></Avatar>
                 <SheetTitle className="text-lg leading-tight font-semibold wrap-break-word">{selected.nama}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-2">
-                  <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id.slice(0, 8)}</SheetDescription>
+                  <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.number ?? "—"}</SheetDescription>
                   <Badge variant={kepegawaianVariant(selected.statusKepegawaian)}>{selected.statusKepegawaian}</Badge>
                 </div>
               </SheetHeader>

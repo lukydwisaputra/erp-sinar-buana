@@ -26,6 +26,7 @@ export function toKaryawan(
 ): Karyawan {
   return {
     id: employee.id,
+    number: employee.number,
     nama: employee.name,
     positionId: employee.positionId,
     jabatan: position?.label ?? "—",

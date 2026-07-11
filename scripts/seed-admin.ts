@@ -11,6 +11,13 @@ import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 import { hash } from "@node-rs/argon2";
 
+// The literal default from .env.example — fine for local dev, never for a
+// real database. Set NODE_ENV=production in whatever runs this against a
+// production DB (same convention src/lib/auth/cookie.ts already relies on)
+// to have this actually enforced instead of just warned about.
+const PLACEHOLDER_PASSWORDS = new Set(["change-me-admin"]);
+const MIN_PRODUCTION_PASSWORD_LENGTH = 12;
+
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   const email = process.env.SEED_ADMIN_EMAIL;
@@ -20,6 +27,21 @@ async function main() {
   if (!databaseUrl || !email || !password) {
     throw new Error(
       "DATABASE_URL, SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set (see .env.example).",
+    );
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    if (PLACEHOLDER_PASSWORDS.has(password)) {
+      throw new Error(
+        "SEED_ADMIN_PASSWORD is still the placeholder value from .env.example — refusing to create an admin with a known credential in production. Set a real password first.",
+      );
+    }
+    if (password.length < MIN_PRODUCTION_PASSWORD_LENGTH) {
+      throw new Error(`SEED_ADMIN_PASSWORD must be at least ${MIN_PRODUCTION_PASSWORD_LENGTH} characters in production.`);
+    }
+  } else if (PLACEHOLDER_PASSWORDS.has(password)) {
+    console.warn(
+      "WARNING: SEED_ADMIN_PASSWORD is the placeholder value from .env.example. Fine for local dev — change it before running this against any real/production database.",
     );
   }
 

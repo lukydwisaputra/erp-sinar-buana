@@ -29,11 +29,13 @@ import {
   useResendInvite, useAdminResetPassword, type PenggunaAccount,
 } from "@/lib/query/pengguna";
 import { useKaryawanList } from "@/lib/query/karyawan";
+import { usePerusahaanList } from "@/lib/query/perusahaan";
 import { appRoleValues, appRoleLabels, akunStatusLabels, type AkunStatus } from "@/lib/schemas/pengguna";
 
 /** Radix Select can't carry an empty-string value, so "Tidak Ditautkan" uses
  * this sentinel and gets mapped back to `null` at the form boundary. */
 const NO_EMPLOYEE = "__none__";
+const NO_CLIENT_COMPANY = "__none__";
 
 function KaryawanLinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { data: karyawan = [] } = useKaryawanList();
@@ -52,6 +54,31 @@ function KaryawanLinkField({ value, onChange }: { value: string; onChange: (v: s
       </Select>
       <FieldDescription>
         Diperlukan untuk akses &ldquo;slip gaji sendiri&rdquo; dan assignment proyek.
+      </FieldDescription>
+    </Field>
+  );
+}
+
+/** Only meaningful for role="viewer" — an external client-contact (PIC)
+ * account. Scopes them to see only that one company's own Proyek/SPH/Faktur;
+ * unlinked viewer accounts see nothing (a dead end, not an error). */
+function ClientCompanyLinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data: perusahaan = [] } = usePerusahaanList();
+  return (
+    <Field>
+      <FieldLabel htmlFor="p-client-company">Tautan Perusahaan Klien</FieldLabel>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id="p-client-company" className="w-full">
+          <SelectValue placeholder="Pilih perusahaan…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_CLIENT_COMPANY}>Tidak Ditautkan</SelectItem>
+          {perusahaan.map((p) => <SelectItem key={p.id} value={p.id}>{p.nama}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <FieldDescription>
+        Akun ini hanya akan melihat Proyek, SPH, dan Faktur milik perusahaan yang ditautkan — tidak ada
+        modul lain.
       </FieldDescription>
     </Field>
   );
@@ -164,6 +191,7 @@ const createFormSchema = z.object({
   email: z.string().min(1, "Email wajib diisi.").email("Format email tidak valid."),
   role: z.enum(appRoleValues, { message: "Peran wajib dipilih." }),
   employeeId: z.string(),
+  clientCompanyId: z.string(),
 });
 type CreateForm = z.infer<typeof createFormSchema>;
 
@@ -177,15 +205,17 @@ function PenggunaCreateForm({
   onCreated: (inviteLink: string) => void;
 }) {
   const { mutateAsync, isPending } = useCreatePengguna();
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<CreateForm>({
+  const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<CreateForm>({
     resolver: zodResolver(createFormSchema),
-    defaultValues: { fullName: "", email: "", role: "viewer", employeeId: NO_EMPLOYEE },
+    defaultValues: { fullName: "", email: "", role: "viewer", employeeId: NO_EMPLOYEE, clientCompanyId: NO_CLIENT_COMPANY },
   });
+  const role = watch("role");
 
   const onSubmit = handleSubmit(async (values) => {
     const account = await mutateAsync({
       fullName: values.fullName, email: values.email, role: values.role,
       employeeId: values.employeeId === NO_EMPLOYEE ? null : values.employeeId,
+      clientCompanyId: values.clientCompanyId === NO_CLIENT_COMPANY ? null : values.clientCompanyId,
     });
     onOpenChange(false);
     reset();
@@ -232,11 +262,19 @@ function PenggunaCreateForm({
         <FieldError errors={errors.role ? [errors.role] : undefined} />
       </Field>
 
-      <Controller
-        control={control}
-        name="employeeId"
-        render={({ field }) => <KaryawanLinkField value={field.value} onChange={field.onChange} />}
-      />
+      {role === "viewer" ? (
+        <Controller
+          control={control}
+          name="clientCompanyId"
+          render={({ field }) => <ClientCompanyLinkField value={field.value} onChange={field.onChange} />}
+        />
+      ) : (
+        <Controller
+          control={control}
+          name="employeeId"
+          render={({ field }) => <KaryawanLinkField value={field.value} onChange={field.onChange} />}
+        />
+      )}
     </FormSheet>
   );
 }
@@ -246,6 +284,7 @@ function PenggunaCreateForm({
 const editFormSchema = z.object({
   role: z.enum(appRoleValues, { message: "Peran wajib dipilih." }),
   employeeId: z.string(),
+  clientCompanyId: z.string(),
 });
 type EditForm = z.infer<typeof editFormSchema>;
 
@@ -260,12 +299,13 @@ function PenggunaEditForm({
 }) {
   const { mutateAsync, isPending } = useUpdatePengguna();
   const defaults = React.useCallback((a: PenggunaAccount): EditForm => ({
-    role: a.role, employeeId: a.employeeId ?? NO_EMPLOYEE,
+    role: a.role, employeeId: a.employeeId ?? NO_EMPLOYEE, clientCompanyId: a.clientCompanyId ?? NO_CLIENT_COMPANY,
   }), []);
-  const { handleSubmit, control, reset, formState: { errors } } = useForm<EditForm>({
+  const { handleSubmit, control, watch, reset, formState: { errors } } = useForm<EditForm>({
     resolver: zodResolver(editFormSchema),
     defaultValues: defaults(account),
   });
+  const role = watch("role");
 
   React.useEffect(() => {
     if (open) reset(defaults(account));
@@ -274,7 +314,11 @@ function PenggunaEditForm({
   const onSubmit = handleSubmit(async (values) => {
     await mutateAsync({
       id: account.id,
-      input: { role: values.role, employeeId: values.employeeId === NO_EMPLOYEE ? null : values.employeeId },
+      input: {
+        role: values.role,
+        employeeId: values.employeeId === NO_EMPLOYEE ? null : values.employeeId,
+        clientCompanyId: values.clientCompanyId === NO_CLIENT_COMPANY ? null : values.clientCompanyId,
+      },
     });
     onOpenChange(false);
   }, onFormInvalid);
@@ -307,11 +351,19 @@ function PenggunaEditForm({
         <FieldError errors={errors.role ? [errors.role] : undefined} />
       </Field>
 
-      <Controller
-        control={control}
-        name="employeeId"
-        render={({ field }) => <KaryawanLinkField value={field.value} onChange={field.onChange} />}
-      />
+      {role === "viewer" ? (
+        <Controller
+          control={control}
+          name="clientCompanyId"
+          render={({ field }) => <ClientCompanyLinkField value={field.value} onChange={field.onChange} />}
+        />
+      ) : (
+        <Controller
+          control={control}
+          name="employeeId"
+          render={({ field }) => <KaryawanLinkField value={field.value} onChange={field.onChange} />}
+        />
+      )}
     </FormSheet>
   );
 }

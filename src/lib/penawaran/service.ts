@@ -1,5 +1,5 @@
 import { and, eq, desc, inArray, isNull } from "drizzle-orm";
-import { withUserTransaction, type Tx } from "@/lib/db/tx";
+import { withUserTransaction, withServiceRole, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/api-error";
 import {
@@ -207,6 +207,22 @@ export async function getQuotation(userId: string, id: string): Promise<Sph> {
       .where(and(eq(schema.quotations.id, id), isNull(schema.quotations.deletedAt)))
       .limit(1);
     if (!row) throw new NotFoundError("Penawaran tidak ditemukan.");
+    return assembleSph(tx, row);
+  });
+}
+
+/** Used only by the internal PDF-render pipeline (`src/app/print/**`, called
+ * by the worker via headless browser, not a real user session) — elevated
+ * since there's no logged-in user to scope RLS to. Never exposed through a
+ * normal API route. */
+export async function getQuotationForPrint(id: string): Promise<Sph | null> {
+  return withServiceRole(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(schema.quotations)
+      .where(and(eq(schema.quotations.id, id), isNull(schema.quotations.deletedAt)))
+      .limit(1);
+    if (!row) return null;
     return assembleSph(tx, row);
   });
 }

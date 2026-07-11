@@ -6,11 +6,13 @@ import { errorResponse } from "@/lib/api-error";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Not Viewer — internal status-change audit trail, not client-facing
+// (matches project_status_log's RLS, staff-only, no client_read).
 export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const session = requireRole(
       await getCurrentSession(),
-      "admin", "keuangan", "sales", "tim_teknis", "viewer",
+      "admin", "keuangan", "sales", "tim_teknis",
     );
     const { id } = await params;
     const log = await listProyekLog(session.id, id);

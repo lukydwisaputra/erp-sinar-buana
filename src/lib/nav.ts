@@ -6,6 +6,12 @@ import {
 import type { AppRole } from "@/lib/schemas/pengguna";
 
 const ALL_ROLES: AppRole[] = ["admin", "keuangan", "sales", "tim_teknis", "viewer"];
+// Internal staff only — excludes Viewer, which since the client-portal pass
+// (planning/prd/02-peran-rbac.md predates this; see 00_helpers.sql's
+// current_client_company_id()) means an external client-contact (PIC)
+// account, not an internal read-only role. A client only gets Penawaran/
+// Proyek/Faktur, each scoped server-side (RLS) to their own company.
+const STAFF_ROLES: AppRole[] = ["admin", "keuangan", "sales", "tim_teknis"];
 
 export type NavItem = { label: string; href: string; icon: LucideIcon; roles: AppRole[] };
 export type NavGroup = { label: string; items: NavItem[] };
@@ -16,23 +22,23 @@ export type NavGroup = { label: string; items: NavItem[] };
 // is UX only (US-01.6 "Sembunyikan menu tak berhak").
 export const NAV: NavGroup[] = [
   { label: "Utama", items: [
-    { label: "Dasbor", href: "/dasbor", icon: LayoutDashboard, roles: ALL_ROLES },
+    { label: "Dasbor", href: "/dasbor", icon: LayoutDashboard, roles: STAFF_ROLES },
   ]},
   { label: "Penjualan", items: [
     { label: "Penawaran", href: "/penawaran", icon: FileText, roles: ALL_ROLES },
     { label: "Proyek", href: "/proyek", icon: FolderKanban, roles: ALL_ROLES },
   ]},
   { label: "Keuangan", items: [
-    { label: "Faktur", href: "/faktur", icon: ReceiptText, roles: ["admin", "keuangan", "sales", "tim_teknis"] },
+    { label: "Faktur", href: "/faktur", icon: ReceiptText, roles: ["admin", "keuangan", "viewer"] },
     { label: "Penggajian", href: "/penggajian", icon: Wallet, roles: ["admin", "keuangan", "sales", "tim_teknis"] },
-    { label: "Arus Kas", href: "/arus-kas", icon: ArrowRightLeft, roles: ["admin", "keuangan", "viewer"] },
+    { label: "Arus Kas", href: "/arus-kas", icon: ArrowRightLeft, roles: ["admin", "keuangan"] },
     { label: "Pajak", href: "/pajak", icon: Landmark, roles: ["admin", "keuangan"] },
   ]},
   { label: "Master Data", items: [
-    { label: "Perusahaan", href: "/perusahaan", icon: Building2, roles: ALL_ROLES },
-    { label: "Katalog Layanan", href: "/katalog", icon: BookOpen, roles: ALL_ROLES },
+    { label: "Perusahaan", href: "/perusahaan", icon: Building2, roles: STAFF_ROLES },
+    { label: "Katalog Layanan", href: "/katalog", icon: BookOpen, roles: STAFF_ROLES },
     { label: "Karyawan", href: "/karyawan", icon: Users, roles: ["admin", "keuangan", "tim_teknis"] },
-    { label: "Kelengkapan Administrasi", href: "/kelengkapan", icon: ClipboardList, roles: ALL_ROLES },
+    { label: "Kelengkapan Administrasi", href: "/kelengkapan", icon: ClipboardList, roles: STAFF_ROLES },
   ]},
   { label: "Administrasi", items: [
     { label: "Pengiriman Dokumen", href: "/dokumen", icon: Send, roles: ["admin", "keuangan", "sales"] },

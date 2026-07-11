@@ -26,7 +26,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { appRole } from "./enums";
 import { pk, timestamps } from "./_shared";
-import { employees } from "./master-data";
+import { employees, companies } from "./master-data";
 
 export const userProfiles = pgTable(
   "user_profiles",
@@ -41,6 +41,11 @@ export const userProfiles = pgTable(
     // 1:1 with an employee — required for "see own payslip" and to be a project
     // assignee (PRD Bab 2.4).
     employeeId: uuid("employee_id").unique(),
+    // Client-contact (PIC) accounts only — role='viewer', "Tautan Perusahaan
+    // Klien" in Akun Pengguna. Scopes RLS (see sql/rls/00_helpers.sql's
+    // current_client_company_id()) to that one company's own Proyek/SPH/
+    // Faktur rows. Not unique — a company can have more than one PIC account.
+    clientCompanyId: uuid("client_company_id"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,
   },
@@ -49,6 +54,11 @@ export const userProfiles = pgTable(
       columns: [t.employeeId],
       foreignColumns: [employees.id],
       name: "user_profiles_employee_id_fk",
+    }).onDelete("set null"),
+    clientCompanyFk: foreignKey({
+      columns: [t.clientCompanyId],
+      foreignColumns: [companies.id],
+      name: "user_profiles_client_company_id_fk",
     }).onDelete("set null"),
   }),
 );

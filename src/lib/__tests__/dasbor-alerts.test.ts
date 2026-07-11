@@ -11,7 +11,7 @@ import type { ProyekProfit } from "@/lib/dasbor/types";
 const TODAY = "2026-06-22";
 
 const mkFaktur = (id: string, jatuhTempo: string, statusSystemRole: string | null = null): FakturTerminRow => ({
-  id, indukId: "MI-" + id, proyekId: "P1", perusahaanNama: "PT Klien",
+  id, indukId: "MI-" + id, number: "INV/" + id, proyekId: "P1", perusahaanNama: "PT Klien",
   tanggal: "2026-06-01", jatuhTempo, statusSystemRole,
   nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
 });
@@ -27,7 +27,7 @@ const mkKewajiban = (
 });
 
 const mkProyekEntity = (id: string, statusSystemRole: string | null, overrides: Partial<Proyek> = {}): Proyek => ({
-  id, nama: "Proyek " + id, perusahaanId: "C1", perusahaanNama: "PT Klien",
+  id, number: "PRY/" + id, nama: "Proyek " + id, perusahaanId: "C1", perusahaanNama: "PT Klien",
   areaId: null, area: "—", tahun: 2026, layanan: [], statusId: null, status: "Aktif",
   statusSystemRole, nilaiKontrak: 100_000_000,
   sphId: null, assignees: [], milestones: [], createdAt: "2026-01-01T00:00:00.000Z",
@@ -57,12 +57,24 @@ describe("alertsFaktur", () => {
     expect(alerts[0].refId).toBe("MI-F1"); // refId points at the Induk, not the termin
   });
 
+  it("titles the alert with the termin's displayed number, not its raw id", () => {
+    const alerts = alertsFaktur([mkFaktur("F1", "2026-06-10")], TODAY);
+    expect(alerts[0].judul).toBe("Faktur Terlambat: INV/F1");
+    expect(alerts[0].judul).not.toContain("F1-");
+  });
+
+  it("falls back to the raw id in the title only when the termin has no number yet", () => {
+    const alerts = alertsFaktur([{ ...mkFaktur("F1", "2026-06-10"), number: null }], TODAY);
+    expect(alerts[0].judul).toBe("Faktur Terlambat: F1");
+  });
+
   it("flags invoices due within FAKTUR_DUE_SOON_DAYS as sedang", () => {
     const jatuhTempo = "2026-06-25"; // 3 days from TODAY
     const alerts = alertsFaktur([mkFaktur("F2", jatuhTempo)], TODAY);
     expect(alerts).toHaveLength(1);
     expect(alerts[0].jenis).toBe("faktur_jatuh_tempo");
     expect(alerts[0].prioritas).toBe("sedang");
+    expect(alerts[0].judul).toBe("Faktur Jatuh Tempo: INV/F2");
   });
 
   it("includes invoice due exactly FAKTUR_DUE_SOON_DAYS away (boundary inclusive)", () => {

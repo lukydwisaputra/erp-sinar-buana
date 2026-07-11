@@ -27,7 +27,8 @@ function installment(overrides: Partial<InstallmentInvoiceRow> = {}): Installmen
 
 function masterInvoice(overrides: Partial<MasterInvoiceRow> = {}): MasterInvoiceRow {
   return {
-    id: "mi-1", projectId: "proj-1", companyId: "company-1",
+    id: "mi-1", number: "INV/001/06.2026", numberYear: 2026, numberMonth: 6,
+    projectId: "proj-1", companyId: "company-1",
     totalCost: "100000000", statusId: "status-1", notes: null,
     createdAt: new Date("2026-06-01T00:00:00.000Z"), updatedAt: new Date(),
     createdBy: null, updatedBy: null, deletedAt: null, deletedBy: null,
@@ -43,6 +44,8 @@ describe("toInvoiceTermin", () => {
       statusSystemRole: null,
       bankAccount: { bankName: "BCA", accountHolder: "PT Sinar Buana", accountNumber: "123456" },
       previousInstallments: [],
+      indukNumber: "INV/001/06.2026",
+      terminIndex: 0,
     });
     expect(termin.nilaiTermin).toBe(50_000_000);
     expect(termin.dpp).toBe(45_833_333);
@@ -62,6 +65,8 @@ describe("toInvoiceTermin", () => {
       statusSystemRole: null,
       bankAccount: null,
       previousInstallments: [],
+      indukNumber: "INV/001/06.2026",
+      terminIndex: 0,
     });
     expect(termin.bankNama).toBe("");
     expect(termin.bankAtasNama).toBe("");
@@ -78,8 +83,36 @@ describe("toInvoiceTermin", () => {
       statusSystemRole: null,
       bankAccount: null,
       previousInstallments: [first],
+      indukNumber: "INV/001/06.2026",
+      terminIndex: 1,
     });
     expect(termin.previousTermins).toEqual([{ label: "Termin I", nilai: 30_000_000 }]);
+  });
+
+  it("derives the displayed number from the Induk's number + 1-based termin position, not the row's own (legacy/unused) column", () => {
+    const termin = toInvoiceTermin({
+      installment: installment({ number: "some-stale-legacy-value" }),
+      statusLabel: "Belum Lunas",
+      statusSystemRole: null,
+      bankAccount: null,
+      previousInstallments: [],
+      indukNumber: "INV/001/06.2026",
+      terminIndex: 2,
+    });
+    expect(termin.number).toBe("INV/001/06.2026-T3");
+  });
+
+  it("returns null when the Induk itself has no number yet", () => {
+    const termin = toInvoiceTermin({
+      installment: installment(),
+      statusLabel: "Belum Lunas",
+      statusSystemRole: null,
+      bankAccount: null,
+      previousInstallments: [],
+      indukNumber: null,
+      terminIndex: 0,
+    });
+    expect(termin.number).toBeNull();
   });
 });
 
@@ -162,6 +195,8 @@ describe("flattenTermins", () => {
       statusSystemRole: null,
       bankAccount: null,
       previousInstallments: [],
+      indukNumber: "INV/001/06.2026",
+      terminIndex: 0,
     });
     const induk = toFakturInduk({
       masterInvoice: masterInvoice({ projectId: "proj-1" }),

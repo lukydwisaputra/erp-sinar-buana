@@ -8,7 +8,7 @@ export const appRoleLabels: Record<AppRole, string> = {
   keuangan: "Keuangan",
   sales: "Marketing / Sales",
   tim_teknis: "Tim Teknis",
-  viewer: "Viewer",
+  viewer: "Klien (PIC)",
 };
 
 export const createPenggunaSchema = z.object({
@@ -21,11 +21,19 @@ export const createPenggunaSchema = z.object({
   // — kept optional/nullable here (matches the DB column) until Karyawan
   // migrates off fixtures.
   employeeId: z.uuid().nullable(),
+  // Client-contact (PIC) accounts only, role='viewer' — scopes RLS to that
+  // one company's own Proyek/SPH/Faktur (db-schema/sql/rls/00_helpers.sql's
+  // current_client_company_id()). Not required even when role is viewer —
+  // an unlinked viewer account is just a dead end (sees nothing), not a
+  // broken one, so this stays a plain optional field rather than a
+  // role-conditional required one.
+  clientCompanyId: z.uuid().nullable(),
 });
 
 export const updatePenggunaSchema = z.object({
   role: z.enum(appRoleValues).optional(),
   employeeId: z.uuid().nullable().optional(),
+  clientCompanyId: z.uuid().nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

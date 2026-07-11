@@ -9,7 +9,7 @@ import { errorResponse } from "@/lib/api-error";
  * every other Konfigurasi list (Daftar Pilihan, etc.). */
 export async function GET() {
   try {
-    const session = requireRole(await getCurrentSession(), "admin", "keuangan", "viewer");
+    const session = requireRole(await getCurrentSession(), "admin", "keuangan");
     const categories = await listCashflowCategories(session.id);
     return NextResponse.json(categories);
   } catch (error) {

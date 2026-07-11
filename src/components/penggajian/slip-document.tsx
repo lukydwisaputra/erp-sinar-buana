@@ -1,4 +1,5 @@
 import { companyProfileCache } from "@/lib/company-profile/cache";
+import { pdfTemplateNotesCache } from "@/lib/pdf-templates/cache";
 import { formatRupiah, formatTanggalPanjang as tglPanjang } from "@/lib/format";
 import { calcSlip, type SlipGaji } from "@/lib/schemas/penggajian";
 import { DocumentPage } from "@/components/shared/document/document-page";
@@ -24,6 +25,7 @@ export function SlipDocument({
   periode: { mulai: string; selesai: string };
 }) {
   const companyProfile = companyProfileCache.current;
+  const { headerNote, footerNote } = pdfTemplateNotesCache.current.slip_gaji;
   const { gajiPokokEfektif, potonganTotal, penggajianKotor, penggajianBersih } = calcSlip(slip);
   const totalPotongan = slip.pph21 + potonganTotal;
   const tglPaid = slip.paidAt ? tglPanjang(slip.paidAt) : tglPanjang(new Date().toISOString());
@@ -38,6 +40,9 @@ export function SlipDocument({
           <p className="text-base font-bold tracking-[0.25em]">SLIP GAJI</p>
           <p className="text-[11px] text-muted-foreground">Periode: {periodStr(periode.mulai, periode.selesai)}</p>
         </div>
+
+        {/* Header note — Konfigurasi > Template > PDF. */}
+        {headerNote && <p className="text-center whitespace-pre-line">{headerNote}</p>}
 
         {/* Employee meta */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 border border-[var(--doc-rule)] rounded p-3">
@@ -122,6 +127,9 @@ export function SlipDocument({
           <p className="font-medium">Dibayarkan ke:</p>
           <p>{slip.bankNama} &bull; {slip.bankNomor} &bull; a/n {slip.bankAtasNama}</p>
         </div>
+
+        {/* Footer note — Konfigurasi > Template > PDF. */}
+        {footerNote && <p className="text-[9px] whitespace-pre-line">{footerNote}</p>}
 
         {/* Signature */}
         <div className="flex justify-end pt-10 pb-4 pr-4">

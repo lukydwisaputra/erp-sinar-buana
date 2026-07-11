@@ -11,6 +11,9 @@ import { pk, timestamps } from "./_shared";
 /** A named checklist template, e.g. "Kelengkapan Administrasi UKL-UPL/DPLH". */
 export const kelengkapanTemplates = pgTable("kelengkapan_templates", {
   id: pk(),
+  number: text("number"), // e.g. KLG/00001 — assigned by trigger, never reset, immutable
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   name: text("name").notNull(),
   ...timestamps,
 });

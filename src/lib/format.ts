@@ -1,6 +1,21 @@
+import { format as formatDateFns } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
+
 /** Locale-agnostic thousands separator (dot, Indonesian style). SSR-safe. */
 export function formatIntIDR(n: number): string {
   return Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+/** "baru saja" / "12 menit lalu" / "3 jam lalu", falling back to a full date
+ * past 24h — shared by the milestone activity feed and the notification bell. */
+export function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "baru saja";
+  if (mins < 60) return `${mins} menit lalu`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} jam lalu`;
+  return formatDateFns(new Date(iso), "d MMM yyyy, HH:mm", { locale: idLocale });
 }
 
 /** "2026-07-03" → "3 Juli 2026". Empty/falsy input returns "—". */

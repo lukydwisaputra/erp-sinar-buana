@@ -14,8 +14,8 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     const { id } = await params;
     const body = updatePenggunaSchema.parse(await request.json());
 
-    if (body.role !== undefined || body.employeeId !== undefined) {
-      await updateAccount(id, { role: body.role, employeeId: body.employeeId });
+    if (body.role !== undefined || body.employeeId !== undefined || body.clientCompanyId !== undefined) {
+      await updateAccount(id, { role: body.role, employeeId: body.employeeId, clientCompanyId: body.clientCompanyId });
     }
     if (body.isActive !== undefined) {
       await setAccountActive(id, body.isActive);

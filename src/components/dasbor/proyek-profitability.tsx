@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { MaskedValue } from "@/components/shared/masked-value";
 import { formatRupiahCompact } from "@/lib/format";
 import type { ProyekProfit, KesehatanProyek } from "@/lib/dasbor/types";
 
@@ -65,14 +66,14 @@ export function ProyekProfitability({ proyek, isLoading }: ProyekProfitabilityPr
                   return (
                     <TableRow key={p.proyekId}>
                       <TableCell className="font-medium">{p.proyekNama}</TableCell>
-                      <TableCell className="text-right tabular-nums font-mono">{formatRupiahCompact(p.nilaiKontrak)}</TableCell>
-                      <TableCell className="text-right tabular-nums font-mono">{formatRupiahCompact(p.rabRencana)}</TableCell>
+                      <TableCell className="text-right tabular-nums font-mono"><MaskedValue>{formatRupiahCompact(p.nilaiKontrak)}</MaskedValue></TableCell>
+                      <TableCell className="text-right tabular-nums font-mono"><MaskedValue>{formatRupiahCompact(p.rabRencana)}</MaskedValue></TableCell>
                       <TableCell className="text-right tabular-nums font-mono">
-                        {p.realisasi !== null ? formatRupiahCompact(p.realisasi) : <span className="text-muted-foreground">–</span>}
+                        {p.realisasi !== null ? <MaskedValue>{formatRupiahCompact(p.realisasi)}</MaskedValue> : <span className="text-muted-foreground">–</span>}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-mono">
                         {p.marginAktual !== null
-                          ? <span className={p.marginAktual < 0 ? "text-destructive" : ""}>{formatRupiahCompact(p.marginAktual)}</span>
+                          ? <span className={p.marginAktual < 0 ? "text-destructive" : ""}><MaskedValue>{formatRupiahCompact(p.marginAktual)}</MaskedValue></span>
                           : <span className="text-muted-foreground">–</span>}
                       </TableCell>
                       <TableCell className="text-center">

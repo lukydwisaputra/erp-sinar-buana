@@ -38,8 +38,17 @@ export const workflowEntity = pgEnum("workflow_entity", [
   "milestone",
 ]);
 
-/** Document types that get an auto-generated, monthly-reset number (PRD Bab 9.5). */
-export const numberedDocType = pgEnum("numbered_doc_type", ["SPH", "INV", "GAJ"]);
+/**
+ * Document/record types that get an auto-generated number (PRD Bab 9.5).
+ * SPH/INV/GAJ reset monthly (keyed by real year/month). PRY/PRS/KLG/FKI/
+ * LYN/KRY are one-off record-creation events (project, company, checklist
+ * template, invoice contract, service catalog item, employee) — they never
+ * reset, keyed on a fixed (year=0, month=0) sentinel in
+ * document_number_sequences (see assign_document_number()).
+ */
+export const numberedDocType = pgEnum("numbered_doc_type", [
+  "SPH", "INV", "GAJ", "PRY", "PRS", "KLG", "FKI", "LYN", "KRY",
+]);
 
 /** Project assignment roles (PRD Bab 6.1). */
 export const projectRole = pgEnum("project_role", [

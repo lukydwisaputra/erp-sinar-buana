@@ -15,5 +15,6 @@ export function toPdfTemplate(row: PdfTemplateRow): PdfTemplate {
     documentType: row.documentType,
     headerNote: row.headerNote,
     footerNote: row.footerNote,
+    isActive: row.isActive,
   };
 }

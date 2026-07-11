@@ -4,6 +4,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { MaskedValue } from "@/components/shared/masked-value";
 import { formatRupiah } from "@/lib/format";
 import type { TaxSummary } from "@/lib/dasbor/tax-summary";
 
@@ -35,7 +36,7 @@ export function TaxSummaryPanel({ summary, isLoading }: TaxSummaryPanelProps) {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
               <p className="text-xs text-muted-foreground">Belum Disetor</p>
-              <p className="mt-1 font-mono text-lg font-semibold">{formatRupiah(summary.belumDisetor)}</p>
+              <p className="mt-1 font-mono text-lg font-semibold"><MaskedValue>{formatRupiah(summary.belumDisetor)}</MaskedValue></p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Jatuh Tempo Terdekat</p>
@@ -55,7 +56,7 @@ export function TaxSummaryPanel({ summary, isLoading }: TaxSummaryPanelProps) {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Kredit PPh 23 Terkumpul</p>
-              <p className="mt-1 font-mono text-lg font-semibold">{formatRupiah(summary.pph23KreditTerkumpul)}</p>
+              <p className="mt-1 font-mono text-lg font-semibold"><MaskedValue>{formatRupiah(summary.pph23KreditTerkumpul)}</MaskedValue></p>
             </div>
           </div>
         )}

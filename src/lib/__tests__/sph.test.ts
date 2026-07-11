@@ -48,8 +48,6 @@ describe("totalRab / margin", () => {
     expect(
       margin([
         {
-          layananId: "x",
-          nama: "x",
           volume: 1,
           harga: 10,
           rab: { personil: [{ vol: 1, hargaSatuan: 100 }], langsung: [] },
@@ -63,5 +61,5 @@ describe("termin", () => {
   const t = [{ label: "I", persen: 40, pemicu: "Mulai" }, { label: "II", persen: 60, pemicu: "Selesai" }];
   it("sums percentages", () => { expect(terminPersenTotal(t)).toBe(100); });
   it("valid when sum is 100", () => { expect(isTerminValid(t)).toBe(true); });
-  it("invalid otherwise", () => { expect(isTerminValid([{ label: "I", persen: 50, pemicu: "" }])).toBe(false); });
+  it("invalid otherwise", () => { expect(isTerminValid([{ persen: 50 }])).toBe(false); });
 });

@@ -42,6 +42,17 @@ export async function getCompanyProfile(userId: string): Promise<CompanyProfile>
   return loadResolved(row);
 }
 
+/** Used only by the internal PDF-render pipeline (`src/app/print/**`) — no
+ * user session exists there to scope `withUserTransaction` to, and the row
+ * itself is `read_auth`-broad anyway (every role can already see it). */
+export async function getCompanyProfileForPrint(): Promise<CompanyProfile> {
+  const row = await withServiceRole(async (tx) => {
+    const [r] = await tx.select().from(schema.companyProfile).limit(1);
+    return r;
+  });
+  return loadResolved(row);
+}
+
 export async function updateCompanyProfile(
   userId: string,
   input: UpdateCompanyProfileInput,

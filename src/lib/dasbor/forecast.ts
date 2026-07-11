@@ -48,7 +48,7 @@ export function forecastInflows(
       f.statusSystemRole === null && f.jatuhTempo !== null && f.jatuhTempo >= today && f.jatuhTempo <= horizon)
     .map((f) => ({
       tanggal: f.jatuhTempo,
-      label: f.perusahaanNama + " – " + f.id,
+      label: f.perusahaanNama + " – " + (f.number ?? f.id),
       jumlah: Math.round(f.netIncome),
       jenis: "masuk" as const,
       sumber: "faktur" as const,

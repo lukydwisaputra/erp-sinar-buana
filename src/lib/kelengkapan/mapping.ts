@@ -20,6 +20,7 @@ export function toKelengkapanTemplate(
 ): KelengkapanTemplate {
   return {
     id: template.id,
+    number: template.number,
     nama: template.name,
     items: sortByOrder(items).map((item) => ({ persyaratan: item.persyaratan })),
   };

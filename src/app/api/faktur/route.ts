@@ -5,11 +5,12 @@ import { listByProyek, listAll, createFakturInduk } from "@/lib/faktur/service";
 import { createFakturIndukSchema } from "@/lib/schemas/faktur";
 import { errorResponse } from "@/lib/api-error";
 
-// Matches faktur_sel/faktur_write: read = admin/keuangan/sales/tim_teknis
-// (not viewer); write = admin/keuangan only (is_finance()).
+// Read: admin/keuangan (all rows, is_finance()) + viewer (own company only,
+// via client_read RLS — matches faktur_sel/client_read). Write stays
+// Keuangan-only (faktur_write).
 export async function GET(request: NextRequest) {
   try {
-    const session = requireRole(await getCurrentSession(), "admin", "keuangan", "sales", "tim_teknis");
+    const session = requireRole(await getCurrentSession(), "admin", "keuangan", "viewer");
     const proyekId = request.nextUrl.searchParams.get("proyekId");
     const rows = proyekId ? await listByProyek(session.id, proyekId) : await listAll(session.id);
     return NextResponse.json(rows);

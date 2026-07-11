@@ -40,7 +40,7 @@ describe("computeProjectProfitability", () => {
     id: "P1", nama: "Proyek Satu", sphId: "SPH-1", nilaiKontrak: 100_000_000,
   } as unknown as Proyek;
   const faktur: FakturTerminRow = {
-    id: "INV-1", indukId: "MI-1", proyekId: "P1", perusahaanNama: "PT Klien",
+    id: "INV-1", indukId: "MI-1", number: "INV/001", proyekId: "P1", perusahaanNama: "PT Klien",
     tanggal: "2026-06-10", jatuhTempo: "2026-06-24", statusSystemRole: "LUNAS",
     nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
   };

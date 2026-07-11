@@ -1,4 +1,5 @@
 import { companyProfileCache } from "@/lib/company-profile/cache";
+import { pdfTemplateNotesCache } from "@/lib/pdf-templates/cache";
 import { formatRupiah, formatTanggalPanjang as tglPanjang, titleCase } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { totalPenawaran } from "@/lib/sph";
@@ -15,6 +16,7 @@ export function SphCoverLetter({
   noSph: string;
 }): React.JSX.Element {
   const companyProfile = companyProfileCache.current;
+  const { headerNote, footerNote } = pdfTemplateNotesCache.current.sph;
   const total = totalPenawaran(values.items);
 
   // Lampiran line: the typed "Dokumen pendukung" plus the RAB & Estimasi Waktu
@@ -62,6 +64,10 @@ export function SphCoverLetter({
           )}
           <p>Di Tempat</p>
         </div>
+
+        {/* Header note — Konfigurasi > Template > PDF, admin-configured per
+            documentType, distinct from the per-SPH `kalimatPembuka` below. */}
+        {headerNote && <p className="mt-4 text-justify whitespace-pre-line">{headerNote}</p>}
 
         {/* 4. Pembuka */}
         <p className="mt-6">Dengan Hormat,</p>
@@ -204,6 +210,9 @@ export function SphCoverLetter({
             )}
           </ul>
         </div>
+
+        {/* Footer note — Konfigurasi > Template > PDF. */}
+        {footerNote && <p className="mt-3 text-[9px] whitespace-pre-line">{footerNote}</p>}
 
         {/* 7. Penutup */}
         <p className="mt-4 indent-8 text-justify">

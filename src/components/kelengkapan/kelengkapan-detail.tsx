@@ -34,7 +34,7 @@ export function KelengkapanDetail({ template }: { template: KelengkapanTemplate 
         <div className="overflow-hidden rounded-lg border border-border">
           <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
             <div>
-              <p className="font-mono text-sm font-medium">{template.id}</p>
+              <p className="font-mono text-sm font-medium">{template.number ?? "—"}</p>
               <p className="text-xs text-muted-foreground">{template.items.length} persyaratan</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => window.print()}>

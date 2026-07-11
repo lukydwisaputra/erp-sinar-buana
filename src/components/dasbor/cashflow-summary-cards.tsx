@@ -1,6 +1,7 @@
 "use client";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MaskedValue } from "@/components/shared/masked-value";
 import { formatRupiah } from "@/lib/format";
 import type { MonthlySummary } from "@/lib/dasbor/cashflow-summary";
 
@@ -19,7 +20,7 @@ function StatCard({ label, value }: { label: string; value: string | undefined }
         {value === undefined ? (
           <Skeleton className="h-7 w-28" />
         ) : (
-          <p className="font-mono text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+          <p className="font-mono text-2xl font-semibold tabular-nums text-foreground"><MaskedValue>{value}</MaskedValue></p>
         )}
       </CardContent>
     </Card>

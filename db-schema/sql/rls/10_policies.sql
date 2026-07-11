@@ -28,12 +28,15 @@ begin
   end loop;
 end $$;
 
--- ── 2. Broad SELECT for all authenticated staff ─────────────────────────────
+-- ── 2. Broad SELECT for all authenticated staff — config/lookup tables only.
+-- Proyek/SPH/Faktur moved out to §2b/2c below: a client-linked Viewer (PIC
+-- portal — see 00_helpers.sql) must NOT get the blanket `using (true)` this
+-- block grants, so those tables need role-conditional policies instead. ────
 do $$
 declare
   t text;
   read_auth text[] := array[
-    'companies','company_contacts','service_catalog',
+    'service_catalog',
     'document_types','authorities','legal_bases','admin_areas','positions',
     'employment_statuses','salary_components','bank_accounts',
     'cashflow_categories','workflow_statuses','message_templates',
@@ -41,12 +44,7 @@ declare
     'termin_templates','termin_template_steps','pdf_templates',
     'kelengkapan_templates','kelengkapan_template_items',
     'company_profile','tax_settings','numbering_settings','dashboard_settings',
-    'quotations','quotation_items','quotation_term_scheme',
-    'quotation_rab_personnel','quotation_rab_direct_costs',
-    'quotation_kelengkapan','quotation_kelengkapan_items',
-    'activity_schedules','activity_schedule_rows','activity_schedule_marked_weeks',
-    'projects','project_services','project_assignees','milestones',
-    'milestone_assignees','project_comments','comment_mentions','project_status_log'
+    'privacy_settings'
   ];
 begin
   foreach t in array read_auth loop
@@ -56,6 +54,99 @@ begin
       t);
   end loop;
 end $$;
+
+-- ── 2b. Proyek/SPH read — internal staff (everyone but Viewer) read
+-- everything, unconditionally, matching what §2's read_auth used to grant
+-- them. A client-linked Viewer instead gets §2c's per-row company-scoped
+-- policies. Internal RAB planning detail and the comment/activity-log tables
+-- are staff-only with NO client_read counterpart at all — never shown to a
+-- client even on their own project (same principle as Realisasi RAB being
+-- Finance-only elsewhere). ──────────────────────────────────────────────────
+do $$
+declare
+  t text;
+  staff_read_tables text[] := array[
+    'quotation_rab_personnel','quotation_rab_direct_costs',
+    'project_comments','comment_mentions','project_status_log',
+    'companies','company_contacts',
+    'quotations','quotation_items','quotation_term_scheme',
+    'quotation_kelengkapan','quotation_kelengkapan_items',
+    'activity_schedules','activity_schedule_rows','activity_schedule_marked_weeks',
+    'projects','project_services','project_assignees','milestones','milestone_assignees'
+  ];
+begin
+  foreach t in array staff_read_tables loop
+    execute format('drop policy if exists staff_read on public.%I', t);
+    execute format(
+      'create policy staff_read on public.%I for select to authenticated '
+      || 'using (auth_role() <> ''viewer'')', t);
+  end loop;
+end $$;
+
+-- ── 2c. Client portal — a Viewer linked to a company (Akun Pengguna's
+-- "Tautan Perusahaan Klien") sees only that company's own Proyek/SPH rows.
+-- Ownership can't be loop-generated (the join path differs per table), each
+-- is written out explicitly on purpose — this is security-sensitive enough
+-- that readability beats brevity. ───────────────────────────────────────────
+drop policy if exists client_read on companies;
+create policy client_read on companies for select to authenticated
+  using (id = current_client_company_id());
+
+drop policy if exists client_read on company_contacts;
+create policy client_read on company_contacts for select to authenticated
+  using (company_id = current_client_company_id());
+
+drop policy if exists client_read on quotations;
+create policy client_read on quotations for select to authenticated
+  using (company_id = current_client_company_id());
+
+drop policy if exists client_read on quotation_items;
+create policy client_read on quotation_items for select to authenticated
+  using (is_own_quotation(quotation_id));
+
+drop policy if exists client_read on quotation_term_scheme;
+create policy client_read on quotation_term_scheme for select to authenticated
+  using (is_own_quotation(quotation_id));
+
+drop policy if exists client_read on quotation_kelengkapan;
+create policy client_read on quotation_kelengkapan for select to authenticated
+  using (is_own_quotation(quotation_id));
+
+drop policy if exists client_read on quotation_kelengkapan_items;
+create policy client_read on quotation_kelengkapan_items for select to authenticated
+  using (is_own_quotation_kelengkapan(quotation_kelengkapan_id));
+
+drop policy if exists client_read on activity_schedules;
+create policy client_read on activity_schedules for select to authenticated
+  using (is_own_schedule(id));
+
+drop policy if exists client_read on activity_schedule_rows;
+create policy client_read on activity_schedule_rows for select to authenticated
+  using (is_own_schedule(schedule_id));
+
+drop policy if exists client_read on activity_schedule_marked_weeks;
+create policy client_read on activity_schedule_marked_weeks for select to authenticated
+  using (is_own_schedule_row(row_id));
+
+drop policy if exists client_read on projects;
+create policy client_read on projects for select to authenticated
+  using (company_id = current_client_company_id());
+
+drop policy if exists client_read on project_services;
+create policy client_read on project_services for select to authenticated
+  using (is_own_project(project_id));
+
+drop policy if exists client_read on project_assignees;
+create policy client_read on project_assignees for select to authenticated
+  using (is_own_project(project_id));
+
+drop policy if exists client_read on milestones;
+create policy client_read on milestones for select to authenticated
+  using (is_own_project(project_id));
+
+drop policy if exists client_read on milestone_assignees;
+create policy client_read on milestone_assignees for select to authenticated
+  using (is_own_milestone(milestone_id));
 
 -- ── 3a. Perusahaan & PIC — Sales may create/update; delete is Admin-only ─────
 create policy companies_ins on companies for insert to authenticated with check (auth_role() = 'sales');
@@ -124,7 +215,10 @@ create policy comments_upd_own on project_comments for update to authenticated
 create policy mentions_ins on comment_mentions for insert to authenticated
   with check (auth_role() <> 'viewer');
 
--- ── 3f. Faktur — read for all non-viewer staff; write Finance ───────────────
+-- ── 3f. Faktur — Keuangan-only end to end (read + write); Sales/Tim Teknis
+-- see nothing, not even via a linked Proyek or Dasbor. A client-linked Viewer
+-- gets its own narrower company-scoped read below (§3f-bis) — not is_finance,
+-- never write access. ───────────────────────────────────────────────────────
 do $$
 declare t text;
   f text[] := array['master_invoices','master_invoice_services',
@@ -133,12 +227,30 @@ begin
   foreach t in array f loop
     execute format(
       'create policy faktur_sel on public.%I for select to authenticated '
-      || 'using (auth_role() in (''admin'',''keuangan'',''sales'',''tim_teknis''))', t);
+      || 'using (is_finance())', t);
     execute format(
       'create policy faktur_write on public.%I for all to authenticated '
       || 'using (is_finance()) with check (is_finance())', t);
   end loop;
 end $$;
+
+-- ── 3f-bis. Client portal — a Viewer sees their own company's invoices
+-- (read-only, additive to faktur_sel above, which stays admin/keuangan-only). ─
+drop policy if exists client_read on master_invoices;
+create policy client_read on master_invoices for select to authenticated
+  using (company_id = current_client_company_id());
+
+drop policy if exists client_read on master_invoice_services;
+create policy client_read on master_invoice_services for select to authenticated
+  using (is_own_master_invoice(master_invoice_id));
+
+drop policy if exists client_read on master_invoice_terms;
+create policy client_read on master_invoice_terms for select to authenticated
+  using (is_own_master_invoice(master_invoice_id));
+
+drop policy if exists client_read on installment_invoices;
+create policy client_read on installment_invoices for select to authenticated
+  using (is_own_master_invoice(master_invoice_id));
 
 -- ── 3g. Penggajian — Finance full; staff see only their OWN slip ────────────
 create policy payslips_sel on payslips for select to authenticated
@@ -154,9 +266,9 @@ create policy payslip_comp_sel on payslip_components for select to authenticated
 create policy payslip_comp_write on payslip_components for all to authenticated
   using (is_finance()) with check (is_finance());
 
--- ── 3h. Arus Kas — Admin/Finance/Viewer read; Finance write (not locked) ────
+-- ── 3h. Arus Kas — Keuangan-only read (no Viewer); Finance write (not locked)
 create policy cashflow_sel on cashflow_entries for select to authenticated
-  using (auth_role() in ('admin','keuangan','viewer'));
+  using (is_finance());
 create policy cashflow_ins on cashflow_entries for insert to authenticated
   with check (is_finance());
 create policy cashflow_upd on cashflow_entries for update to authenticated

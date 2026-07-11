@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
-import { withUserTransaction, type Tx } from "@/lib/db/tx";
+import { withUserTransaction, withServiceRole, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError, ConflictError } from "@/lib/api-error";
 import { getDefaultStatusId, loadStatus, loadStatusLabelsByIds } from "@/lib/workflow-status";
@@ -118,6 +118,24 @@ async function getSlipWithinTx(tx: Tx, batchId: string, slipId: string): Promise
 
 export async function getSlip(userId: string, batchId: string, slipId: string): Promise<SlipGaji> {
   return withUserTransaction(userId, (tx) => getSlipWithinTx(tx, batchId, slipId));
+}
+
+/** Used only by the internal PDF-render pipeline (`src/app/print/**`, called
+ * by the worker via headless browser, not a real user session) — elevated
+ * since there's no logged-in user to scope RLS to. Skips the batch-id match
+ * `getSlipWithinTx` does (that's a URL-consistency check for the app's own
+ * nested route, irrelevant here — the worker already knows the exact payslip). */
+export async function getSlipForPrint(payslipId: string): Promise<{ slip: SlipGaji; periode: { mulai: string; selesai: string } } | null> {
+  return withServiceRole(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(schema.payslips)
+      .where(and(eq(schema.payslips.id, payslipId), isNull(schema.payslips.deletedAt)))
+      .limit(1);
+    if (!row) return null;
+    const [slip] = await assembleSlips(tx, [row]);
+    return { slip, periode: { mulai: row.periodStart, selesai: row.periodEnd } };
+  });
 }
 
 /** Resolves an employee's configured salary components (both tunjangan and

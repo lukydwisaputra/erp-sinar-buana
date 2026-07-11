@@ -7,11 +7,14 @@ import { errorResponse } from "@/lib/api-error";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+// Not Viewer — comments are internal team discussion, deliberately excluded
+// from the client portal (matches project_comments' RLS, which has no
+// client_read policy at all).
 export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const session = requireRole(
       await getCurrentSession(),
-      "admin", "keuangan", "sales", "tim_teknis", "viewer",
+      "admin", "keuangan", "sales", "tim_teknis",
     );
     const { id } = await params;
     const milestoneId = request.nextUrl.searchParams.get("milestoneId");

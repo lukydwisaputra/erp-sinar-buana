@@ -27,6 +27,9 @@ import {
 /** Client company (PRD Bab 3.1). Country is always Indonesia. */
 export const companies = pgTable("companies", {
   id: pk(),
+  number: text("number"), // e.g. PRS/00001 — assigned by trigger, never reset, immutable
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   name: text("name").notNull(),
   address: text("address").notNull(),
   city: text("city").notNull(), // Kota
@@ -87,6 +90,9 @@ export const milestoneTemplateSteps = pgTable("milestone_template_steps", {
 /** Service catalog — managed master data, not free text (PRD Bab 3.2). */
 export const serviceCatalog = pgTable("service_catalog", {
   id: pk(),
+  number: text("number"), // e.g. LYN/00001 — assigned by trigger, never reset, immutable
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   name: text("name").notNull(), // e.g. "Penyusunan Pertek Air Limbah"
   documentTypeId: uuid("document_type_id").references(() => documentTypes.id, {
     onDelete: "set null",
@@ -112,6 +118,9 @@ export const serviceCatalog = pgTable("service_catalog", {
 /** Employee — source for payroll & project assignment (PRD Bab 3.3). */
 export const employees = pgTable("employees", {
   id: pk(),
+  number: text("number"), // e.g. KRY/00001 — assigned by trigger, never reset, immutable
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   name: text("name").notNull(),
   positionId: uuid("position_id").references(() => positions.id, {
     onDelete: "set null",

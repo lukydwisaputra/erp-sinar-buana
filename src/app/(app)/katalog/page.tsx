@@ -58,11 +58,11 @@ function makeColumns(
 ): ColumnDef<Layanan>[] {
   return [
     {
-      accessorKey: "id", header: "ID", meta: { mono: true },
+      accessorKey: "number", header: "No. Layanan", meta: { mono: true },
       cell: ({ row }) => (
         <button type="button" onClick={() => onOpen(row.original)}
           className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-          {row.original.id.slice(0, 8)}
+          {row.original.number ?? "—"}
         </button>
       ),
     },
@@ -573,10 +573,10 @@ export default function KatalogPage() {
           columns={columns}
           data={filteredData}
           loading={isLoading}
-          searchColumns={["id", "nama"]}
-          searchPlaceholder="Cari ID atau nama layanan…"
+          searchColumns={["number", "nama"]}
+          searchPlaceholder="Cari nomor atau nama layanan…"
           emptyMessage="Belum ada layanan"
-          defaultSorting={[{ id: "id", desc: true }]}
+          defaultSorting={[{ id: "number", desc: true }]}
           rowActions={false}
           toolbarActions={
             <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
@@ -681,7 +681,7 @@ export default function KatalogPage() {
                 </div>
                 <SheetTitle className="text-lg leading-tight font-semibold wrap-break-word">{selected.nama}</SheetTitle>
                 <div className="flex flex-wrap items-center gap-2">
-                  <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.id.slice(0, 8)}</SheetDescription>
+                  <SheetDescription className="font-mono text-sm text-muted-foreground">{selected.number ?? "—"}</SheetDescription>
                   <StatusBadge status={selected.status} map={STATUS_BADGE} />
                 </div>
               </SheetHeader>

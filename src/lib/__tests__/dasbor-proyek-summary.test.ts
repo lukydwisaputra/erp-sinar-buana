@@ -6,7 +6,7 @@ import type { SessionUser } from "@/lib/auth/session";
 
 function mkProyek(overrides: Partial<Proyek> = {}): Proyek {
   return {
-    id: "P1", nama: "Proyek Satu", perusahaanId: "C1", perusahaanNama: "PT Klien",
+    id: "P1", number: "PRY/001", nama: "Proyek Satu", perusahaanId: "C1", perusahaanNama: "PT Klien",
     areaId: null, area: "Jakarta", tahun: 2026, layanan: [{ serviceId: "s1", nama: "AMDAL" }],
     statusId: null, status: "Berjalan", statusSystemRole: null, nilaiKontrak: 100_000_000,
     sphId: null, assignees: [], milestones: [], createdAt: "2026-01-01T00:00:00.000Z",

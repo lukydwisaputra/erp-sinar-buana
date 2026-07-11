@@ -42,6 +42,7 @@ export type ProyekLayanan = z.infer<typeof proyekLayananSchema>;
 
 export const proyekSchema = z.object({
   id: z.string(),
+  number: z.string().nullable(), // e.g. PRY/00001 — assigned by trigger, never reset
   nama: z.string(),
   perusahaanId: z.string(),
   perusahaanNama: z.string(),
@@ -122,6 +123,7 @@ export const proyekCommentSchema = z.object({
   authorNama: z.string(),
   body: z.string(),
   mentionedUserIds: z.array(z.string()),
+  mentionedUserNames: z.array(z.string()),
   createdAt: z.string(),
 });
 export type ProyekComment = z.infer<typeof proyekCommentSchema>;

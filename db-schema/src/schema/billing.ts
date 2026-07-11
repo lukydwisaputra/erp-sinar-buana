@@ -21,6 +21,9 @@ import { bankAccounts, workflowStatuses } from "./config";
 /** Master invoice — groups billing under a project (PRD Bab 5.1.A). */
 export const masterInvoices = pgTable("master_invoices", {
   id: pk(),
+  number: text("number"), // e.g. INV/001/2026 — assigned by trigger, resets yearly, immutable
+  numberYear: integer("number_year"),
+  numberMonth: integer("number_month"),
   projectId: uuid("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "restrict" }),
@@ -69,14 +72,19 @@ export const masterInvoiceTerms = pgTable("master_invoice_terms", {
 // ── B. Invoice Termin ─────────────────────────────────────────────────────────
 
 /**
- * Installment invoice (PRD Bab 5.1.B). `number` (INV/...) is set by the numbering
- * trigger and is immutable on edit. Tax columns are computed snapshots.
- * Previous-term deductions are derived from sibling installments of the same
- * master invoice (ordered by creation); the resulting `currentTermValue` is stored.
+ * Installment invoice (PRD Bab 5.1.B). A termin has no numbering identity of
+ * its own — it isn't independently trigger-assigned (unlike its parent
+ * master_invoices row); the app derives its displayed number as
+ * "{indukNumber}-T{index}" (src/lib/faktur/mapping.ts). `number`/
+ * `numberYear`/`numberMonth` are legacy columns, unused going forward — kept
+ * only so historically-assigned values on old rows aren't silently dropped.
+ * Tax columns are computed snapshots. Previous-term deductions are derived
+ * from sibling installments of the same master invoice (ordered by
+ * creation); the resulting `currentTermValue` is stored.
  */
 export const installmentInvoices = pgTable("installment_invoices", {
   id: pk(),
-  number: text("number"), // e.g. INV/002/05.2026 — immutable on edit
+  number: text("number"), // legacy/unused — see table comment
   numberYear: integer("number_year"),
   numberMonth: integer("number_month"),
   masterInvoiceId: uuid("master_invoice_id")

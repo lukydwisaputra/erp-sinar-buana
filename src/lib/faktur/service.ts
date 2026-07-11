@@ -1,5 +1,5 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
-import { withUserTransaction, type Tx } from "@/lib/db/tx";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { withUserTransaction, withServiceRole, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError, ConflictError } from "@/lib/api-error";
 import {
@@ -13,6 +13,7 @@ import type {
   FakturInduk,
   InvoiceTermin,
   CreateFakturIndukInput,
+  UpdateFakturIndukInput,
   GenerateTerminInput,
   UpdateTerminInput,
 } from "@/lib/schemas/faktur";
@@ -36,7 +37,7 @@ async function loadServiceNames(tx: Tx, serviceIds: string[]): Promise<Map<strin
   return new Map(rows.map((r) => [r.id, r.name]));
 }
 
-async function assembleInstallments(tx: Tx, masterInvoiceId: string): Promise<InvoiceTermin[]> {
+async function assembleInstallments(tx: Tx, masterInvoiceId: string, indukNumber: string | null): Promise<InvoiceTermin[]> {
   const rows = await tx
     .select()
     .from(schema.installmentInvoices)
@@ -69,6 +70,8 @@ async function assembleInstallments(tx: Tx, masterInvoiceId: string): Promise<In
     statusSystemRole: r.statusId ? statusRoleById.get(r.statusId) ?? null : null,
     bankAccount: r.bankAccountId ? bankById.get(r.bankAccountId) ?? null : null,
     previousInstallments: rows.slice(0, i),
+    indukNumber,
+    terminIndex: i,
   }));
 }
 
@@ -79,7 +82,7 @@ async function assembleFakturInduk(tx: Tx, masterInvoice: MasterInvoiceRow): Pro
     tx.select({ name: schema.projects.name }).from(schema.projects).where(eq(schema.projects.id, masterInvoice.projectId)).limit(1).then((r) => r[0]),
     loadCompanyName(tx, masterInvoice.companyId),
     loadStatus(tx, masterInvoice.statusId),
-    assembleInstallments(tx, masterInvoice.id),
+    assembleInstallments(tx, masterInvoice.id, masterInvoice.number),
   ]);
   const serviceNamesById = await loadServiceNames(tx, services.map((s) => s.serviceId).filter((x): x is string => !!x));
 
@@ -118,6 +121,28 @@ export async function getFakturInduk(userId: string, id: string): Promise<Faktur
   });
 }
 
+/** Used only by the internal PDF-render pipeline (`src/app/print/**`, called
+ * by the worker via headless browser, not a real user session) — elevated
+ * since there's no logged-in user to scope RLS to. Takes the *termin's* id
+ * (what document_deliveries actually records) and resolves its parent Induk
+ * to assemble both, matching exactly what FakturDocument needs. */
+export async function getFakturDocumentForPrint(installmentInvoiceId: string): Promise<{ induk: FakturInduk; termin: InvoiceTermin } | null> {
+  return withServiceRole(async (tx) => {
+    const [installment] = await tx
+      .select({ masterInvoiceId: schema.installmentInvoices.masterInvoiceId })
+      .from(schema.installmentInvoices)
+      .where(eq(schema.installmentInvoices.id, installmentInvoiceId))
+      .limit(1);
+    if (!installment) return null;
+    const [masterRow] = await tx.select().from(schema.masterInvoices).where(eq(schema.masterInvoices.id, installment.masterInvoiceId)).limit(1);
+    if (!masterRow) return null;
+    const induk = await assembleFakturInduk(tx, masterRow);
+    const termin = induk.termins.find((t) => t.id === installmentInvoiceId);
+    if (!termin) return null;
+    return { induk, termin };
+  });
+}
+
 export async function createFakturInduk(userId: string, input: CreateFakturIndukInput): Promise<FakturInduk> {
   return withUserTransaction(userId, async (tx) => {
     const [project] = await tx.select({ id: schema.projects.id, companyId: schema.projects.companyId }).from(schema.projects).where(eq(schema.projects.id, input.proyekId)).limit(1);
@@ -145,6 +170,48 @@ export async function createFakturInduk(userId: string, input: CreateFakturInduk
     );
 
     return assembleFakturInduk(tx, masterInvoice);
+  });
+}
+
+/** Edits the Induk's own fields (billed services, total biaya, catatan) — never
+ * the term scheme or termins themselves. Guards totalBiaya the same way
+ * fn_installment_validate() guards installment inserts (that trigger only
+ * fires on installment_invoices, not on master_invoices, so this check is the
+ * app-side equivalent for this one write path). */
+export async function updateFakturInduk(userId: string, id: string, input: UpdateFakturIndukInput): Promise<FakturInduk> {
+  return withUserTransaction(userId, async (tx) => {
+    const [masterInvoice] = await tx.select().from(schema.masterInvoices).where(and(eq(schema.masterInvoices.id, id), isNull(schema.masterInvoices.deletedAt))).limit(1);
+    if (!masterInvoice) throw new NotFoundError("Faktur Induk tidak ditemukan.");
+
+    // Mirrors the client's isIndukFinal check, enforced server-side too — a
+    // LUNAS/BATAL invoice is trusted-final by fn_installment_after_change's
+    // own payment automation; editing services/totalBiaya after that point
+    // would silently diverge from what was actually billed/paid.
+    const status = await loadStatus(tx, masterInvoice.statusId);
+    if (status?.systemRole === "LUNAS" || status?.systemRole === "BATAL") {
+      throw new ConflictError("Faktur Induk yang sudah Lunas atau Batal tidak dapat diubah.");
+    }
+
+    const [{ sum: terminSum }] = await tx
+      .select({ sum: sql<string>`coalesce(sum(${schema.installmentInvoices.currentTermValue}), 0)` })
+      .from(schema.installmentInvoices)
+      .where(and(eq(schema.installmentInvoices.masterInvoiceId, id), isNull(schema.installmentInvoices.deletedAt)));
+    if (input.totalBiaya < Number(terminSum) - 0.01) {
+      throw new ConflictError(`Total biaya tidak boleh kurang dari total Invoice Termin yang sudah dibuat (${terminSum}).`);
+    }
+
+    await tx
+      .update(schema.masterInvoices)
+      .set({ totalCost: String(input.totalBiaya), notes: input.notes || null, updatedBy: userId })
+      .where(eq(schema.masterInvoices.id, id));
+
+    await tx.delete(schema.masterInvoiceServices).where(eq(schema.masterInvoiceServices.masterInvoiceId, id));
+    if (input.serviceIds.length) {
+      await tx.insert(schema.masterInvoiceServices).values(input.serviceIds.map((serviceId) => ({ masterInvoiceId: id, serviceId })));
+    }
+
+    const [refreshed] = await tx.select().from(schema.masterInvoices).where(eq(schema.masterInvoices.id, id)).limit(1);
+    return assembleFakturInduk(tx, refreshed);
   });
 }
 

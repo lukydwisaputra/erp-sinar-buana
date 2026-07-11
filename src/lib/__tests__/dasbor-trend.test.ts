@@ -10,7 +10,7 @@ const natureOf = () => "operasional" as const;
 
 function faktur(overrides: Partial<FakturTerminRow>): FakturTerminRow {
   return {
-    id: "t1", indukId: "mi1", proyekId: "p1", perusahaanNama: "PT A",
+    id: "t1", indukId: "mi1", number: "INV/t1", proyekId: "p1", perusahaanNama: "PT A",
     tanggal: "2026-06-10", jatuhTempo: "2026-07-10", statusSystemRole: "LUNAS",
     nilaiTermin: 10_000_000, pph23: 0, netIncome: 10_000_000, totalSetelahPajak: 10_000_000,
     ...overrides,

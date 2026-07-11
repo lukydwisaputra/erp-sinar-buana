@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, Lock, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Lock, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ import { onFormInvalid } from "@/lib/form-toast";
 import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
   useWorkflowStatusAdminList, useCreateWorkflowStatus, useUpdateWorkflowStatus,
-  useDeleteWorkflowStatus, useMoveWorkflowStatus,
+  useDeleteWorkflowStatus,
 } from "@/lib/query/workflow-status-admin";
 import {
   workflowStatusEntity, workflowStatusSystemRole,
@@ -51,7 +51,6 @@ function makeColumns(
   onEditLabel: (row: WorkflowStatusRow) => void,
   onSetRole: (row: WorkflowStatusRow, role: WorkflowStatusSystemRole | null) => void,
   onToggleAktif: (row: WorkflowStatusRow, isActive: boolean) => void,
-  onMove: (row: WorkflowStatusRow, direction: "up" | "down") => void,
   onDelete: (row: WorkflowStatusRow) => void,
 ): ColumnDef<WorkflowStatusRow>[] {
   return [
@@ -77,11 +76,13 @@ function makeColumns(
     {
       id: "aktif", header: "Aktif", enableSorting: false, meta: { className: "text-center" },
       cell: ({ row }) => (
-        <Checkbox
-          checked={row.original.isActive}
-          disabled={row.original.isDefault}
-          onCheckedChange={(checked) => onToggleAktif(row.original, checked === true)}
-        />
+        <div className="flex justify-center">
+          <Checkbox
+            checked={row.original.isActive}
+            disabled={row.original.isDefault}
+            onCheckedChange={(checked) => onToggleAktif(row.original, checked === true)}
+          />
+        </div>
       ),
     },
     {
@@ -100,12 +101,6 @@ function makeColumns(
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => onEditLabel(row.original)}>
               <Pencil className="size-3.5" /> Ubah Label
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onMove(row.original, "up")}>
-              <ArrowUp className="size-3.5" /> Pindah ke Atas
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onMove(row.original, "down")}>
-              <ArrowDown className="size-3.5" /> Pindah ke Bawah
             </DropdownMenuItem>
             {!row.original.isSystem && (
               <>
@@ -198,7 +193,6 @@ function CreateStatusForm({
 function EntitySection({ entity }: { entity: WorkflowStatusEntityAdmin }) {
   const { data, isLoading } = useWorkflowStatusAdminList(entity);
   const { mutate: updateStatus } = useUpdateWorkflowStatus();
-  const { mutate: moveStatus } = useMoveWorkflowStatus();
   const { mutate: deleteStatus, isPending: isDeleting } = useDeleteWorkflowStatus();
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<WorkflowStatusRow | null>(null);
@@ -208,7 +202,6 @@ function EntitySection({ entity }: { entity: WorkflowStatusEntityAdmin }) {
     setEditTarget,
     (row, role) => updateStatus({ id: row.id, input: { systemRole: role } }),
     (row, isActive) => updateStatus({ id: row.id, input: { isActive } }),
-    (row, direction) => moveStatus({ id: row.id, direction, entity }),
     setDeleteTarget,
   );
 
