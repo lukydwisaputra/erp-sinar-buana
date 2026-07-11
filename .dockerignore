@@ -5,9 +5,11 @@ node_modules
 !.env.example
 
 # Standalone sibling projects — not needed to build the app image.
+# NOT infra/ — infra/postgres/Dockerfile also builds from this same
+# repo-root context (matching app/worker's convention) and needs
+# infra/postgres/init/ actually present to COPY.
 docs-client
 db-schema/node_modules
-infra
 
 npm-debug.log*
 *.log

@@ -7,6 +7,14 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends postgresql-17-cron \
     && rm -rf /var/lib/apt/lists/*
 
+# Baked in, not just bind-mounted (docker-compose.yml also bind-mounts the
+# same dir locally — harmless overlay, same file either way). A standalone
+# `docker build` of this Dockerfile (e.g. Coolify, which doesn't go through
+# docker-compose) needs the script actually present in the image, or
+# /docker-entrypoint-initdb.d/ is empty and the roles/auth-stub setup never
+# runs on first boot.
+COPY infra/postgres/init/ /docker-entrypoint-initdb.d/
+
 # pg_cron must be in shared_preload_libraries; this runs as the server command.
 # (docker-compose passes the same via `command:` — keep them in sync.)
 CMD ["postgres", "-c", "shared_preload_libraries=pg_cron", "-c", "cron.database_name=sbmj_erp"]

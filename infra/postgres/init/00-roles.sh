@@ -27,12 +27,11 @@ CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid
   LANGUAGE sql STABLE AS
 $$ SELECT nullif(current_setting('app.user_id', true), '')::uuid $$;
 
--- auth.users lives outside `public` (see GRANTs below) — not covered by the
--- `ALTER DEFAULT PRIVILEGES ... IN SCHEMA public` further down.
-GRANT USAGE ON SCHEMA auth TO authenticated, service_role;
-GRANT ALL ON auth.users TO authenticated, service_role;
-
--- RBAC roles the RLS policies grant to.
+-- RBAC roles the RLS policies grant to — created before the GRANTs below
+-- reference them (GRANT to a role that doesn't exist yet errors out; this
+-- only ever worked in earlier testing because Postgres roles are
+-- cluster-wide, not per-database, so a "fresh database" test against an
+-- already-used cluster silently had these roles from a prior run).
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
@@ -45,6 +44,11 @@ BEGIN
     CREATE ROLE service_role BYPASSRLS;
   END IF;
 END $$;
+
+-- auth.users lives outside `public` (see GRANTs below) — not covered by the
+-- `ALTER DEFAULT PRIVILEGES ... IN SCHEMA public` further down.
+GRANT USAGE ON SCHEMA auth TO authenticated, service_role;
+GRANT ALL ON auth.users TO authenticated, service_role;
 
 -- The application logs in as this role, then `SET LOCAL ROLE authenticated`
 -- (or service_role on marked paths) per request.
