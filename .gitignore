@@ -25,6 +25,10 @@ coverage/
 !.env.example
 *.local
 
+# infra/scripts/backup.sh's default output dir (real pg_dump data if
+# BACKUP_DIR isn't overridden) — never let a real backup land in the repo.
+backups/
+
 # Logs
 *.log
 npm-debug.log*
