@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { encryptSecret, decryptSecret } from "@/lib/crypto";
 
-const REAL_KEY = "8QQoTaGGRAzwTsZdqtntdffd5EgSRH4Z7zjKwDce1Q8=";
+// Throwaway key, generated solely for this test file — must decode to 32
+// bytes to pass validation, but has no relationship to any real environment.
+const TEST_KEY = "s6yYae7jUzh8XWE0SeHt5sSnGUKvym3zsVfNrd3wZG0=";
 const originalKey = process.env.ENCRYPTION_KEY;
 
 describe("encryptSecret / decryptSecret", () => {
   beforeEach(() => {
-    process.env.ENCRYPTION_KEY = REAL_KEY;
+    process.env.ENCRYPTION_KEY = TEST_KEY;
   });
 
   afterEach(() => {
