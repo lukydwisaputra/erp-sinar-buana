@@ -10,7 +10,9 @@
 
 services:
   postgres:
-    build: ./postgres
+    build:
+      context: ..
+      dockerfile: infra/postgres/Dockerfile
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-sbmj_erp}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
