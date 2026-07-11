@@ -11,33 +11,36 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { onFormInvalid } from "@/lib/form-toast";
 import { useKaryawanList } from "@/lib/query/karyawan";
-import { useCompanyProfile, useUpdateCompanyProfile } from "@/lib/query/company-profile";
+import { useCompanyProfile, useUpdateCompanyProfile, useUploadLogo } from "@/lib/query/company-profile";
 import { updateCompanyProfileSchema, type CompanyProfile, type UpdateCompanyProfileInput } from "@/lib/schemas/company-profile";
+import { ALLOWED_UPLOAD_EXTENSIONS } from "@/lib/storage/upload-validation";
 
 type CompanyProfileForm = UpdateCompanyProfileInput;
 
 /** 16:9 preview, per docs/design/… "Logo perusahaan (16:9)" convention. */
 function LogoField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const { mutateAsync: uploadLogo, isPending } = useUploadLogo();
 
   return (
     <Field>
       <FieldLabel>Logo</FieldLabel>
       <div className="flex items-center gap-4">
         <div className="flex aspect-video w-40 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-input bg-muted/30">
-          {value ? (
-            // Object-URL preview from the file picker below — no upload backend yet (mock prototype).
+          {isPending ? (
+            <span className="text-xs text-muted-foreground">Mengunggah…</span>
+          ) : value ? (
             <img src={value} alt="Logo perusahaan" className="size-full object-contain" />
           ) : (
             <span className="text-xs text-muted-foreground">Belum ada logo</span>
           )}
         </div>
         <div className="flex flex-col gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+          <Button type="button" variant="outline" size="sm" disabled={isPending} onClick={() => inputRef.current?.click()}>
             <ImageUp className="size-3.5" /> {value ? "Ganti Logo" : "Unggah Logo"}
           </Button>
           {value && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => onChange("")}>
+            <Button type="button" variant="ghost" size="sm" disabled={isPending} onClick={() => onChange("")}>
               <Trash2 className="size-3.5" /> Hapus
             </Button>
           )}
@@ -45,12 +48,14 @@ function LogoField({ value, onChange }: { value: string; onChange: (v: string) =
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept={ALLOWED_UPLOAD_EXTENSIONS.join(",")}
           className="hidden"
-          onChange={(e) => {
+          onChange={async (e) => {
             const file = e.target.files?.[0];
-            if (file) onChange(URL.createObjectURL(file));
             e.target.value = "";
+            if (!file) return;
+            const result = await uploadLogo(file).catch(() => null);
+            if (result) onChange(result.url);
           }}
         />
       </div>

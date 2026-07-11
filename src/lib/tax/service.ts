@@ -6,7 +6,9 @@ import { toTaxEntry } from "@/lib/tax/mapping";
 import type { SettleTaxEntryInput, TaxEntry } from "@/lib/schemas/tax-entries";
 
 /** Manual entry and file upload (proofAttachmentUrl/buktiPotongAttachmentUrl)
- * stay out of scope — no MinIO client exists anywhere in this app yet. */
+ * stay out of scope — a MinIO client now exists (src/lib/storage/s3.ts, used
+ * by company-profile's logo upload) but nothing wires tax-entry attachments
+ * to it yet; a separate feature, not part of that pass. */
 export async function listTaxEntries(userId: string): Promise<TaxEntry[]> {
   return withUserTransaction(userId, async (tx) => {
     const rows = await tx
