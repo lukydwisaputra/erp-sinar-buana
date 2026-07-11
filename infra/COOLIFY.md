@@ -10,6 +10,13 @@ that means and what to revisit before real client data goes in.
 
 - A Coolify server, with this repo pushed somewhere Coolify can pull from
   (GitHub/GitLab/etc., or a Coolify-visible Git remote).
+- **Point every resource's Git source at the `testing` branch, not `main`.**
+  This whole guide targets a testing environment on purpose — `testing` is
+  where that work lands and gets deployed from, so it can diverge from
+  `main` without every commit there needing to be production-ready. Set
+  this explicitly in each resource's Git settings (App, Worker — Postgres
+  and MinIO aren't built from this repo's app code, so it doesn't apply to
+  them); Coolify defaults to `main` if left unset.
 - One domain (or subdomain) you can point DNS at Coolify for the app —
   e.g. `erp-test.yourdomain.com`. A second subdomain for MinIO is needed too
   (e.g. `minio-test.yourdomain.com`) — see step 2.
@@ -90,8 +97,9 @@ default.
 ## 3. App
 
 **Resource → Dockerfile**, `Dockerfile` (repo root), repo root as build
-context. **Domain**: this is the one resource with a public domain —
-`erp-test.yourdomain.com`, Coolify Let's Encrypt TLS.
+context, **branch: `testing`** (see §0). **Domain**: this is the one
+resource with a public domain — `erp-test.yourdomain.com`, Coolify Let's
+Encrypt TLS.
 
 **Env vars:**
 ```
@@ -132,7 +140,8 @@ S3_KEY_PREFIX=testing
 ## 4. Worker
 
 **Resource → Dockerfile**, `infra/worker/Dockerfile`, repo root as build
-context, **no public domain** (no HTTP surface — it's a queue consumer).
+context, **branch: `testing`** (see §0), **no public domain** (no HTTP
+surface — it's a queue consumer).
 
 **Env vars:**
 ```
