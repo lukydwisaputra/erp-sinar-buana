@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { ForbiddenError, UnauthorizedError } from "./auth/rbac";
+import { reportError } from "@/lib/observability/sentry";
 
 export class NotFoundError extends Error {
   constructor(message = "Data tidak ditemukan.") {
@@ -36,6 +37,6 @@ export function errorResponse(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  console.error(error);
+  reportError(error);
   return NextResponse.json({ error: "Terjadi kesalahan pada server." }, { status: 500 });
 }

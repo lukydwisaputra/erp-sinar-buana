@@ -1,5 +1,6 @@
 import { PgBoss } from "pg-boss";
 import { env } from "@/env";
+import { reportError } from "@/lib/observability/sentry";
 
 export const DELIVERY_EMAIL_QUEUE = "pengiriman.email";
 
@@ -15,7 +16,7 @@ export async function getBoss(): Promise<PgBoss> {
   if (!bossPromise) {
     bossPromise = (async () => {
       const boss = new PgBoss(env.DATABASE_URL);
-      boss.on("error", (err: Error) => console.error("[pg-boss]", err));
+      boss.on("error", (err: Error) => reportError(err, { source: "pg-boss" }));
       await boss.start();
       await boss.createQueue(DELIVERY_EMAIL_QUEUE);
       return boss;

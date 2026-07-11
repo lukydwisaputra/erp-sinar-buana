@@ -10,14 +10,17 @@
  * same convention as scripts/seed-*.ts.
  *
  * Run: node --env-file=.env.local scripts/worker.ts
- * Leave running in its own terminal during dev; production runs a built
- * `dist/worker.js` (see infra/docker-compose.yml's worker service).
+ * Leave running in its own terminal during dev; production runs the exact
+ * same command inside infra/worker/Dockerfile's image (no separate build
+ * step — Node's native TS type-stripping handles both).
  */
 import postgres from "postgres";
 import { PgBoss } from "pg-boss";
 import nodemailer from "nodemailer";
+import { chromium, type Browser } from "@playwright/test";
 import { decryptSecret } from "../src/lib/crypto.ts";
 import { fillTokens } from "../src/lib/pengiriman/token-fill.ts";
+import { reportError } from "../src/lib/observability/sentry.ts";
 
 const DELIVERY_EMAIL_QUEUE = "pengiriman.email";
 type EmailDeliveryJob = { deliveryId: string };
@@ -25,9 +28,65 @@ type EmailDeliveryJob = { deliveryId: string };
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL must be set (see .env.example).");
 
+// PDF attachments: headless-render the same print routes a browser would
+// hit (src/app/print/**), reusing the real React document components — see
+// .env.example for both vars. Neither is required to boot the worker (only
+// checked inside renderDocumentPdf), so a dev environment that doesn't need
+// attachments yet doesn't need them set.
+const appUrl = process.env.APP_URL;
+const renderSecret = process.env.INTERNAL_RENDER_SECRET;
+
 const sql = postgres(databaseUrl);
 const boss = new PgBoss(databaseUrl);
-boss.on("error", (err: Error) => console.error("[pg-boss]", err));
+boss.on("error", (err: Error) => reportError(err, { source: "pg-boss" }));
+
+// One browser instance for the worker's whole lifetime — launching Chromium
+// per email would be needlessly slow. Started lazily on first use, not at
+// boot, so a worker that never sends anything doesn't pay the startup cost.
+let browserPromise: Promise<Browser> | null = null;
+function getBrowser(): Promise<Browser> {
+  if (!browserPromise) browserPromise = chromium.launch({ headless: true });
+  return browserPromise;
+}
+
+type DeliveryRow = {
+  document_type: string;
+  quotation_id: string | null;
+  installment_invoice_id: string | null;
+  payslip_id: string | null;
+  document_number: string;
+};
+
+const PRINT_PATH_BY_DOC_TYPE: Record<string, (delivery: DeliveryRow) => string | null> = {
+  sph: (d) => (d.quotation_id ? `/print/sph/${d.quotation_id}` : null),
+  invoice: (d) => (d.installment_invoice_id ? `/print/faktur/${d.installment_invoice_id}` : null),
+  slip_gaji: (d) => (d.payslip_id ? `/print/slip/${d.payslip_id}` : null),
+};
+
+/** Renders one of `src/app/print/**` to a PDF buffer via headless Chromium.
+ * Throws (rather than returning null) on any failure — an attachment that
+ * silently never shows up is worse than a delivery that visibly retries/fails,
+ * matching this worker's existing "no partial success" error handling. */
+async function renderDocumentPdf(delivery: DeliveryRow): Promise<Buffer> {
+  if (!appUrl || !renderSecret) {
+    throw new Error("APP_URL and INTERNAL_RENDER_SECRET must both be set to attach PDFs (see .env.example).");
+  }
+  const path = PRINT_PATH_BY_DOC_TYPE[delivery.document_type]?.(delivery);
+  if (!path) throw new Error(`No print route for document_type=${delivery.document_type}.`);
+
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+  try {
+    const url = `${appUrl}${path}?token=${encodeURIComponent(renderSecret)}`;
+    const response = await page.goto(url, { waitUntil: "networkidle" });
+    if (!response || !response.ok()) {
+      throw new Error(`Print route returned ${response?.status() ?? "no response"} for ${path}.`);
+    }
+    return await page.pdf({ format: "A4", printBackground: true });
+  } finally {
+    await page.close();
+  }
+}
 
 type Tokens = Record<string, string>;
 
@@ -42,10 +101,7 @@ function formatTanggal(d: string): string {
 }
 
 /** Resolves the token set for a delivery's document type by joining its owner document. */
-async function resolveTokens(
-  tx: postgres.TransactionSql,
-  delivery: { document_type: string; quotation_id: string | null; installment_invoice_id: string | null; payslip_id: string | null; document_number: string },
-): Promise<Tokens> {
+async function resolveTokens(tx: postgres.TransactionSql, delivery: DeliveryRow): Promise<Tokens> {
   if (delivery.document_type === "sph" && delivery.quotation_id) {
     const [row] = await tx`
       select c.name as company_name
@@ -81,11 +137,20 @@ async function resolveTokens(
 
 async function processDelivery(deliveryId: string): Promise<void> {
   try {
+    // Its own short transaction, separate from the main send below —
+    // renderDocumentPdf is a multi-second external round-trip (HTTP + full
+    // page render), not something to hold a Postgres transaction open for.
+    const [delivery] = await sql.begin<DeliveryRow[]>(async (tx) => {
+      await tx`set local role service_role`;
+      return tx<DeliveryRow[]>`select * from document_deliveries where id = ${deliveryId}`;
+    });
+    if (!delivery) return; // gone — nothing to do
+
+    const pdf = await renderDocumentPdf(delivery);
+    const pdfFilename = `${delivery.document_number.replace(/[/\\]/g, "-")}.pdf`;
+
     await sql.begin(async (tx) => {
       await tx`set local role service_role`;
-
-      const [delivery] = await tx`select * from document_deliveries where id = ${deliveryId}`;
-      if (!delivery) return; // gone — nothing to do
 
       const [account] = await tx`select * from email_accounts where singleton = true`;
       if (!account?.is_configured) throw new Error("Akun email belum dikonfigurasi.");
@@ -110,6 +175,7 @@ async function processDelivery(deliveryId: string): Promise<void> {
         to: delivery.recipient_contact,
         subject,
         text: body,
+        attachments: [{ filename: pdfFilename, content: pdf, contentType: "application/pdf" }],
       });
 
       await tx`
@@ -119,6 +185,7 @@ async function processDelivery(deliveryId: string): Promise<void> {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    reportError(err, { source: "processDelivery", deliveryId });
     // Must re-elevate to service_role here too — the failed transaction above
     // rolled back its own "set local role", so a bare statement on `sql`
     // would run as the plain, un-elevated `app` role and get silently
@@ -166,6 +233,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
+  reportError(err, { source: "main" });
   process.exit(1);
 });

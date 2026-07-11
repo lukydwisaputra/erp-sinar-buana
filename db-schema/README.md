@@ -64,14 +64,25 @@ db-schema/
 > under `sql/` is never diffed away. `drizzle-kit generate` diffs the Drizzle
 > schema against its own snapshot, so the `sql/` objects are left untouched.
 
-Order matters — apply in exactly this sequence:
+### One command (recommended)
+
+```bash
+DATABASE_URL="postgres://postgres:<superuser-password>@<host>:<port>/<db>" npm run migrate:apply
+```
+
+Runs [`scripts/migrate.sh`](scripts/migrate.sh) — every step below, in order,
+in one shot. Needs a role with schema-level DDL rights (the Postgres
+superuser, not the `app` LOGIN role). This replaced a previously undocumented
+"remember to run ~12 `psql -f` commands by hand, in the right order" process.
+
+### What it does (order matters — apply in exactly this sequence)
 
 ```bash
 # 0. Supabase already provides the `auth` schema, auth.users and auth.uid().
 #    (For a NON-Supabase Postgres, create stubs first — see below.)
 
-# 1. Tables, FKs, enums (Drizzle-generated)
-psql "$DATABASE_URL" -f migrations/0000_init.sql
+# 1. Tables, FKs, enums (Drizzle-generated) — every file in migrations/, in order
+for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
 
 # 1b. Link user_profiles.id -> auth.users(id) (Supabase-managed auth schema)
 psql "$DATABASE_URL" -f sql/00_auth_link.sql
@@ -94,6 +105,13 @@ psql "$DATABASE_URL" -f sql/rls/10_policies.sql
 # 5. Seed defaults
 psql "$DATABASE_URL" -f sql/seed/00_seed.sql
 ```
+
+> **Only safe for a genuinely fresh database.** Re-running against an
+> already-provisioned one isn't fully idempotent — some RLS policy blocks in
+> `sql/rls/10_policies.sql` don't `drop policy if exists` before creating
+> (a known, documented gap). Hotfixing a live database needs a targeted,
+> hand-written `drop policy if exists` + `create policy` pair instead of
+> re-running the whole file.
 
 Regenerate the migration after editing `src/schema/*`:
 

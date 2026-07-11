@@ -2,8 +2,16 @@
 
 Reference deployment for the architecture in
 [`docs/architecture.md`](../docs/architecture.md): **Postgres** (data + RLS +
-pg_cron + pg-boss), **MinIO** (S3 storage), **App** (Next.js), **Worker**
-(pg-boss consumer), plus **MailDev** (dev-only SMTP catcher, never deployed).
+pg-boss), **MinIO** (S3 storage), **App** (Next.js), **Worker** (pg-boss
+consumer), plus **MailDev** (dev-only SMTP catcher, never deployed).
+
+> The Postgres image still installs `pg_cron` (docs/architecture.md originally
+> planned periodic SQL jobs through it), but nothing in `db-schema/` actually
+> calls it — the one periodic job that exists (`mark_overdue_tax_entries`) runs
+> via pg-boss's own `.schedule()` instead (`scripts/worker.ts`), found while
+> building the migration runner. Not removed here since it's harmless as
+> installed-but-unused, just worth knowing before reaching for `cron.schedule`
+> and finding nothing already there.
 
 ## Local development
 
@@ -19,15 +27,16 @@ from `APP_DB_PASSWORD`) with default table grants for anything `db-schema`'s
 migrations create afterward — the "Non-Supabase Postgres" prerequisites from
 [`db-schema/README.md`](../db-schema/README.md).
 
-Then apply the schema (from `db-schema/`, in the documented order):
+Then apply the schema:
 
 ```bash
 cd db-schema && npm install
-export DATABASE_URL="postgres://postgres:<POSTGRES_PASSWORD>@localhost:5434/sbmj_erp"  # 5434, see below
-npm run generate              # only if schema changed
-for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
-# ... then sql/00_auth_link.sql, indexes, triggers/, rls/, seed/ (see that README)
+DATABASE_URL="postgres://postgres:<POSTGRES_PASSWORD>@localhost:5434/sbmj_erp" npm run migrate:apply  # 5434, see below
 ```
+
+One command, in the right order (see [`db-schema/README.md`](../db-schema/README.md)
+for exactly what it runs) — replaces the previous "manually run ~12 `psql -f`
+commands in a specific order" process.
 
 > **Port 5434, not 5432.** The compose file maps the container's Postgres to
 > host port `5434` by default (`POSTGRES_HOST_PORT` in `infra/.env`) instead
@@ -57,16 +66,73 @@ MinIO console: http://localhost:9001 · S3 API: http://localhost:9000.
 (`scripts/worker.ts`) in its own terminal to actually process queued email
 deliveries against it.
 
-The `app` and `worker` services are commented in the compose file until their
-Dockerfiles exist.
+### Running the full stack (app + worker) in Docker
+
+Day-to-day iteration is usually faster with `npm run dev` / `npm run worker`
+on the host against the `postgres`/`minio`/`maildev` containers above. To
+run the whole stack the way Coolify would (built images, not the host
+toolchain):
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --build
+```
+
+Builds `app` ([`../Dockerfile`](../Dockerfile), multi-stage, `next.config.ts`'s
+`output: "standalone"`) and `worker` ([`worker/Dockerfile`](worker/Dockerfile) —
+also installs Chromium, needed for the PDF-attachment rendering pipeline).
+Both need `ENCRYPTION_KEY` and `INTERNAL_RENDER_SECRET` set in `infra/.env`
+(generate each with `openssl rand -base64 32`) — see `.env.example`.
+
+- **App**: http://localhost:3000, health check at `/api/health` (also the
+  Docker `HEALTHCHECK` target — no auth, just a `select 1`).
+- **Worker**: no HTTP surface (a queue consumer). Check liveness via
+  `docker compose logs -f worker`, or by watching for `document_deliveries`
+  rows stuck in `queued` for longer than expected.
+
+> **Building `app` needs ~4GiB free for the Docker build VM.** `next build`'s
+> TypeScript-checking pass got `SIGKILL`ed (OOM) under Colima's 2GiB default
+> on the 8GB dev machine this was built on — Turbopack compilation itself
+> finished fine (84s), it's specifically the typecheck worker that's memory-hungry.
+> Bump the VM before building: `colima stop && colima start --memory 4`
+> (Docker Desktop: Settings → Resources → Memory). The `Dockerfile`'s builder
+> stage also sets `NODE_OPTIONS=--max-old-space-size=3072` as a second line of
+> defense so V8 GCs under pressure instead of growing unbounded — keep both if
+> deploying to a similarly small VPS.
+
+### Backups
+
+```bash
+BACKUP_DIR=/var/backups/sbmj-erp infra/scripts/backup.sh    # pg_dump + gzip, prunes after 14 days
+infra/scripts/restore.sh <path-to-dump.sql.gz>               # drops + recreates the DB, asks for confirmation
+```
+
+Schedule `backup.sh` with cron (see the script's own header for an example
+line) or a Coolify Scheduled Task — there's no automatic backup for a
+custom-image Postgres service like this one (`pg_cron` baked in), only for
+Coolify's own managed database resources.
 
 ## Coolify notes
 
-- Deploy each service as its own resource; **put Cloudflare (Tunnel) in front of
-  `app` only**. Postgres and MinIO stay on the internal network — no public ports.
+> **First deploy (testing environment)?** See
+> [`COOLIFY.md`](COOLIFY.md) for the concrete step-by-step: 4 resources
+> (Postgres/MinIO/App/Worker), exact env vars, deploy order, bucket
+> bootstrap, and how to carry the existing local demo data over as the test
+> environment's seed instead of starting from an empty database.
+
+- Deploy each service as its own resource; for **real production**, put
+  Cloudflare (Tunnel) in front of `app` (and MinIO, since uploaded objects
+  need to stay publicly fetchable) — Postgres stays internal-only, no public
+  port. `COOLIFY.md`'s testing-environment pass uses Coolify's own
+  domains + Let's Encrypt instead, as a deliberate simplification; switch to
+  the Tunnel before real client data goes in. The `worker` never needs a
+  public port either way (it only makes outbound calls: to Postgres, to
+  `app`'s internal `/print/**` routes, to MinIO, and to SMTP).
 - The `5434`/`9000`/`9001` port mappings here are **dev-only**; remove them in
-  the Coolify definitions.
-- Schedule a periodic `pg_dump` for backups
-  ([NFR Bab 13](../planning/prd/13-non-fungsional.md)).
-- Large uploads use **presigned multipart** to MinIO so each part stays under
-  Cloudflare's 100 MB proxied-body cap.
+  the Coolify definitions (Coolify assigns its own domains/ports instead).
+- Schedule `infra/scripts/backup.sh` as a periodic task for Postgres backups
+  ([NFR Bab 13](../planning/prd/13-non-fungsional.md)) — see above.
+- **Company-logo upload** is wired to MinIO (`src/lib/storage/s3.ts`,
+  `POST /api/company-profile/logo`) — small server-proxied uploads, not the
+  presigned-multipart flow. Presigned direct-to-MinIO uploads (needed once
+  larger document attachments are built, to stay under Cloudflare's 100MB
+  proxied-body cap) remain a disclosed, separate gap.

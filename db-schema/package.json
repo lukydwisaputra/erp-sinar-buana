@@ -7,6 +7,7 @@
   "scripts": {
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
+    "migrate:apply": "bash scripts/migrate.sh",
     "push": "drizzle-kit push",
     "studio": "drizzle-kit studio"
   },
