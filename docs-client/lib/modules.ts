@@ -47,7 +47,7 @@ export const DOC_GROUPS: DocGroup[] = [
   {
     label: "Administrasi",
     modules: [
-      { slug: "pengiriman", label: "Pengiriman Dokumen", group: "Administrasi" },
+      { slug: "dokumen", label: "Pengiriman Dokumen", group: "Administrasi" },
       { slug: "konfigurasi", label: "Konfigurasi", group: "Administrasi" },
       { slug: "pengguna", label: "Pengguna", group: "Administrasi" },
       { slug: "profil-perusahaan", label: "Profil Perusahaan", group: "Administrasi" },

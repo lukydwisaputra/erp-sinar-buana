@@ -26,14 +26,18 @@ export default function MasukPage() {
 
       <h2>Lupa sandi</h2>
       <p>
-        Klik <strong>Lupa sandi?</strong> di halaman Masuk. Admin dapat membuatkan tautan
-        atur ulang sandi baru melalui menu Pengguna bila diperlukan.
+        Klik <strong>Lupa sandi?</strong> di halaman Masuk, lalu masukkan email akun Anda.
+        Tautan atur ulang sandi (berlaku 1 jam) akan dikirim otomatis lewat email — buka
+        tautan tersebut, isi sandi baru beserta konfirmasinya, lalu masuk kembali dengan
+        sandi yang baru. Admin tetap dapat membuatkan tautan atur ulang sandi secara manual
+        melalui menu Pengguna bila diperlukan (mis. email belum terkirim).
       </p>
 
       <Callout>
-        Belum ada pengiriman email otomatis — tautan undangan/atur ulang sandi saat ini
-        ditampilkan langsung di menu Pengguna oleh Admin, lalu dibagikan secara manual
-        (mis. lewat chat) ke karyawan bersangkutan.
+        Pengiriman email bergantung pada akun SMTP Pengiriman yang sudah dikonfigurasi
+        (Konfigurasi → Pengiriman). Tautan undangan akun baru masih ditampilkan langsung
+        di menu Pengguna oleh Admin dan dibagikan secara manual (mis. lewat chat) — hanya
+        tautan atur ulang sandi yang sudah dikirim otomatis lewat email.
       </Callout>
     </>
   );

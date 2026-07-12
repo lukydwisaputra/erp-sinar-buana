@@ -4,6 +4,8 @@ import { getAccountByEmail } from "@/lib/auth/accounts";
 import { createResetToken } from "@/lib/auth/invite-reset";
 import { isRateLimited } from "@/lib/auth/rate-limit";
 import { errorResponse } from "@/lib/api-error";
+import { getBoss, PASSWORD_RESET_EMAIL_QUEUE } from "@/lib/queue/boss";
+import { reportError } from "@/lib/observability/sentry";
 
 const requestResetSchema = z.object({ email: z.string().email() });
 
@@ -19,12 +21,24 @@ export async function POST(request: NextRequest) {
     }
 
     // US-01.4 — always report success (anti-enumeration); only issue a token
-    // if the account actually exists. No email service is wired yet (see
-    // Non-goals) — the link is only ever surfaced to an Admin via /pengguna,
-    // never returned here.
+    // (and queue an email) if the account actually exists.
     const account = await getAccountByEmail(body.email);
     if (account && account.isActive) {
-      await createResetToken(account.id);
+      const rawToken = await createResetToken(account.id);
+      const resetUrl = `${new URL(request.url).origin}/reset-password?token=${encodeURIComponent(rawToken)}`;
+      try {
+        const boss = await getBoss();
+        // Reset tokens expire in 1h (RESET_TOKEN_TTL_MS) — no point retrying past that.
+        await boss.send(
+          PASSWORD_RESET_EMAIL_QUEUE,
+          { to: body.email, resetUrl },
+          { retryLimit: 3, retryDelay: 30, expireInSeconds: 3600 },
+        );
+      } catch (err) {
+        // Queueing failure shouldn't surface to the client (anti-enumeration,
+        // and the token itself is still valid if an Admin hands it over manually).
+        reportError(err, { source: "request-reset" });
+      }
     }
 
     return NextResponse.json({ ok: true });

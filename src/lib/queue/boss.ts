@@ -3,6 +3,7 @@ import { env } from "@/env";
 import { reportError } from "@/lib/observability/sentry";
 
 export const DELIVERY_EMAIL_QUEUE = "pengiriman.email";
+export const PASSWORD_RESET_EMAIL_QUEUE = "auth.password-reset";
 
 let bossPromise: Promise<PgBoss> | null = null;
 
@@ -19,6 +20,7 @@ export async function getBoss(): Promise<PgBoss> {
       boss.on("error", (err: Error) => reportError(err, { source: "pg-boss" }));
       await boss.start();
       await boss.createQueue(DELIVERY_EMAIL_QUEUE);
+      await boss.createQueue(PASSWORD_RESET_EMAIL_QUEUE);
       return boss;
     })();
   }

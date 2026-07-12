@@ -4,3 +4,7 @@
  * than trusting a stale enqueue-time snapshot.
  */
 export type EmailDeliveryJob = { deliveryId: string };
+
+/** Password-reset link email — no owning business document, so it skips the
+ * document_deliveries/message_templates pipeline entirely (see PASSWORD_RESET_EMAIL_QUEUE). */
+export type PasswordResetEmailJob = { to: string; resetUrl: string };
