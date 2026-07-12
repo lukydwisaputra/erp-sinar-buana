@@ -25,7 +25,11 @@ export async function POST(request: NextRequest) {
     const account = await getAccountByEmail(body.email);
     if (account && account.isActive) {
       const rawToken = await createResetToken(account.id);
-      const resetUrl = `${new URL(request.url).origin}/reset-password?token=${encodeURIComponent(rawToken)}`;
+      // Behind Traefik, request.url's origin reflects the container's own
+      // bind address (0.0.0.0:3000), not the public Host header — use the
+      // same APP_URL the worker already relies on for building public links.
+      const origin = process.env.APP_URL ?? new URL(request.url).origin;
+      const resetUrl = `${origin}/reset-password?token=${encodeURIComponent(rawToken)}`;
       try {
         const boss = await getBoss();
         // Reset tokens expire in 1h (RESET_TOKEN_TTL_MS) — no point retrying past that.
