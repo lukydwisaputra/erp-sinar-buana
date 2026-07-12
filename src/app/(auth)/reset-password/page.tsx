@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Button } from "@/components/ui/button";
 import { onFormInvalid } from "@/lib/form-toast";
 import { useRequestReset, useResetPassword } from "@/lib/query/session";
@@ -18,9 +19,15 @@ const requestFormSchema = z.object({
 });
 type RequestForm = z.infer<typeof requestFormSchema>;
 
-const completeFormSchema = z.object({
-  password: z.string().min(8, "Sandi minimal 8 karakter."),
-});
+const completeFormSchema = z
+  .object({
+    password: z.string().min(8, "Sandi minimal 8 karakter."),
+    confirmPassword: z.string().min(1, "Konfirmasi sandi wajib diisi."),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Konfirmasi sandi tidak cocok.",
+    path: ["confirmPassword"],
+  });
 type CompleteForm = z.infer<typeof completeFormSchema>;
 
 function RequestResetCard() {
@@ -122,13 +129,17 @@ function CompleteResetCard({ token }: { token: string }) {
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Field>
             <FieldLabel htmlFor="new-password">Sandi Baru</FieldLabel>
-            <Input
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              {...register("password")}
-            />
+            <PasswordInput id="new-password" autoComplete="new-password" {...register("password")} />
             <FieldError errors={errors.password ? [errors.password] : undefined} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="confirm-password">Konfirmasi Sandi Baru</FieldLabel>
+            <PasswordInput
+              id="confirm-password"
+              autoComplete="new-password"
+              {...register("confirmPassword")}
+            />
+            <FieldError errors={errors.confirmPassword ? [errors.confirmPassword] : undefined} />
           </Field>
           <Button type="submit" disabled={resetPassword.isPending} className="mt-2">
             {resetPassword.isPending ? "Memproses..." : "Simpan Sandi Baru"}

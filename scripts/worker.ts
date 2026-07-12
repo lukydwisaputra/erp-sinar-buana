@@ -25,6 +25,9 @@ import { reportError } from "../src/lib/observability/sentry.ts";
 const DELIVERY_EMAIL_QUEUE = "pengiriman.email";
 type EmailDeliveryJob = { deliveryId: string };
 
+const PASSWORD_RESET_EMAIL_QUEUE = "auth.password-reset";
+type PasswordResetEmailJob = { to: string; resetUrl: string };
+
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL must be set (see .env.example).");
 
@@ -199,6 +202,30 @@ async function processDelivery(deliveryId: string): Promise<void> {
   }
 }
 
+/** Sends the "reset your password" link. No owning document, no PDF — a plain
+ * transactional email via the same email_accounts singleton processDelivery uses. */
+async function sendPasswordResetEmail(job: PasswordResetEmailJob): Promise<void> {
+  const [account] = await sql`select * from email_accounts where singleton = true`;
+  if (!account?.is_configured) {
+    throw new Error("Akun email belum dikonfigurasi — tautan reset tidak terkirim.");
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: account.host,
+    port: account.port,
+    secure: account.port === 465,
+    auth: { user: account.username, pass: decryptSecret(account.password_encrypted) },
+  });
+  await transporter.sendMail({
+    from: `"${account.from_nama}" <${account.from_email}>`,
+    to: job.to,
+    subject: "Atur ulang sandi Anda",
+    text:
+      `Klik tautan berikut untuk mengatur sandi baru (berlaku 1 jam):\n\n${job.resetUrl}\n\n` +
+      `Jika Anda tidak meminta ini, abaikan email ini.`,
+  });
+}
+
 const TAX_OVERDUE_SWEEP_QUEUE = "tax.overdue-sweep";
 
 /** Flips `belum_disetor` + past-`due_date` tax_entries rows to `terlambat`
@@ -221,6 +248,14 @@ async function main() {
     console.log("[worker] sent delivery", job.data.deliveryId);
   });
   console.log("[worker] listening on", DELIVERY_EMAIL_QUEUE);
+
+  await boss.createQueue(PASSWORD_RESET_EMAIL_QUEUE);
+  await boss.work<PasswordResetEmailJob>(PASSWORD_RESET_EMAIL_QUEUE, async ([job]) => {
+    console.log("[worker] sending password-reset email to", job.data.to);
+    await sendPasswordResetEmail(job.data);
+    console.log("[worker] sent password-reset email to", job.data.to);
+  });
+  console.log("[worker] listening on", PASSWORD_RESET_EMAIL_QUEUE);
 
   await boss.createQueue(TAX_OVERDUE_SWEEP_QUEUE);
   await boss.schedule(TAX_OVERDUE_SWEEP_QUEUE, "0 1 * * *", {});
