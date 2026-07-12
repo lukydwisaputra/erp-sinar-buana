@@ -14,6 +14,7 @@
  * same command inside infra/worker/Dockerfile's image (no separate build
  * step — Node's native TS type-stripping handles both).
  */
+import { setDefaultResultOrder } from "node:dns";
 import postgres from "postgres";
 import { PgBoss } from "pg-boss";
 import nodemailer from "nodemailer";
@@ -21,6 +22,11 @@ import { chromium, type Browser } from "@playwright/test";
 import { decryptSecret } from "../src/lib/crypto.ts";
 import { fillTokens } from "../src/lib/pengiriman/token-fill.ts";
 import { reportError } from "../src/lib/observability/sentry.ts";
+
+// See src/lib/db/client.ts's matching comment — Coolify's internal Docker
+// network resolves "postgres" to both an IPv4 and an unroutable IPv6
+// address; force IPv4 so connections don't intermittently pick the broken one.
+setDefaultResultOrder("ipv4first");
 
 const DELIVERY_EMAIL_QUEUE = "pengiriman.email";
 type EmailDeliveryJob = { deliveryId: string };
