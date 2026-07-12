@@ -40,10 +40,11 @@ const NO_CLIENT_COMPANY = "__none__";
 function KaryawanLinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { data: karyawan = [] } = useKaryawanList();
   const aktif = karyawan.filter((k) => k.status === "aktif");
+  const isEmpty = aktif.length === 0;
   return (
     <Field>
       <FieldLabel htmlFor="p-karyawan">Tautan Karyawan</FieldLabel>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={onChange} disabled={isEmpty}>
         <SelectTrigger id="p-karyawan" className="w-full">
           <SelectValue placeholder="Pilih karyawan…" />
         </SelectTrigger>
@@ -53,7 +54,9 @@ function KaryawanLinkField({ value, onChange }: { value: string; onChange: (v: s
         </SelectContent>
       </Select>
       <FieldDescription>
-        Diperlukan untuk akses &ldquo;slip gaji sendiri&rdquo; dan assignment proyek.
+        {isEmpty
+          ? "Belum ada data karyawan aktif — tambahkan lewat menu Karyawan agar bisa ditautkan di sini."
+          : "Diperlukan untuk akses “slip gaji sendiri” dan assignment proyek."}
       </FieldDescription>
     </Field>
   );
@@ -64,10 +67,11 @@ function KaryawanLinkField({ value, onChange }: { value: string; onChange: (v: s
  * unlinked viewer accounts see nothing (a dead end, not an error). */
 function ClientCompanyLinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { data: perusahaan = [] } = usePerusahaanList();
+  const isEmpty = perusahaan.length === 0;
   return (
     <Field>
       <FieldLabel htmlFor="p-client-company">Tautan Perusahaan Klien</FieldLabel>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={onChange} disabled={isEmpty}>
         <SelectTrigger id="p-client-company" className="w-full">
           <SelectValue placeholder="Pilih perusahaan…" />
         </SelectTrigger>
@@ -77,8 +81,9 @@ function ClientCompanyLinkField({ value, onChange }: { value: string; onChange: 
         </SelectContent>
       </Select>
       <FieldDescription>
-        Akun ini hanya akan melihat Proyek, SPH, dan Faktur milik perusahaan yang ditautkan — tidak ada
-        modul lain.
+        {isEmpty
+          ? "Belum ada data perusahaan — tambahkan lewat menu Perusahaan agar bisa ditautkan di sini."
+          : "Akun ini hanya akan melihat Proyek, SPH, dan Faktur milik perusahaan yang ditautkan — tidak ada modul lain."}
       </FieldDescription>
     </Field>
   );

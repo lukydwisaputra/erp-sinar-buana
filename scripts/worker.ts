@@ -258,8 +258,15 @@ async function main() {
   await boss.createQueue(PASSWORD_RESET_EMAIL_QUEUE);
   await boss.work<PasswordResetEmailJob>(PASSWORD_RESET_EMAIL_QUEUE, async ([job]) => {
     console.log("[worker] sending password-reset email to", job.data.to);
-    await sendPasswordResetEmail(job.data);
-    console.log("[worker] sent password-reset email to", job.data.to);
+    try {
+      await sendPasswordResetEmail(job.data);
+      console.log("[worker] sent password-reset email to", job.data.to);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[worker] failed to send password-reset email to", job.data.to, "-", message);
+      reportError(err, { source: "sendPasswordResetEmail", to: job.data.to });
+      throw err; // re-throw so pg-boss's own retry/backoff still applies
+    }
   });
   console.log("[worker] listening on", PASSWORD_RESET_EMAIL_QUEUE);
 
