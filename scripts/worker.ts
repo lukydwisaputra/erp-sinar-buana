@@ -211,7 +211,10 @@ async function processDelivery(deliveryId: string): Promise<void> {
 /** Sends the "reset your password" link. No owning document, no PDF — a plain
  * transactional email via the same email_accounts singleton processDelivery uses. */
 async function sendPasswordResetEmail(job: PasswordResetEmailJob): Promise<void> {
-  const [account] = await sql`select * from email_accounts where singleton = true`;
+  const [account] = await sql.begin(async (tx) => {
+    await tx`set local role service_role`;
+    return tx`select * from email_accounts where singleton = true`;
+  });
   if (!account?.is_configured) {
     throw new Error("Akun email belum dikonfigurasi — tautan reset tidak terkirim.");
   }
