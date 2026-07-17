@@ -38,6 +38,21 @@ export type ToInvoiceTerminInput = {
   terminIndex: number;
 };
 
+function resolveReferencedInstallment(
+  input: ToInvoiceTerminInput,
+): { id: string; label: string; number: string | null } | null {
+  const r = input.installment;
+  if (!r.referencedInstallmentId) return null;
+  const idx = input.previousInstallments.findIndex((p) => p.id === r.referencedInstallmentId);
+  if (idx === -1) return null;
+  const referenced = input.previousInstallments[idx];
+  return {
+    id: referenced.id,
+    label: referenced.label,
+    number: input.indukNumber ? `${input.indukNumber}-T${idx + 1}` : null,
+  };
+}
+
 export function toInvoiceTermin(input: ToInvoiceTerminInput): InvoiceTermin {
   const r = input.installment;
   return {
@@ -63,24 +78,40 @@ export function toInvoiceTermin(input: ToInvoiceTerminInput): InvoiceTermin {
     totalSetelahPajak: Number(r.totalAfterTax),
     grossIncome: Number(r.grossIncome),
     netIncome: Number(r.netIncome),
+    // Deducted at the pre-tax value (currentTermValue) — TOTAL BIAYA on the
+    // invoice is the pre-tax contract total, so the running deduction must
+    // stay in the same (pre-tax) unit, not the after-tax total.
     previousTermins: input.previousInstallments.map((p) => ({
       label: p.label,
-      nilai: Number(p.totalAfterTax),
+      nilai: Number(p.currentTermValue),
+      pemicu: p.pemicu ?? null,
     })),
+    pemicu: r.pemicu ?? null,
     catatan: r.notes ?? "",
+    isCancellationFee: r.isCancellationFee,
+    referencedInstallment: resolveReferencedInstallment(input),
   };
 }
 
 export type ToFakturIndukInput = {
   masterInvoice: MasterInvoiceRow;
   proyekNama: string;
+  proyekNumber: string | null;
+  sphNumber: string | null;
   companyName: string;
   statusLabel: string | null;
   statusSystemRole: string | null;
   services: MasterInvoiceServiceRow[];
   serviceNamesById: Map<string, string>;
+  /** Best-effort pricing per billed service, traced from the source SPH's
+   * quotation_items (see faktur/service.ts) — empty map when the project has
+   * no source SPH, in which case every line just shows the service name. */
+  pricingByServiceId: Map<string, { harga: number; volume: number; satuan: string }>;
   terms: MasterInvoiceTermRow[];
   termins: InvoiceTermin[];
+  /** Resolved from masterInvoice.signatureTemplateId — null when not using a
+   * digital signature, or the linked template was deleted (FK set null). */
+  signatureImage: string | null;
 };
 
 /** Flat termin-level row for Dasbor's revenue/forecast/alert calculations —
@@ -128,19 +159,32 @@ export function toFakturInduk(input: ToFakturIndukInput): FakturInduk {
     number: m.number,
     proyekId: m.projectId,
     proyekNama: input.proyekNama,
+    proyekNumber: input.proyekNumber,
+    sphNumber: input.sphNumber,
     perusahaanId: m.companyId,
     perusahaanNama: input.companyName,
-    layanan: input.services.map((s) => ({
-      serviceId: s.serviceId,
-      nama: (s.serviceId && input.serviceNamesById.get(s.serviceId)) || s.description || "—",
-    })),
+    layanan: input.services.map((s) => {
+      const pricing = s.serviceId ? input.pricingByServiceId.get(s.serviceId) : undefined;
+      return {
+        serviceId: s.serviceId,
+        nama: (s.serviceId && input.serviceNamesById.get(s.serviceId)) || s.description || "—",
+        harga: pricing?.harga ?? null,
+        volume: pricing?.volume ?? null,
+        satuan: pricing?.satuan ?? null,
+      };
+    }),
     totalBiaya: Number(m.totalCost),
     statusId: m.statusId,
     status: input.statusLabel ?? "—",
     statusSystemRole: input.statusSystemRole,
     notes: m.notes ?? "",
-    terminScheme: sortByOrder(input.terms).map((t) => ({ label: t.label, persen: Number(t.percentage) })),
+    terminScheme: sortByOrder(input.terms).map((t) => ({ label: t.label, persen: Number(t.percentage), pemicu: t.pemicu ?? null })),
     termins: input.termins,
     createdAt: m.createdAt.toISOString(),
+    useDigitalSignature: m.useDigitalSignature,
+    signatureTemplateId: m.signatureTemplateId,
+    signatureImage: input.signatureImage,
+    cancelReason: m.cancelReason,
+    cancelFee: m.cancelFee !== null ? Number(m.cancelFee) : null,
   };
 }

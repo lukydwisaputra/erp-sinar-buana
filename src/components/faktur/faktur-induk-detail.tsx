@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { CalendarIcon, Download, Send, Plus, Ban, CheckCircle2, Pencil, X } from "lucide-react";
+import { CalendarIcon, Download, Send, Plus, Ban, CheckCircle2, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,12 +29,14 @@ import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/docume
 import { FakturDocument } from "@/components/faktur/faktur-document";
 import { cn } from "@/lib/utils";
 import { formatRupiah, formatTanggalPanjang } from "@/lib/format";
-import { useGenerateTermin, useUpdateTermin } from "@/lib/query/faktur";
+import { useGenerateTermin, useUpdateTermin, useGenerateCancellationFeeTermin } from "@/lib/query/faktur";
 import { useWorkflowStatuses } from "@/lib/query/proyek";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
 import { useSession } from "@/lib/query/session";
-import { isClientPortal } from "@/lib/auth/rbac";
+import { isClientPortal, isAdminUser } from "@/lib/auth/rbac";
+import { CancelPembatalanModal } from "@/components/shared/cancel-pembatalan-modal";
+import { useCancelPembatalan } from "@/lib/query/pembatalan";
 import type { FakturInduk, InvoiceTermin } from "@/lib/schemas/faktur";
 
 export function statusVariant(systemRole: string | null): "info" | "warning" | "success" | "secondary" | "destructive" {
@@ -220,42 +222,61 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
 }) {
   const updateTermin = useUpdateTermin();
   const [docOpen, setDocOpen] = React.useState(false);
+  const [refDocOpen, setRefDocOpen] = React.useState(false);
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const isFinal = termin.statusSystemRole === "LUNAS" || termin.statusSystemRole === "BATAL";
   const { data: session } = useSession();
   const isClient = isClientPortal(session);
+  const referencedTermin = termin.referencedInstallment
+    ? induk.termins.find((t) => t.id === termin.referencedInstallment?.id)
+    : undefined;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm">
-      <div className="w-32 font-medium">{termin.label}</div>
-      <div className="w-40 font-mono text-xs text-muted-foreground">{termin.number ?? "—"}</div>
-      <div className="w-32 text-muted-foreground">{tanggalID(termin.tanggal)}</div>
-      <div className="w-40 font-mono tabular-nums">{formatRupiah(termin.totalSetelahPajak)}</div>
-      <Badge variant={statusVariant(termin.statusSystemRole)}>{termin.status}</Badge>
-      <div className="ml-auto flex items-center gap-2">
-        <Button size="xs" variant="outline" onClick={() => setDocOpen(true)}>Lihat Dokumen</Button>
-        {!isClient && !isFinal && (lunasStatusId || batalStatusId) && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="xs" variant="outline">Aksi</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {lunasStatusId && (
-                <DropdownMenuItem onSelect={() => updateTermin.mutate({ masterInvoiceId: induk.id, terminId: termin.id, input: { statusId: lunasStatusId, paidDate: todayISO() } })}>
-                  <CheckCircle2 className="size-3.5" /> Tandai Lunas
-                </DropdownMenuItem>
-              )}
-              {batalStatusId && (
-                <DropdownMenuItem variant="destructive" onSelect={() => setCancelOpen(true)}>
-                  <Ban className="size-3.5" /> Batalkan
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+    <div className="px-4 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <div className="w-32 font-medium">{termin.label}</div>
+        <div className="w-40 font-mono text-xs text-muted-foreground">{termin.number ?? "—"}</div>
+        <div className="w-32 text-muted-foreground">{tanggalID(termin.tanggal)}</div>
+        <div className="w-40 font-mono tabular-nums">{formatRupiah(termin.totalSetelahPajak)}</div>
+        <Badge variant={statusVariant(termin.statusSystemRole)}>{termin.status}</Badge>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="xs" variant="outline" onClick={() => setDocOpen(true)}>Lihat Dokumen</Button>
+          {!isClient && !isFinal && (lunasStatusId || batalStatusId) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="xs" variant="outline">Aksi</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {lunasStatusId && (
+                  <DropdownMenuItem onSelect={() => updateTermin.mutate({ masterInvoiceId: induk.id, terminId: termin.id, input: { statusId: lunasStatusId, paidDate: todayISO() } })}>
+                    <CheckCircle2 className="size-3.5" /> Tandai Lunas
+                  </DropdownMenuItem>
+                )}
+                {batalStatusId && (
+                  <DropdownMenuItem variant="destructive" onSelect={() => setCancelOpen(true)}>
+                    <Ban className="size-3.5" /> Batalkan
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
+      {termin.referencedInstallment && (
+        <button
+          type="button"
+          onClick={() => setRefDocOpen(true)}
+          className="mt-1 text-xs text-(--link) hover:underline"
+        >
+          Sudah dikurangi dari {termin.referencedInstallment.label} ({termin.referencedInstallment.number ?? "—"})
+        </button>
+      )}
+
       <TerminDocumentDialog induk={induk} termin={termin} open={docOpen} onOpenChange={setDocOpen} />
+      {referencedTermin && (
+        <TerminDocumentDialog induk={induk} termin={referencedTermin} open={refDocOpen} onOpenChange={setRefDocOpen} />
+      )}
 
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <AlertDialogContent>
@@ -293,11 +314,25 @@ export function FakturIndukDetail({ induk }: { induk: FakturInduk }) {
   const lunasStatusId = statusOptions.find((s) => s.systemRole === "LUNAS")?.id;
   const batalStatusId = statusOptions.find((s) => s.systemRole === "BATAL")?.id;
   const [generateOpen, setGenerateOpen] = React.useState(false);
+  const [cancelOpen, setCancelOpen] = React.useState(false);
+  const cancelPembatalan = useCancelPembatalan();
+  const generateCancellationFee = useGenerateCancellationFeeTermin();
   const { data: session } = useSession();
   const isClient = isClientPortal(session);
+  const isAdmin = isAdminUser(session);
 
   const nextTerm = induk.terminScheme[induk.termins.length];
-  const isIndukFinal = induk.statusSystemRole === "LUNAS" || induk.statusSystemRole === "BATAL";
+
+  // Pembatalan Penawaran: once cancelled, if the admin fee (cancelFee) exceeds
+  // what's already been paid (Lunas termins), the "Buat Termin X" slot is
+  // replaced by a one-off shortfall invoice instead — never both at once.
+  const isBatal = induk.statusSystemRole === "BATAL";
+  const sudahDibayar = induk.termins
+    .filter((t) => t.statusSystemRole === "LUNAS")
+    .reduce((sum, t) => sum + t.totalSetelahPajak, 0);
+  const hasCancellationFeeTermin = induk.termins.some((t) => t.isCancellationFee);
+  const shortfall = (induk.cancelFee ?? 0) - sudahDibayar;
+  const showShortfallButton = isBatal && !hasCancellationFeeTermin && shortfall > 0.01;
 
   return (
     <div className="space-y-6">
@@ -310,16 +345,29 @@ export function FakturIndukDetail({ induk }: { induk: FakturInduk }) {
               <Badge variant={statusVariant(induk.statusSystemRole)}>{induk.status}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">{induk.perusahaanNama}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {induk.sphNumber && <span>No. SPH: <span className="font-mono">{induk.sphNumber}</span></span>}
+              {induk.proyekNumber && (
+                <span>
+                  No. Proyek:{" "}
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/proyek/${encodeURIComponent(induk.proyekId)}`)}
+                    className="font-mono text-(--link) hover:underline"
+                  >
+                    {induk.proyekNumber}
+                  </button>
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
               <p className="font-mono text-lg tabular-nums">{formatRupiah(induk.totalBiaya)}</p>
               <p className="text-xs text-muted-foreground">Total Biaya</p>
             </div>
-            {!isClient && !isIndukFinal && (
-              <Button variant="outline" size="sm" onClick={() => router.push(`/faktur/${encodeURIComponent(induk.id)}/edit`)}>
-                <Pencil className="size-4" /> Edit
-              </Button>
+            {!isClient && isAdmin && !isBatal && (
+              <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)}>Batalkan</Button>
             )}
           </div>
         </div>
@@ -333,30 +381,13 @@ export function FakturIndukDetail({ induk }: { induk: FakturInduk }) {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground">Skema Termin</h2>
-        </div>
-        <div className="overflow-hidden rounded-lg border border-border">
-          <div className="divide-y divide-border">
-            {induk.terminScheme.map((t, i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-2 text-sm">
-                <span className="w-32 font-medium">{t.label}</span>
-                <span className="w-16 text-muted-foreground">{t.persen}%</span>
-                <span className="font-mono tabular-nums text-muted-foreground">{formatRupiah((t.persen / 100) * induk.totalBiaya)}</span>
-                <span className="ml-auto">
-                  <Badge variant={i < induk.termins.length ? "success" : "secondary"} className="text-xs">
-                    {i < induk.termins.length ? "Sudah dibuat" : "Belum dibuat"}
-                  </Badge>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-muted-foreground">Invoice Termin</h2>
-          {!isClient && nextTerm && !isIndukFinal && (
+          {!isClient && showShortfallButton && (
+            <Button size="sm" variant="destructive" loading={generateCancellationFee.isPending} onClick={() => generateCancellationFee.mutate(induk.id)}>
+              <Plus className="size-4" /> Buat Invoice Biaya Administrasi Pengembalian
+            </Button>
+          )}
+          {!isClient && !showShortfallButton && nextTerm && (
             <Button size="sm" onClick={() => setGenerateOpen(true)}>
               <Plus className="size-4" /> Buat {nextTerm.label}
             </Button>
@@ -380,6 +411,19 @@ export function FakturIndukDetail({ induk }: { induk: FakturInduk }) {
       {nextTerm && (
         <GenerateTerminDialog induk={induk} nextTerm={nextTerm} open={generateOpen} onOpenChange={setGenerateOpen} />
       )}
+
+      {/* Batalkan — cascades to the linked SPH + Proyek too */}
+      <CancelPembatalanModal
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        isPending={cancelPembatalan.isPending}
+        onConfirm={({ alasan, biayaAdministrasi }) => {
+          cancelPembatalan.mutate(
+            { fakturIndukId: induk.id, alasan, biayaAdministrasi },
+            { onSuccess: () => setCancelOpen(false) },
+          );
+        }}
+      />
     </div>
   );
 }

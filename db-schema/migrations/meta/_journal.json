@@ -141,6 +141,83 @@
       "when": 1783780967536,
       "tag": "0019_client_portal_company_link",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1784108035646,
+      "tag": "0020_company_npwp_optional_province",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1784111152926,
+      "tag": "0021_employee_contract_file",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1784120940062,
+      "tag": "0022_penawaran_salutation_tempat",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1784124163586,
+      "tag": "0023_rab_jadwal_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1784176257497,
+      "tag": "0024_project_rab_estimates",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1784214195976,
+      "tag": "0025_add_faktur_termin_pemicu",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1784218043431,
+      "tag": "0026_signature_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1784223528408,
+      "tag": "0027_pembatalan_penawaran",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1784224156440,
+      "tag": "0028_cancellation_fee_termin_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1784275542000,
+      "tag": "0029_remove_recurring_feature",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1784292086988,
+      "tag": "0030_proyek_share_token",
+      "breakpoints": true
     }
   ]
 }

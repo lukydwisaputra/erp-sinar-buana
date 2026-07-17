@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { rabRowSchema } from "@/lib/schemas/penawaran";
 
 export const milestoneAttachmentSchema = z.object({
   name: z.string(),
@@ -58,11 +59,32 @@ export const proyekSchema = z.object({
   statusSystemRole: z.string().nullable(),
   nilaiKontrak: z.number(),
   sphId: z.string().nullable(),
+  sphNumber: z.string().nullable(), // e.g. SPH/006/6.2026 — the source Deal quotation, if any
+  fakturs: z.array(z.object({ id: z.string(), number: z.string().nullable() })), // linked Faktur Induk (a project may have several, over different service subsets)
   assignees: z.array(proyekAssigneeSchema),
   milestones: z.array(milestoneSchema),
   createdAt: z.string(),
+  // Public read-only share link's credential (Proyek "Copy Link") — see
+  // src/lib/proyek/share-service.ts. Just an opaque id; harmless to any
+  // internal role that can already view this project.
+  shareToken: z.string(),
 });
 export type Proyek = z.infer<typeof proyekSchema>;
+
+/** Public read-only projection served by the share-token route — financial
+ * fields (nilaiKontrak/RAB/realisasi/fakturs/sphNumber) are deliberately
+ * excluded, see src/lib/proyek/share-service.ts. */
+export const proyekShareSchema = z.object({
+  nama: z.string(),
+  number: z.string().nullable(),
+  perusahaanNama: z.string(),
+  area: z.string(),
+  tahun: z.number().nullable(),
+  status: z.string(),
+  statusSystemRole: z.string().nullable(),
+  milestones: z.array(milestoneSchema),
+});
+export type ProyekShare = z.infer<typeof proyekShareSchema>;
 
 /** Manual project creation (no SPH) — `proyek-create.tsx`'s form. When
  * `sphId` is set, header fields/layanan/nilaiKontrak are pre-filled server
@@ -86,12 +108,16 @@ export const updateProyekSchema = z.object({
   areaId: z.string().optional(),
   tahun: z.coerce.number().optional(),
   statusId: z.string().optional(),
+  assigneeIds: z.array(z.string()).optional(),
 });
 export type UpdateProyekInput = z.infer<typeof updateProyekSchema>;
 
 export const createMilestoneSchema = z.object({
   parentId: z.string().nullable().optional(),
-  nama: z.string().min(1, "Nama milestone wajib diisi."),
+  // Deliberately no .min(1) — proyek-detail.tsx's "Tambah milestone" creates
+  // the row with an empty name first (autoFocus inline input), then saves
+  // the typed name via updateMilestoneSchema on blur.
+  nama: z.string(),
   assigneeIds: z.array(z.string()).default([]),
   targetDate: z.string().nullable().optional(),
 });
@@ -161,3 +187,23 @@ export const proyekJadwalSchema = z.object({
   rows: z.array(proyekJadwalRowSchema),
 });
 export type ProyekJadwal = z.infer<typeof proyekJadwalSchema>;
+
+// ── Estimasi RAB (proyek-side, Admin/Keuangan only) ──────────────────────────
+// One-time copy of the SPH's quotation_rab_personnel/quotation_rab_direct_costs
+// at project-creation time (see project_rab_estimates/project_rab_items) — a
+// separate record from the SPH's own RAB, not a live link; editing here never
+// changes the source SPH document.
+
+export const proyekRabSchema = z.object({
+  estimateId: z.string(),
+  layananNama: z.string().nullable(),
+  personil: z.array(rabRowSchema),
+  langsung: z.array(rabRowSchema),
+});
+export type ProyekRab = z.infer<typeof proyekRabSchema>;
+
+export const updateProyekRabSchema = z.object({
+  personil: z.array(rabRowSchema),
+  langsung: z.array(rabRowSchema),
+});
+export type UpdateProyekRabInput = z.infer<typeof updateProyekRabSchema>;

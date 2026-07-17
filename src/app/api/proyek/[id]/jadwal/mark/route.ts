@@ -11,7 +11,7 @@ const markSchema = z.object({ rowId: z.string(), weekNumber: z.coerce.number() }
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    const session = requireRole(await getCurrentSession(), "admin", "sales", "tim_teknis");
+    const session = requireRole(await getCurrentSession(), "admin");
     const { id } = await params;
     const { rowId, weekNumber } = markSchema.parse(await request.json());
     await toggleActualWeek(session.id, rowId, weekNumber);

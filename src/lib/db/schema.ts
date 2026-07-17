@@ -116,11 +116,11 @@ export const companies = pgTable("companies", {
   numberMonth: integer("number_month"),
   name: text("name").notNull(),
   address: text("address").notNull(),
-  city: text("city").notNull(),
-  regency: text("regency").notNull(),
+  city: text("city").notNull(), // Kota/Kabupaten (single combined field)
+  province: text("province").notNull(),
   adminAreaId: uuid("admin_area_id"),
   country: text("country").notNull().default("Indonesia"),
-  npwp: text("npwp").notNull(),
+  npwp: text("npwp"),
   email: text("email"),
   isActive: boolean("is_active").notNull().default(true),
   ...bookkeeping,
@@ -135,6 +135,7 @@ export const companyContacts = pgTable("company_contacts", {
   phone: text("phone").notNull(),
   email: text("email"),
   position: text("position"),
+  salutation: text("salutation").notNull().default("bapak_ibu"),
   isPrimary: boolean("is_primary").notNull().default(false),
   ...bookkeeping,
 });
@@ -246,7 +247,6 @@ export const serviceCatalog = pgTable("service_catalog", {
   authorityId: uuid("authority_id").references(() => authorities.id, { onDelete: "set null" }),
   legalBasisId: uuid("legal_basis_id").references(() => legalBases.id, { onDelete: "set null" }),
   standardPrice: money("standard_price"),
-  isRecurring: boolean("is_recurring").notNull().default(false),
   milestoneTemplateId: uuid("milestone_template_id").references(() => milestoneTemplates.id, { onDelete: "set null" }),
   isActive: boolean("is_active").notNull().default(true),
   ...bookkeeping,
@@ -274,6 +274,8 @@ export const employees = pgTable("employees", {
   joinDate: date("join_date"),
   phone: text("phone"),
   email: text("email"),
+  contractFileUrl: text("contract_file_url"),
+  contractFileName: text("contract_file_name"),
   isActive: boolean("is_active").notNull().default(true),
   ...bookkeeping,
 });
@@ -334,6 +336,8 @@ export const quotations = pgTable("quotations", {
   openingSentence: text("opening_sentence"),
   attachmentNote: text("attachment_note"),
   recipientTitle: text("recipient_title"),
+  recipientSalutation: text("recipient_salutation").notNull().default("bapak_ibu"),
+  place: text("place"),
   rincianActive: boolean("rincian_active").notNull().default(true),
   ppnActive: boolean("ppn_active").notNull().default(false),
   ppnPercent: rate("ppn_percent"),
@@ -342,6 +346,11 @@ export const quotations = pgTable("quotations", {
   picOverrideActive: boolean("pic_override_active").notNull().default(false),
   picOverrideName: text("pic_override_name"),
   picOverridePosition: text("pic_override_position"),
+  picOverrideSalutation: text("pic_override_salutation"),
+  useDigitalSignature: boolean("use_digital_signature").notNull().default(false),
+  signatureTemplateId: uuid("signature_template_id").references(() => signatureTemplates.id, { onDelete: "set null" }),
+  cancelReason: text("cancel_reason"),
+  cancelFee: money("cancel_fee"),
   ...bookkeeping,
 });
 
@@ -464,10 +473,11 @@ export const projects = pgTable(
     statusId: uuid("status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
     contractValue: money("contract_value").notNull().default("0"),
     quotationId: uuid("quotation_id").references(() => quotations.id, { onDelete: "set null" }),
-    recurringPeriod: smallint("recurring_period"),
+    cancelReason: text("cancel_reason"),
+    cancelFee: money("cancel_fee"),
+    shareToken: uuid("share_token").notNull().unique().default(sql`gen_random_uuid()`),
     ...bookkeeping,
   },
-  (t) => [unique("projects_recurring_uq").on(t.companyId, t.workYear, t.recurringPeriod)],
 );
 
 export const projectServices = pgTable("project_services", {
@@ -571,6 +581,25 @@ export const rabActuals = pgTable("rab_actuals", {
   ...bookkeeping,
 });
 
+export const projectRabEstimates = pgTable("project_rab_estimates", {
+  id: pk(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, { onDelete: "set null" }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const projectRabItems = pgTable("project_rab_items", {
+  id: pk(),
+  estimateId: uuid("estimate_id").notNull().references(() => projectRabEstimates.id, { onDelete: "cascade" }),
+  section: text("section").notNull(),
+  uraian: text("uraian").notNull(),
+  volume: rate("volume").notNull().default("1"),
+  unit: text("unit"),
+  unitPrice: money("unit_price").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
 // ── Faktur — Faktur Induk / Invoice Termin (db-schema/src/schema/billing.ts) ──
 // Billing hierarchy: Proyek → Faktur Induk (master_invoices) → Invoice Termin
 // (installment_invoices). Numbering ('INV') uses the same assign_document_number
@@ -589,6 +618,10 @@ export const masterInvoices = pgTable("master_invoices", {
   totalCost: money("total_cost").notNull().default("0"),
   statusId: uuid("status_id").references(() => workflowStatuses.id, { onDelete: "set null" }),
   notes: text("notes"),
+  useDigitalSignature: boolean("use_digital_signature").notNull().default(false),
+  signatureTemplateId: uuid("signature_template_id").references(() => signatureTemplates.id, { onDelete: "set null" }),
+  cancelReason: text("cancel_reason"),
+  cancelFee: money("cancel_fee"),
   ...bookkeeping,
 });
 
@@ -606,6 +639,7 @@ export const masterInvoiceTerms = pgTable("master_invoice_terms", {
   masterInvoiceId: uuid("master_invoice_id").notNull().references(() => masterInvoices.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   percentage: rate("percentage").notNull(),
+  pemicu: text("pemicu"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
@@ -619,6 +653,9 @@ export const installmentInvoices = pgTable("installment_invoices", {
   masterInvoiceId: uuid("master_invoice_id").notNull().references(() => masterInvoices.id, { onDelete: "cascade" }),
   termId: uuid("term_id").references(() => masterInvoiceTerms.id, { onDelete: "set null" }),
   label: text("label").notNull(),
+  pemicu: text("pemicu"),
+  isCancellationFee: boolean("is_cancellation_fee").notNull().default(false),
+  referencedInstallmentId: uuid("referenced_installment_id").references((): AnyPgColumn => installmentInvoices.id, { onDelete: "set null" }),
   date: date("date").notNull(),
   dueDate: date("due_date"),
   bankAccountId: uuid("bank_account_id").references(() => bankAccounts.id, { onDelete: "set null" }),
@@ -690,7 +727,7 @@ export const cashflowTaxComponent = pgEnum("cashflow_tax_component", [
   "jasa", "ppn_keluaran", "pph23_dipotong", "pph21", "bpjs", "bonus",
 ]);
 export const cashflowCategorySystemKey = pgEnum("cashflow_category_system_key", [
-  "FAKTUR", "PENGGAJIAN", "PAJAK", "BPJS", "BONUS",
+  "FAKTUR", "PENGGAJIAN", "PAJAK", "BPJS", "BONUS", "REFUND_PEMBATALAN", "ADMIN_PEMBATALAN",
 ]);
 export const expenseNature = pgEnum("expense_nature", ["HPP", "OPERASIONAL", "NON_LABA_RUGI"]);
 
@@ -787,6 +824,47 @@ export const terminTemplateSteps = pgTable("termin_template_steps", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
+export const rabTemplates = pgTable("rab_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const rabTemplateRows = pgTable("rab_template_rows", {
+  id: pk(),
+  templateId: uuid("template_id").notNull().references(() => rabTemplates.id, { onDelete: "cascade" }),
+  section: text("section").notNull(),
+  uraian: text("uraian").notNull(),
+  volume: rate("volume").notNull().default("1"),
+  unit: text("unit"),
+  unitPrice: money("unit_price").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const jadwalTemplates = pgTable("jadwal_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  numMonths: integer("num_months").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const jadwalTemplateRows = pgTable("jadwal_template_rows", {
+  id: pk(),
+  templateId: uuid("template_id").notNull().references(() => jadwalTemplates.id, { onDelete: "cascade" }),
+  activityName: text("activity_name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const jadwalTemplateMarkedWeeks = pgTable("jadwal_template_marked_weeks", {
+  id: pk(),
+  rowId: uuid("row_id").notNull().references(() => jadwalTemplateRows.id, { onDelete: "cascade" }),
+  weekNumber: integer("week_number").notNull(),
+});
+
 export const pdfTemplates = pgTable("pdf_templates", {
   id: pk(),
   name: text("name").notNull(),
@@ -794,6 +872,14 @@ export const pdfTemplates = pgTable("pdf_templates", {
   headerNote: text("header_note").notNull().default(""),
   footerNote: text("footer_note").notNull().default(""),
   isActive: boolean("is_active").notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const signatureTemplates = pgTable("signature_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  signatureImage: text("signature_image").notNull(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

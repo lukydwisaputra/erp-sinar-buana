@@ -7,7 +7,8 @@ import {
   type ProjectRow,
   type MilestoneAssigneeRow,
 } from "@/lib/proyek/mapping";
-import { linkQuotationSchedulesToProject } from "@/lib/proyek/jadwal-service";
+import { cloneQuotationSchedulesToProject } from "@/lib/proyek/jadwal-service";
+import { cloneQuotationRabToProject } from "@/lib/proyek/rab-service";
 import { createMentionNotifications } from "@/lib/notifications/service";
 import { getDefaultStatusId, loadStatus, loadStatusLabelsByIds } from "@/lib/workflow-status";
 import type {
@@ -23,18 +24,21 @@ import type {
 
 export { toProyek } from "@/lib/proyek/mapping";
 
-async function loadCompanyName(tx: Tx, companyId: string): Promise<string> {
+// Exported (not module-private) so src/lib/proyek/share-service.ts's
+// service_role-scoped public lookup can reuse them — they're pure Tx-based
+// reads with no assumption about the caller's role/transaction kind.
+export async function loadCompanyName(tx: Tx, companyId: string): Promise<string> {
   const [row] = await tx.select({ name: schema.companies.name }).from(schema.companies).where(eq(schema.companies.id, companyId)).limit(1);
   return row?.name ?? "";
 }
 
-async function loadAreaLabel(tx: Tx, areaId: string | null): Promise<string | null> {
+export async function loadAreaLabel(tx: Tx, areaId: string | null): Promise<string | null> {
   if (!areaId) return null;
   const [row] = await tx.select({ label: schema.adminAreas.label }).from(schema.adminAreas).where(eq(schema.adminAreas.id, areaId)).limit(1);
   return row?.label ?? null;
 }
 
-async function loadEmployeeNames(tx: Tx, employeeIds: string[]): Promise<Map<string, string>> {
+export async function loadEmployeeNames(tx: Tx, employeeIds: string[]): Promise<Map<string, string>> {
   const ids = [...new Set(employeeIds)];
   if (!ids.length) return new Map();
   const rows = await tx.select({ id: schema.employees.id, name: schema.employees.name }).from(schema.employees).where(inArray(schema.employees.id, ids));
@@ -48,14 +52,30 @@ async function loadServiceNames(tx: Tx, serviceIds: string[]): Promise<Map<strin
   return new Map(rows.map((r) => [r.id, r.name]));
 }
 
+async function loadSphNumber(tx: Tx, quotationId: string | null): Promise<string | null> {
+  if (!quotationId) return null;
+  const [row] = await tx.select({ number: schema.quotations.number }).from(schema.quotations).where(eq(schema.quotations.id, quotationId)).limit(1);
+  return row?.number ?? null;
+}
+
+async function loadFakturs(tx: Tx, projectId: string): Promise<{ id: string; number: string | null }[]> {
+  const rows = await tx
+    .select({ id: schema.masterInvoices.id, number: schema.masterInvoices.number })
+    .from(schema.masterInvoices)
+    .where(and(eq(schema.masterInvoices.projectId, projectId), isNull(schema.masterInvoices.deletedAt)));
+  return rows;
+}
+
 async function assembleProyek(tx: Tx, project: ProjectRow): Promise<Proyek> {
-  const [services, assignees, milestoneRows, companyName, areaLabel, status] = await Promise.all([
+  const [services, assignees, milestoneRows, companyName, areaLabel, status, sphNumber, fakturs] = await Promise.all([
     tx.select().from(schema.projectServices).where(eq(schema.projectServices.projectId, project.id)),
     tx.select().from(schema.projectAssignees).where(eq(schema.projectAssignees.projectId, project.id)),
     tx.select().from(schema.milestones).where(eq(schema.milestones.projectId, project.id)),
     loadCompanyName(tx, project.companyId),
     loadAreaLabel(tx, project.adminAreaId),
     loadStatus(tx, project.statusId),
+    loadSphNumber(tx, project.quotationId),
+    loadFakturs(tx, project.id),
   ]);
 
   const milestoneIds = milestoneRows.map((m) => m.id);
@@ -89,6 +109,8 @@ async function assembleProyek(tx: Tx, project: ProjectRow): Promise<Proyek> {
     milestones: milestoneRows,
     milestoneAssignees,
     milestoneStatusLabelsById,
+    sphNumber,
+    fakturs,
   });
 }
 
@@ -148,50 +170,57 @@ async function loadMilestonesFromTemplate(tx: Tx, projectId: string, serviceIds:
   );
 }
 
+/** Core create logic, usable either standalone (createProyek) or nested
+ * inside another function's transaction — e.g. Penawaran's Deal-transition
+ * cascade (createProyekAndFakturForDeal in penawaran/service.ts), which needs
+ * this to run in the SAME transaction as the status update it's part of. */
+export async function createProyekTx(tx: Tx, userId: string, input: CreateProyekInput): Promise<Proyek> {
+  const statusId = await getDefaultStatusId(tx, "proyek");
+  let companyId = input.perusahaanId;
+  let contractValue = 0;
+  let serviceIds: string[] = input.serviceIds;
+
+  if (input.sphId) {
+    const [quotation] = await tx.select().from(schema.quotations).where(eq(schema.quotations.id, input.sphId)).limit(1);
+    if (!quotation) throw new NotFoundError("Penawaran (SPH) tidak ditemukan.");
+    companyId = quotation.companyId;
+    contractValue = Number(quotation.totalAmount);
+    const items = await tx.select({ serviceId: schema.quotationItems.serviceId }).from(schema.quotationItems).where(eq(schema.quotationItems.quotationId, input.sphId));
+    serviceIds = [...new Set(items.map((i) => i.serviceId).filter((x): x is string => !!x))];
+  }
+
+  const [project] = await tx
+    .insert(schema.projects)
+    .values({
+      name: input.nama,
+      companyId,
+      adminAreaId: input.areaId || null,
+      workYear: input.tahun ?? new Date().getFullYear(),
+      statusId,
+      contractValue: String(contractValue),
+      quotationId: input.sphId || null,
+      createdBy: userId,
+      updatedBy: userId,
+    })
+    .returning();
+
+  if (serviceIds.length) {
+    await tx.insert(schema.projectServices).values(serviceIds.map((serviceId) => ({ projectId: project.id, serviceId })));
+    await loadMilestonesFromTemplate(tx, project.id, serviceIds);
+  }
+  if (input.assigneeIds.length) {
+    await tx.insert(schema.projectAssignees).values(input.assigneeIds.map((employeeId) => ({ projectId: project.id, employeeId, role: "anggota" as const })));
+  }
+  if (input.sphId) {
+    await cloneQuotationSchedulesToProject(tx, input.sphId, project.id);
+    await cloneQuotationRabToProject(tx, input.sphId, project.id);
+  }
+
+  return assembleProyek(tx, project);
+}
+
 export async function createProyek(userId: string, input: CreateProyekInput): Promise<Proyek> {
-  return withUserTransaction(userId, async (tx) => {
-    const statusId = await getDefaultStatusId(tx, "proyek");
-    let companyId = input.perusahaanId;
-    let contractValue = 0;
-    let serviceIds: string[] = input.serviceIds;
-
-    if (input.sphId) {
-      const [quotation] = await tx.select().from(schema.quotations).where(eq(schema.quotations.id, input.sphId)).limit(1);
-      if (!quotation) throw new NotFoundError("Penawaran (SPH) tidak ditemukan.");
-      companyId = quotation.companyId;
-      contractValue = Number(quotation.totalAmount);
-      const items = await tx.select({ serviceId: schema.quotationItems.serviceId }).from(schema.quotationItems).where(eq(schema.quotationItems.quotationId, input.sphId));
-      serviceIds = [...new Set(items.map((i) => i.serviceId).filter((x): x is string => !!x))];
-    }
-
-    const [project] = await tx
-      .insert(schema.projects)
-      .values({
-        name: input.nama,
-        companyId,
-        adminAreaId: input.areaId || null,
-        workYear: input.tahun ?? new Date().getFullYear(),
-        statusId,
-        contractValue: String(contractValue),
-        quotationId: input.sphId || null,
-        createdBy: userId,
-        updatedBy: userId,
-      })
-      .returning();
-
-    if (serviceIds.length) {
-      await tx.insert(schema.projectServices).values(serviceIds.map((serviceId) => ({ projectId: project.id, serviceId })));
-      await loadMilestonesFromTemplate(tx, project.id, serviceIds);
-    }
-    if (input.assigneeIds.length) {
-      await tx.insert(schema.projectAssignees).values(input.assigneeIds.map((employeeId) => ({ projectId: project.id, employeeId, role: "anggota" as const })));
-    }
-    if (input.sphId) {
-      await linkQuotationSchedulesToProject(tx, input.sphId, project.id);
-    }
-
-    return assembleProyek(tx, project);
-  });
+  return withUserTransaction(userId, (tx) => createProyekTx(tx, userId, input));
 }
 
 export async function updateProyek(userId: string, id: string, input: UpdateProyekInput): Promise<Proyek> {
@@ -210,6 +239,13 @@ export async function updateProyek(userId: string, id: string, input: UpdateProy
       })
       .where(eq(schema.projects.id, id))
       .returning();
+
+    if (input.assigneeIds !== undefined) {
+      await tx.delete(schema.projectAssignees).where(eq(schema.projectAssignees.projectId, id));
+      if (input.assigneeIds.length) {
+        await tx.insert(schema.projectAssignees).values(input.assigneeIds.map((employeeId) => ({ projectId: id, employeeId, role: "anggota" as const })));
+      }
+    }
 
     return assembleProyek(tx, project);
   });

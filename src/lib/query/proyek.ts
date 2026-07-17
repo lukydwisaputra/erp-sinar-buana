@@ -7,7 +7,9 @@ import type {
   ProyekLogEntry,
   ProyekComment,
   ProyekJadwal,
-  CreateProyekInput,
+  ProyekRab,
+  UpdateProyekRabInput,
+  UpdateProyekInput,
   CreateMilestoneInput,
   UpdateMilestoneInput,
   AddCommentInput,
@@ -60,29 +62,18 @@ export function useAddMilestoneComment() {
   });
 }
 
-export function useCreateProyek() {
+export function useUpdateProyek() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateProyekInput) => apiClient.post<Proyek>("/api/proyek", input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["proyek"] });
-      toast.success("Proyek berhasil dibuat.");
-    },
-    onError: (error) => toast.error(apiErrorMessage(error, "Gagal membuat proyek.")),
-  });
-}
-
-export function useUpdateProyekStatus() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, statusId }: { id: string; statusId: string }) =>
-      apiClient.patch<Proyek>(`/api/proyek/${id}`, { statusId }),
+    mutationFn: ({ id, input }: { id: string; input: UpdateProyekInput }) =>
+      apiClient.patch<Proyek>(`/api/proyek/${id}`, input),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ["proyek", id] });
       qc.invalidateQueries({ queryKey: ["proyek"] });
       qc.invalidateQueries({ queryKey: ["proyek-log", id] });
+      toast.success("Proyek berhasil diperbarui.");
     },
-    onError: (error) => toast.error(apiErrorMessage(error, "Gagal mengubah status proyek.")),
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal memperbarui proyek.")),
   });
 }
 
@@ -188,6 +179,41 @@ export function useRemoveScheduleRow() {
       qc.invalidateQueries({ queryKey: ["proyek-jadwal", proyekId] });
     },
     onError: (error) => toast.error(apiErrorMessage(error, "Gagal menghapus baris jadwal.")),
+  });
+}
+
+export function useUpdateScheduleMonths() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ proyekId, scheduleId, numMonths }: { proyekId: string; scheduleId: string; numMonths: number }) =>
+      apiClient.patch<ProyekJadwal[]>(`/api/proyek/${proyekId}/jadwal/schedules/${scheduleId}`, { numMonths }),
+    onSuccess: (_, { proyekId }) => {
+      qc.invalidateQueries({ queryKey: ["proyek-jadwal", proyekId] });
+    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal mengubah jumlah bulan.")),
+  });
+}
+
+// ── Estimasi RAB (Admin/Keuangan only) ──────────────────────────────────────
+
+export function useProjectRab(proyekId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["proyek-rab", proyekId],
+    queryFn: () => apiClient.get<ProyekRab[]>(`/api/proyek/${proyekId}/rab`),
+    enabled: enabled && !!proyekId,
+  });
+}
+
+export function useUpdateProjectRab() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ proyekId, estimateId, input }: { proyekId: string; estimateId: string; input: UpdateProyekRabInput }) =>
+      apiClient.patch<ProyekRab>(`/api/proyek/${proyekId}/rab/${estimateId}`, input),
+    onSuccess: (_, { proyekId }) => {
+      qc.invalidateQueries({ queryKey: ["proyek-rab", proyekId] });
+      toast.success("Estimasi RAB berhasil disimpan.");
+    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal menyimpan Estimasi RAB.")),
   });
 }
 

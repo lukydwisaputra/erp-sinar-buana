@@ -26,6 +26,13 @@ insert into cashflow_categories (label, system_key, expense_nature, is_system, s
   ('Bonus',      'BONUS',      'OPERASIONAL',   true, 5)
 on conflict do nothing;
 
+-- ── Cashflow categories — Pembatalan Penawaran (client request). Locked/system
+-- so fn_installment_after_change can look up ADMIN_PEMBATALAN reliably. ──────
+insert into cashflow_categories (label, system_key, expense_nature, is_system, sort_order) values
+  ('Pengembalian Pembatalan',       'REFUND_PEMBATALAN', 'OPERASIONAL', true, 6),
+  ('Biaya Administrasi Pembatalan', 'ADMIN_PEMBATALAN',  'OPERASIONAL', true, 7)
+on conflict do nothing;
+
 -- ── Workflow statuses (label + stable system role) ──────────────────────────
 insert into workflow_statuses (entity, label, system_role, sort_order, is_default) values
   -- Penawaran

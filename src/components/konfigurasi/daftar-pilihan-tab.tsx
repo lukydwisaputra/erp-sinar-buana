@@ -17,18 +17,17 @@ import {
 import { Field, FieldError, FieldLabel, FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onFormInvalid } from "@/lib/form-toast";
 import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
   useOptionList, useCreateOption, useUpdateOption, useDeleteOption,
 } from "@/lib/query/daftar-pilihan";
 import {
-  calcMethod, komponenGajiKind, daftarPilihanKategori,
+  calcMethod, komponenGajiKind,
   type CalcMethod, type KomponenGajiKind, type DaftarPilihanKategori, type OptionItem,
 } from "@/lib/schemas/daftar-pilihan";
 
-const KATEGORI_META: Record<DaftarPilihanKategori, {
+export const KATEGORI_META: Record<DaftarPilihanKategori, {
   label: string; hasPengali?: boolean; hasKomponenGaji?: boolean; hasBank?: boolean;
 }> = {
   jenis_dokumen: { label: "Jenis Dokumen" },
@@ -233,7 +232,7 @@ function OptionFormFields({ meta, register, control, errors }: {
             <Input type="number" step="1" {...register("defaultValue")} />
             <FieldDescription>Nominal (Rp) atau persentase, tergantung cara hitung.</FieldDescription>
           </Field>
-          <Field className="flex-row items-center gap-2">
+          <Field orientation="horizontal">
             <Controller
               name="isEmployerPortion"
               control={control}
@@ -259,7 +258,7 @@ function OptionFormFields({ meta, register, control, errors }: {
             <FieldLabel>Nomor Rekening</FieldLabel>
             <Input {...register("bankNomor")} />
           </Field>
-          <Field className="flex-row items-center gap-2">
+          <Field orientation="horizontal">
             <Controller
               name="isDefault"
               control={control}
@@ -367,7 +366,7 @@ function EditOptionForm({
   );
 }
 
-function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
+export function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
   const meta = KATEGORI_META[kategori];
   const { data, isLoading } = useOptionList(kategori, { includeInactive: true });
   const { mutate: updateOption } = useUpdateOption();
@@ -416,20 +415,5 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
         rowActions={false}
       />
     </div>
-  );
-}
-
-export function DaftarPilihanTab() {
-  return (
-    <Tabs defaultValue="jenis_dokumen">
-      <TabsList variant="line">
-        {daftarPilihanKategori.options.map((k) => (
-          <TabsTrigger key={k} value={k}>{KATEGORI_META[k].label}</TabsTrigger>
-        ))}
-      </TabsList>
-      {daftarPilihanKategori.options.map((k) => (
-        <TabsContent key={k} value={k}><KategoriList kategori={k} /></TabsContent>
-      ))}
-    </Tabs>
   );
 }

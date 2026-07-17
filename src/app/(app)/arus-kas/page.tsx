@@ -4,11 +4,12 @@ import { useSearchParams } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
-import { ArrowRightLeft, CalendarIcon, SlidersHorizontal, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowRightLeft, CalendarIcon, Plus, SlidersHorizontal, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
+import { MoneyInput } from "@/components/shared/money-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -16,13 +17,19 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import {
   ChartContainer, ChartTooltip, ChartTooltipContent,
   ChartLegend, ChartLegendContent, type ChartConfig,
 } from "@/components/ui/chart";
 import { formatRupiah } from "@/lib/format";
-import { useArusKasList } from "@/lib/query/arus-kas";
+import { useArusKasList, useCreateArusKas } from "@/lib/query/arus-kas";
+import { useKategoriArusKasList, useCreateKategoriArusKas } from "@/lib/query/expense-nature";
 import type { ArusKasEntry, ArusKasJenis, ArusKasSumber } from "@/lib/schemas/arus-kas";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -97,6 +104,144 @@ function DateRangeInput({
         <Calendar mode="range" selected={value} onSelect={onChange} locale={idLocale} />
       </PopoverContent>
     </Popover>
+  );
+}
+
+function SingleDateInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = React.useState(false);
+  const date = value ? new Date(value + "T00:00:00") : undefined;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex h-9 w-full items-center gap-2 rounded-md border border-input bg-background px-3 text-left text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <CalendarIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          {date ? date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : <span className="text-muted-foreground">Pilih tanggal</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          locale={idLocale}
+          autoFocus
+          onSelect={(d) => { onChange(d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : ""); setOpen(false); }}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ── Tambah Transaksi ──────────────────────────────────────────────────────
+
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const createEntry = useCreateArusKas();
+  const { data: categories = [] } = useKategoriArusKasList();
+  const createCategory = useCreateKategoriArusKas();
+
+  const [jenis, setJenis] = React.useState<ArusKasJenis>("kredit");
+  const [tanggal, setTanggal] = React.useState(todayISO());
+  const [jumlah, setJumlah] = React.useState(0);
+  const [categoryId, setCategoryId] = React.useState("");
+  const [keterangan, setKeterangan] = React.useState("");
+  const [newCategoryOpen, setNewCategoryOpen] = React.useState(false);
+  const [newCategoryName, setNewCategoryName] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setJenis("kredit"); setTanggal(todayISO()); setJumlah(0);
+      setCategoryId(""); setKeterangan(""); setNewCategoryOpen(false); setNewCategoryName("");
+    }
+  }, [open]);
+
+  const isValid = !!categoryId && jumlah > 0 && !!tanggal;
+
+  const onSubmit = async () => {
+    if (!isValid) return;
+    await createEntry.mutateAsync({ jenis, tanggal, jumlah, categoryId, keterangan: keterangan.trim() || undefined });
+    onOpenChange(false);
+  };
+
+  const onCreateCategory = async () => {
+    const nama = newCategoryName.trim();
+    if (!nama) return;
+    const created = await createCategory.mutateAsync({ kategori: nama, sifat: "operasional" });
+    setCategoryId(created.id);
+    setNewCategoryOpen(false);
+    setNewCategoryName("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Tambah Transaksi</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <Field>
+            <FieldLabel>Jenis</FieldLabel>
+            <Select value={jenis} onValueChange={(v) => setJenis(v as ArusKasJenis)}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {JENIS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field>
+            <FieldLabel>Tanggal</FieldLabel>
+            <SingleDateInput value={tanggal} onChange={setTanggal} />
+          </Field>
+
+          <Field>
+            <FieldLabel>Jumlah</FieldLabel>
+            <MoneyInput defaultValue={jumlah} onValueChange={setJumlah} className="w-full" />
+          </Field>
+
+          <Field>
+            <FieldLabel>Kategori</FieldLabel>
+            <Select
+              value={categoryId}
+              onValueChange={(v) => { if (v === "__new__") { setNewCategoryOpen(true); return; } setCategoryId(v); }}
+            >
+              <SelectTrigger className="w-full"><SelectValue placeholder="Pilih kategori…" /></SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.kategori}</SelectItem>)}
+                <SelectSeparator />
+                <SelectItem value="__new__">+ Tambah kategori baru…</SelectItem>
+              </SelectContent>
+            </Select>
+            {newCategoryOpen && (
+              <div className="flex items-center gap-2 pt-1">
+                <Input
+                  autoFocus
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Nama kategori baru"
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onCreateCategory(); } }}
+                />
+                <Button type="button" size="sm" loading={createCategory.isPending} onClick={onCreateCategory}>Tambah</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setNewCategoryOpen(false); setNewCategoryName(""); }}>Batal</Button>
+              </div>
+            )}
+          </Field>
+
+          <Field>
+            <FieldLabel>Keterangan (opsional)</FieldLabel>
+            <Input value={keterangan} onChange={(e) => setKeterangan(e.target.value)} placeholder="Keterangan transaksi" />
+          </Field>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
+          <Button loading={createEntry.isPending} disabled={!isValid} onClick={onSubmit}>Simpan</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -250,6 +395,7 @@ function ArusKasPageContent() {
   const searchParams = useSearchParams();
   const kategoriParam = searchParams.get("kategori");
 
+  const [createOpen, setCreateOpen] = React.useState(false);
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [pendingJenis, setPendingJenis] = React.useState<ArusKasJenis[]>([]);
   const [pendingKategori, setPendingKategori] = React.useState<string[]>([]);
@@ -354,6 +500,8 @@ function ArusKasPageContent() {
         <h1 className="text-xl font-semibold tracking-tight">Arus Kas</h1>
       </div>
 
+      <CreateEntryDialog open={createOpen} onOpenChange={setCreateOpen} />
+
       {!isLoading && !isError && <TrendLineChart entries={allEntries} dateRange={appliedTanggal} />}
       {!isLoading && !isError && <SummaryCards entries={allEntries} showDelta={!hasDateFilter} />}
       {!isLoading && !isError && <Separator />}
@@ -371,11 +519,16 @@ function ArusKasPageContent() {
           defaultSorting={[{ id: "tanggal", desc: true }]}
           rowActions={false}
           toolbarActions={
-            <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
-              <SlidersHorizontal className="size-3.5" />
-              Filter
-              {hasFilter && <Badge variant="secondary" className="px-1.5 py-0 text-xs">{filterCount}</Badge>}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
+                <SlidersHorizontal className="size-3.5" />
+                Filter
+                {hasFilter && <Badge variant="secondary" className="px-1.5 py-0 text-xs">{filterCount}</Badge>}
+              </Button>
+              <Button size="sm" className="h-9" onClick={() => setCreateOpen(true)}>
+                <Plus className="size-4" /> Tambah Transaksi
+              </Button>
+            </div>
           }
         />
       )}

@@ -150,6 +150,10 @@ export default function ProyekPage() {
         </button>
       ),
     },
+    {
+      accessorKey: "sphNumber", header: "No. SPH", meta: { mono: true },
+      cell: ({ row }) => row.original.sphNumber ?? "—",
+    },
     { accessorKey: "perusahaanNama", header: "Perusahaan", meta: { className: "min-w-40" } },
     {
       accessorKey: "layanan", header: "Layanan",

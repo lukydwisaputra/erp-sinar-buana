@@ -9,7 +9,8 @@ function mkProyek(overrides: Partial<Proyek> = {}): Proyek {
     id: "P1", number: "PRY/001", nama: "Proyek Satu", perusahaanId: "C1", perusahaanNama: "PT Klien",
     areaId: null, area: "Jakarta", tahun: 2026, layanan: [{ serviceId: "s1", nama: "AMDAL" }],
     statusId: null, status: "Berjalan", statusSystemRole: null, nilaiKontrak: 100_000_000,
-    sphId: null, assignees: [], milestones: [], createdAt: "2026-01-01T00:00:00.000Z",
+    sphId: null, sphNumber: null, fakturs: [], assignees: [], milestones: [], createdAt: "2026-01-01T00:00:00.000Z",
+    shareToken: "token-P1",
     ...overrides,
   };
 }

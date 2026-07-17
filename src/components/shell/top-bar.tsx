@@ -191,7 +191,7 @@ export function TopBar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem><User className="mr-2 size-4" /> Profil</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/profil")}><User className="mr-2 size-4" /> Profil</DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onClick={handleLogout}>
               <LogOut className="mr-2 size-4" /> Keluar
             </DropdownMenuItem>

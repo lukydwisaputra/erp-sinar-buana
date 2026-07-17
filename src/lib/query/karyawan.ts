@@ -1,8 +1,24 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { apiClient, apiErrorMessage } from "@/lib/api-client";
+import { apiClient, apiErrorMessage, ApiError } from "@/lib/api-client";
 import type { Karyawan, CreateKaryawanInput, UpdateKaryawanInput } from "@/lib/schemas/karyawan";
+
+/** Multipart upload, same shape as company-profile's useUploadLogo — bypasses
+ * apiClient's hardcoded JSON content type. */
+export function useUploadKontrak() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/karyawan/kontrak", { method: "POST", body: form });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new ApiError(body?.error ?? "Gagal mengunggah surat kontrak.", res.status);
+      return body as { url: string; fileName: string };
+    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal mengunggah surat kontrak. Coba lagi.")),
+  });
+}
 
 export function useKaryawanList() {
   return useQuery({

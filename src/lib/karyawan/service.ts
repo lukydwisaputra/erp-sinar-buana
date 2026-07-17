@@ -110,6 +110,8 @@ export async function createEmployee(userId: string, input: CreateKaryawanInput)
         email: input.email || null,
         phone: input.telepon || null,
         joinDate: input.tanggalMasuk,
+        contractFileUrl: input.kontrakUrl || null,
+        contractFileName: input.kontrakFileName || null,
         createdBy: userId,
         updatedBy: userId,
       })
@@ -148,6 +150,8 @@ export async function updateEmployee(
         ...(input.email !== undefined && { email: input.email || null }),
         ...(input.telepon !== undefined && { phone: input.telepon || null }),
         ...(input.tanggalMasuk !== undefined && { joinDate: input.tanggalMasuk }),
+        ...(input.kontrakUrl !== undefined && { contractFileUrl: input.kontrakUrl || null }),
+        ...(input.kontrakFileName !== undefined && { contractFileName: input.kontrakFileName || null }),
         ...(input.status !== undefined && { isActive: input.status === "aktif" }),
         updatedBy: userId,
       })

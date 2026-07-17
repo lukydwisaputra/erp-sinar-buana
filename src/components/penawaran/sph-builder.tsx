@@ -6,14 +6,12 @@ import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { usePending } from "@/lib/use-pending";
-import { createPortal } from "react-dom";
-import { Download, Lock, Save, Send, XCircle } from "lucide-react";
+import { Download, Lock, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { DocumentBuilder } from "@/components/shared/document/document-builder";
 import { StatusBadge, type StatusBadgeConfig } from "@/components/shared/status-badge";
-import { DocumentFooter } from "@/components/shared/document/document-footer";
 import { ScaleToFit } from "@/components/shared/scale-to-fit";
 import {
   SphForm,
@@ -23,10 +21,13 @@ import {
 import { SphCoverLetter } from "@/components/penawaran/sph-cover-letter";
 import { SphDocumentPackage } from "@/components/penawaran/sph-document-package";
 import { KirimDokumenDialog, type KirimTujuan } from "@/components/shared/document/kirim-dokumen-dialog";
+import { CancelPembatalanModal } from "@/components/shared/cancel-pembatalan-modal";
+import { useCancelPembatalan } from "@/lib/query/pembatalan";
 import { defaultItemRab, defaultItemJadwal } from "@/lib/sph-templates";
 import { onFormInvalid } from "@/lib/form-toast";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
 import { useKatalogList } from "@/lib/query/katalog";
+import { useSignatureTemplateList } from "@/lib/query/signature-templates";
 import {
   sphFormSchema,
   type SphFormValues,
@@ -50,7 +51,7 @@ const SPH_STATUS: Record<SphStatus, StatusBadgeConfig> = {
 import { useSph, useCreatePenawaran, useUpdatePenawaran, useUpdatePenawaranStatus } from "@/lib/query/penawaran";
 import { useSession } from "@/lib/query/session";
 import { useTaxSettings } from "@/lib/query/tax-settings";
-import { isClientPortal } from "@/lib/auth/rbac";
+import { isClientPortal, isAdminUser } from "@/lib/auth/rbac";
 
 const emptyValues: SphFormValues = {
   perusahaanId: "",
@@ -80,10 +81,15 @@ const emptyValues: SphFormValues = {
   pph23Aktif: false,
   pph23Persen: 2,
   jabatanPenerima: "Direktur",
+  salutasiPenerima: "bapak_ibu",
+  tempat: "",
   picAktif: false,
   picNama: "",
   picJabatan: "",
+  picSalutation: "bapak_ibu",
   kelengkapan: [],
+  useDigitalSignature: false,
+  signatureTemplateId: null,
 };
 
 function sphToFormValues(existing: Sph): SphFormValues {
@@ -105,10 +111,15 @@ function sphToFormValues(existing: Sph): SphFormValues {
     pph23Aktif:       existing.pph23Aktif,
     pph23Persen:      existing.pph23Persen,
     jabatanPenerima:  existing.jabatanPenerima,
+    salutasiPenerima: existing.salutasiPenerima,
+    tempat:           existing.tempat,
     picAktif:         existing.picAktif,
     picNama:          existing.picNama,
     picJabatan:       existing.picJabatan,
+    picSalutation:    existing.picSalutation,
     kelengkapan:      existing.kelengkapan ?? [],
+    useDigitalSignature: existing.useDigitalSignature,
+    signatureTemplateId: existing.signatureTemplateId,
   };
 }
 
@@ -118,69 +129,6 @@ function SphHeaderBar({ noSph, status }: { noSph: string; status: SphStatus }) {
       <span className="text-sm font-semibold">{noSph}</span>
       <StatusBadge status={status} map={SPH_STATUS} />
     </div>
-  );
-}
-
-function SphDealView({ existing, noSph }: { existing: Sph; noSph: string }) {
-  const [mounted, setMounted] = React.useState(false);
-  const [kirimOpen, setKirimOpen] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-  const { data: perusahaanOptions = [] } = usePerusahaanList();
-
-  const values = sphToFormValues(existing);
-
-  return (
-    <>
-      <div className="space-y-4">
-        <Alert>
-          <Lock className="size-4" />
-          <AlertTitle>Read Only</AlertTitle>
-          <AlertDescription>
-            Penawaran ini sudah menjadi Deal dan tidak dapat diubah.
-          </AlertDescription>
-        </Alert>
-        <div className="overflow-hidden rounded-lg border border-border">
-          <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
-            <SphHeaderBar noSph={noSph} status={existing.status} />
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
-                <Download className="size-4" /> Unduh
-              </Button>
-              <Button size="sm" onClick={() => setKirimOpen(true)}>
-                <Send className="size-4" /> Kirim
-              </Button>
-            </div>
-          </div>
-          <div className="p-4">
-            <div className="mx-auto max-w-[794px]">
-              <ScaleToFit>
-                <SphCoverLetter values={values} noSph={noSph} />
-              </ScaleToFit>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <KirimDokumenDialog
-        open={kirimOpen}
-        onOpenChange={setKirimOpen}
-        jenisDokumen="sph"
-        dokumenId={existing.id}
-        dokumenNomor={noSph}
-        tujuanOptions={tujuanOptionsFor(perusahaanOptions, existing.perusahaanId)}
-        tokens={{ nama_perusahaan: perusahaanOptions.find((p) => p.id === existing.perusahaanId)?.nama ?? "" }}
-      />
-
-      {mounted && createPortal(
-        <div className="doc-print hidden print:block">
-          <SphDocumentPackage values={values} noSph={noSph} />
-          <div className="doc-print-footer" aria-hidden>
-            <DocumentFooter />
-          </div>
-        </div>,
-        document.body,
-      )}
-    </>
   );
 }
 
@@ -206,7 +154,7 @@ function SphClientView({ existing, noSph }: { existing: Sph; noSph: string }) {
         <div className="p-4">
           <div className="mx-auto max-w-[794px]">
             <ScaleToFit>
-              <SphCoverLetter values={values} noSph={noSph} />
+              <SphCoverLetter values={values} noSph={noSph} signatureImage={existing.signatureImage} />
             </ScaleToFit>
           </div>
         </div>
@@ -215,56 +163,9 @@ function SphClientView({ existing, noSph }: { existing: Sph; noSph: string }) {
   );
 }
 
-function SphCancelledView({ existing, noSph }: { existing: Sph; noSph: string }) {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-
-  const values = sphToFormValues(existing);
-  const isDitolak = existing.status === "ditolak";
-
-  return (
-    <>
-      <div className="space-y-4">
-        <Alert variant="destructive">
-          <XCircle className="size-4" />
-          <AlertTitle>{isDitolak ? "Ditolak" : "Dibatalkan"}</AlertTitle>
-          <AlertDescription>
-            {isDitolak
-              ? "Penawaran ini telah ditolak dan tidak dapat diubah."
-              : "Penawaran ini telah dibatalkan dan tidak dapat diubah."}
-          </AlertDescription>
-        </Alert>
-        <div className="overflow-hidden rounded-lg border border-border">
-          <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
-            <SphHeaderBar noSph={noSph} status={existing.status} />
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
-              <Download className="size-4" /> Unduh
-            </Button>
-          </div>
-          <div className="p-4">
-            <div className="mx-auto max-w-[794px]">
-              <ScaleToFit>
-                <SphCoverLetter values={values} noSph={noSph} />
-              </ScaleToFit>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {mounted && createPortal(
-        <div className="doc-print hidden print:block">
-          <SphDocumentPackage values={values} noSph={noSph} />
-          <div className="doc-print-footer" aria-hidden>
-            <DocumentFooter />
-          </div>
-        </div>,
-        document.body,
-      )}
-    </>
-  );
-}
-
 function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
+  const { data: session } = useSession();
+  const isAdmin = isAdminUser(session);
   const { data: tarif } = useTaxSettings();
   const { data: perusahaanOptions = [] } = usePerusahaanList();
   const { data: katalogData = [] } = useKatalogList();
@@ -297,10 +198,15 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
           pph23Aktif: existing.pph23Aktif,
           pph23Persen: existing.pph23Persen,
           jabatanPenerima: existing.jabatanPenerima,
+          salutasiPenerima: existing.salutasiPenerima,
+          tempat: existing.tempat,
           picAktif: existing.picAktif,
           picNama: existing.picNama,
           picJabatan: existing.picJabatan,
+          picSalutation: existing.picSalutation,
           kelengkapan: existing.kelengkapan,
+          useDigitalSignature: existing.useDigitalSignature,
+          signatureTemplateId: existing.signatureTemplateId,
         }
       : emptyValues,
   });
@@ -318,10 +224,16 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
   }, [existing, tarif, form]);
 
   const values = form.watch();
+  const { data: signatureTemplates = [] } = useSignatureTemplateList();
+  const signatureImage = values.useDigitalSignature
+    ? signatureTemplates.find((s) => s.id === values.signatureTemplateId)?.signatureImage ?? null
+    : null;
 
   const router = useRouter();
   const [saving, runSave] = usePending();
   const [kirimOpen, setKirimOpen] = React.useState(false);
+  const [cancelOpen, setCancelOpen] = React.useState(false);
+  const cancelPembatalan = useCancelPembatalan();
   const updateStatus = useUpdatePenawaranStatus();
   const createSph = useCreatePenawaran();
   const updateSph = useUpdatePenawaran();
@@ -360,13 +272,18 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
         subtitle="Susun Surat Penawaran Harga. Pratinjau diperbarui otomatis."
         previewTitle="Pratinjau SPH"
         actions={
-          <Button variant="secondary" loading={saving} onClick={onSimpan}>
-            <Save className="size-4" /> Simpan
-          </Button>
+          <>
+            {existing && existing.status !== "dibatalkan" && isAdmin && (
+              <Button variant="destructive" onClick={() => setCancelOpen(true)}>Batalkan</Button>
+            )}
+            <Button variant="secondary" loading={saving} onClick={onSimpan}>
+              <Save className="size-4" /> Simpan
+            </Button>
+          </>
         }
         form={<SphForm form={form} perusahaanOptions={perusahaanOptions} layananOptions={layananOptions} />}
-        sidePreview={<ScaleToFit><SphCoverLetter values={values} noSph={noSph} /></ScaleToFit>}
-        doc={<SphDocumentPackage values={values} noSph={noSph} />}
+        sidePreview={<ScaleToFit><SphCoverLetter values={values} noSph={noSph} signatureImage={signatureImage} /></ScaleToFit>}
+        doc={<SphDocumentPackage values={values} noSph={noSph} signatureImage={signatureImage} />}
         onKirim={onKirim}
       />
 
@@ -385,6 +302,20 @@ function SphEditView({ existing, noSph }: { existing?: Sph; noSph: string }) {
           }}
         />
       )}
+
+      {existing && (
+        <CancelPembatalanModal
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+          isPending={cancelPembatalan.isPending}
+          onConfirm={({ alasan, biayaAdministrasi }) => {
+            cancelPembatalan.mutate(
+              { sphId: existing.id, alasan, biayaAdministrasi },
+              { onSuccess: () => setCancelOpen(false) },
+            );
+          }}
+        />
+      )}
     </>
   );
 }
@@ -394,20 +325,14 @@ export function SphBuilder({ existing }: { existing?: Sph }) {
   const { data: session } = useSession();
   const sph = live ?? existing;
   const noSph = sph?.number ?? "Draf Baru";
-  const status = sph?.status;
 
-  // Client portal — always read-only, regardless of status. Checked first:
-  // a draft/terkirim SPH the client can see is still not theirs to edit.
+  // Client portal — always read-only, regardless of status (an RBAC
+  // restriction, not a status one — a client-linked Viewer never edits their
+  // own SPH). Every other status stays on the editable form: nothing is
+  // read-only because of status anymore (Pembatalan Penawaran client
+  // request) — Deal/Ditolak/Dibatalkan SPH can all still be adjusted.
   if (sph && isClientPortal(session)) {
     return <SphClientView existing={sph} noSph={noSph} />;
-  }
-
-  if (sph && status === "deal") {
-    return <SphDealView existing={sph} noSph={noSph} />;
-  }
-
-  if (sph && (status === "dibatalkan" || status === "ditolak")) {
-    return <SphCancelledView existing={sph} noSph={noSph} />;
   }
 
   return <SphEditView existing={sph} noSph={noSph} />;

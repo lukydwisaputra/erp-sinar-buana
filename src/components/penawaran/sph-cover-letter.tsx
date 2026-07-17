@@ -3,21 +3,29 @@ import { pdfTemplateNotesCache } from "@/lib/pdf-templates/cache";
 import { formatRupiah, formatTanggalPanjang as tglPanjang, titleCase } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 import { totalPenawaran } from "@/lib/sph";
-import { afterTaxAmount } from "@/lib/faktur";
+import { taxBreakdown } from "@/lib/faktur";
 import type { SphFormValues } from "@/lib/schemas/penawaran";
+import { SALUTATION_LABEL } from "@/lib/schemas/common";
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
 
 export function SphCoverLetter({
   values,
   noSph,
+  signatureImage,
 }: {
   values: SphFormValues;
   noSph: string;
+  /** Resolved digital-signature image (data URI) — null/absent leaves the
+   * existing blank-space-for-manual-signature treatment untouched. */
+  signatureImage?: string | null;
 }): React.JSX.Element {
   const companyProfile = companyProfileCache.current;
   const { headerNote, footerNote } = pdfTemplateNotesCache.current.sph;
   const total = totalPenawaran(values.items);
+  const tax = taxBreakdown(total, values.ppnAktif, values.ppnPersen, values.pph23Aktif, values.pph23Persen);
+  const taxActive = values.ppnAktif || values.pph23Aktif;
+  const totalSetelahPajak = taxActive ? tax.net : total;
 
   // Lampiran line: the typed "Dokumen pendukung" plus the RAB & Estimasi Waktu
   // appendix (only when the toggle is on), joined by ", ". Empty → long dash.
@@ -53,16 +61,12 @@ export function SphCoverLetter({
         {/* 3. Kepada */}
         <div className="mt-6">
           <p>Kepada Yth.</p>
+          <p>{SALUTATION_LABEL[values.salutasiPenerima]} {values.jabatanPenerima || "Direktur"}</p>
           <p className="font-semibold">{values.perusahaanNama || "—"}</p>
-          {values.picAktif && values.picNama ? (
-            <>
-              <p>u.p. Bapak/Ibu {values.picNama}</p>
-              <p>{values.picJabatan}</p>
-            </>
-          ) : (
-            <p>u.p. Bapak/Ibu {values.jabatanPenerima || "Direktur"}</p>
+          {values.picAktif && values.picNama && (
+            <p>u.p. {SALUTATION_LABEL[values.picSalutation]} {values.picNama}</p>
           )}
-          <p>Di Tempat</p>
+          <p>Di {values.tempat || "Tempat"}</p>
         </div>
 
         {/* Header note — Konfigurasi > Template > PDF, admin-configured per
@@ -120,33 +124,31 @@ export function SphCoverLetter({
                 {formatRupiah(total)}
               </td>
             </tr>
-            {/* Per-termin after-tax rows (only when termin + any tax active) */}
-            {values.termin.length > 0 && (values.ppnAktif || values.pph23Aktif) && (
+            {/* DPP/PPN/PPh breakdown (only when a tax is active) */}
+            {taxActive && (
               <>
-                {values.termin.map((t, i) => {
-                  const nilaiTermin = ((Number(t.persen) || 0) / 100) * total;
-                  const net = afterTaxAmount(
-                    nilaiTermin,
-                    values.ppnAktif,
-                    values.ppnPersen,
-                    values.pph23Aktif,
-                    values.pph23Persen,
-                  );
-                  return (
-                    <tr key={i}>
-                      <td
-                        colSpan={4}
-                        className="border border-[var(--doc-rule)] px-2 py-1 text-right"
-                      >
-                        {t.label}{t.pemicu ? ` — ${t.pemicu}` : ""}{" "}
-                        <span className="text-[9px]">(Termasuk Pajak)</span>
-                      </td>
-                      <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
-                        {formatRupiah(net)}
-                      </td>
-                    </tr>
-                  );
-                })}
+                <tr>
+                  <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">DPP</td>
+                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                    {formatRupiah(tax.dpp)}
+                  </td>
+                </tr>
+                {tax.ppn > 0 && (
+                  <tr>
+                    <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">PPN</td>
+                    <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                      {formatRupiah(tax.ppn)}
+                    </td>
+                  </tr>
+                )}
+                {tax.pph23 > 0 && (
+                  <tr>
+                    <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">PPh</td>
+                    <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums text-destructive">
+                      {formatRupiah(-tax.pph23)}
+                    </td>
+                  </tr>
+                )}
                 <tr>
                   <td
                     colSpan={4}
@@ -155,21 +157,7 @@ export function SphCoverLetter({
                     TOTAL BIAYA SETELAH PAJAK
                   </td>
                   <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
-                    {formatRupiah(
-                      values.termin.reduce((s, t) => {
-                        const nilaiTermin = ((Number(t.persen) || 0) / 100) * total;
-                        return (
-                          s +
-                          afterTaxAmount(
-                            nilaiTermin,
-                            values.ppnAktif,
-                            values.ppnPersen,
-                            values.pph23Aktif,
-                            values.pph23Persen,
-                          )
-                        );
-                      }, 0),
-                    )}
+                    {formatRupiah(totalSetelahPajak)}
                   </td>
                 </tr>
               </>
@@ -178,7 +166,7 @@ export function SphCoverLetter({
             <tr>
               <td colSpan={5} className="border border-[var(--doc-rule)] px-2 py-1 text-center">
                 <span className="font-semibold">Terbilang: </span>
-                <span className="font-bold italic">{titleCase(terbilang(total))} Rupiah</span>
+                <span className="font-bold italic">{titleCase(terbilang(totalSetelahPajak))} Rupiah</span>
               </td>
             </tr>
           </tbody>
@@ -223,10 +211,17 @@ export function SphCoverLetter({
         {/* 8. Signature */}
         <div className="mt-8 flex flex-col items-end text-right">
           <p>Hormat Kami,</p>
-          {/* Approximates the round company stamp. */}
-          <div className="my-2 flex size-20 rotate-[-8deg] items-center justify-center rounded-full border-2 border-[var(--doc-blue)]/60 text-[var(--doc-blue)]/70">
-            <span className="text-base font-bold tracking-tight">SBMJ</span>
-          </div>
+          {signatureImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={signatureImage} alt="Tanda tangan" className="my-2 h-20 w-auto" />
+          ) : (
+            <>
+              {/* Approximates the round company stamp — blank space for a manual signature + wet stamp. */}
+              <div className="my-2 flex size-20 rotate-[-8deg] items-center justify-center rounded-full border-2 border-[var(--doc-blue)]/60 text-[var(--doc-blue)]/70">
+                <span className="text-base font-bold tracking-tight">SBMJ</span>
+              </div>
+            </>
+          )}
           <p className="font-bold underline">{companyProfile.direktur.nama}</p>
           <p className="font-bold">{companyProfile.direktur.jabatan}</p>
         </div>

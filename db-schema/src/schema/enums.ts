@@ -104,6 +104,10 @@ export const cashflowCategorySystemKey = pgEnum("cashflow_category_system_key", 
   "PAJAK",
   "BPJS",
   "BONUS",
+  // Pembatalan Penawaran (client request) — locked so fn_installment_after_change
+  // can look these up reliably regardless of label renames.
+  "REFUND_PEMBATALAN",
+  "ADMIN_PEMBATALAN",
 ]);
 
 /**

@@ -45,6 +45,8 @@ export function toKaryawan(
     email: employee.email,
     telepon: employee.phone,
     tanggalMasuk: employee.joinDate,
+    kontrakUrl: employee.contractFileUrl,
+    kontrakFileName: employee.contractFileName,
     status: employee.isActive ? "aktif" : "terarsip",
   };
 }

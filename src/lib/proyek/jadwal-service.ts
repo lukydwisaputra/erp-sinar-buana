@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { withUserTransaction, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { toProyekJadwal } from "@/lib/proyek/jadwal-mapping";
@@ -36,12 +36,55 @@ export async function getProjectSchedules(userId: string, projectId: string): Pr
   });
 }
 
-/** The Deal-time "take-over" — points the SAME activity_schedules rows
- * Penawaran wrote at SPH time at the new project, rather than creating fresh
- * ones (schedules.ts: "Attached to a quotation, a project, or both (after
- * Deal)"). Runs inside the caller's transaction (createProyek), not its own. */
-export async function linkQuotationSchedulesToProject(tx: Tx, quotationId: string, projectId: string): Promise<void> {
-  await tx.update(schema.activitySchedules).set({ projectId }).where(eq(schema.activitySchedules.quotationId, quotationId));
+/** The Deal-time hand-off — CLONES the activity_schedules/rows/marked_weeks
+ * (rencana only, isActual=0) Penawaran wrote at SPH time into fresh
+ * project-owned rows, rather than re-pointing the same ones. The SPH's own
+ * Estimasi Jadwal stays exactly as authored (frozen "planning" record); the
+ * project gets its own independent, editable copy (the "actual execution
+ * plan") — two records, not one shared row, so editing either side never
+ * touches the other. Runs inside the caller's transaction (createProyek),
+ * not its own. */
+export async function cloneQuotationSchedulesToProject(tx: Tx, quotationId: string, projectId: string): Promise<void> {
+  const sourceSchedules = await tx.select().from(schema.activitySchedules).where(eq(schema.activitySchedules.quotationId, quotationId));
+  if (!sourceSchedules.length) return;
+
+  const sourceScheduleIds = sourceSchedules.map((s) => s.id);
+  const sourceRows = await tx.select().from(schema.activityScheduleRows).where(inArray(schema.activityScheduleRows.scheduleId, sourceScheduleIds));
+  const sourceRowIds = sourceRows.map((r) => r.id);
+  const sourceMarkedWeeks = sourceRowIds.length
+    ? await tx.select().from(schema.activityScheduleMarkedWeeks).where(
+        and(inArray(schema.activityScheduleMarkedWeeks.rowId, sourceRowIds), eq(schema.activityScheduleMarkedWeeks.isActual, 0)),
+      )
+    : [];
+
+  for (const source of sourceSchedules) {
+    const [cloned] = await tx
+      .insert(schema.activitySchedules)
+      .values({
+        projectId,
+        quotationItemId: source.quotationItemId, // traceability only — which service this maps to
+        numMonths: source.numMonths,
+        weeksPerMonth: source.weeksPerMonth,
+      })
+      .returning();
+
+    const rowsForSchedule = sourceRows.filter((r) => r.scheduleId === source.id);
+    if (!rowsForSchedule.length) continue;
+
+    const clonedRows = await tx
+      .insert(schema.activityScheduleRows)
+      .values(rowsForSchedule.map((r) => ({ scheduleId: cloned.id, activityName: r.activityName, sortOrder: r.sortOrder })))
+      .returning();
+
+    const weekValues = rowsForSchedule.flatMap((sourceRow, i) =>
+      sourceMarkedWeeks
+        .filter((mw) => mw.rowId === sourceRow.id)
+        .map((mw) => ({ rowId: clonedRows[i].id, weekNumber: mw.weekNumber, isActual: 0 })),
+    );
+    if (weekValues.length) {
+      await tx.insert(schema.activityScheduleMarkedWeeks).values(weekValues);
+    }
+  }
 }
 
 /** Toggle one (rowId, weekNumber) actual-progress mark on/off — incremental,
@@ -93,6 +136,34 @@ export async function addScheduleRow(
 export async function removeScheduleRow(userId: string, projectId: string, rowId: string): Promise<ProyekJadwal[]> {
   await withUserTransaction(userId, async (tx) => {
     await tx.delete(schema.activityScheduleRows).where(eq(schema.activityScheduleRows.id, rowId));
+  });
+  return getProjectSchedules(userId, projectId);
+}
+
+/** Changes a schedule's month count (Admin-only, matches the SPH JadwalEditor's
+ * +/- control) — clips any marked weeks beyond the new max week, same as the
+ * SPH-side editor does. */
+export async function updateScheduleMonths(
+  userId: string,
+  projectId: string,
+  scheduleId: string,
+  numMonths: number,
+): Promise<ProyekJadwal[]> {
+  await withUserTransaction(userId, async (tx) => {
+    const clamped = Math.max(1, numMonths);
+    const [schedule] = await tx
+      .update(schema.activitySchedules)
+      .set({ numMonths: clamped })
+      .where(eq(schema.activitySchedules.id, scheduleId))
+      .returning();
+    const maxWeek = clamped * schedule.weeksPerMonth;
+    const rows = await tx.select({ id: schema.activityScheduleRows.id }).from(schema.activityScheduleRows).where(eq(schema.activityScheduleRows.scheduleId, scheduleId));
+    const rowIds = rows.map((r) => r.id);
+    if (rowIds.length) {
+      await tx.delete(schema.activityScheduleMarkedWeeks).where(
+        and(inArray(schema.activityScheduleMarkedWeeks.rowId, rowIds), gt(schema.activityScheduleMarkedWeeks.weekNumber, maxWeek)),
+      );
+    }
   });
   return getProjectSchedules(userId, projectId);
 }

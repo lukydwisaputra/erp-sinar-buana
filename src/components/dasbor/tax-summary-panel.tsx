@@ -55,7 +55,7 @@ export function TaxSummaryPanel({ summary, isLoading }: TaxSummaryPanelProps) {
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Kredit PPh 23 Terkumpul</p>
+              <p className="text-xs text-muted-foreground">Kredit PPh Terkumpul</p>
               <p className="mt-1 font-mono text-lg font-semibold"><MaskedValue>{formatRupiah(summary.pph23KreditTerkumpul)}</MaskedValue></p>
             </div>
           </div>

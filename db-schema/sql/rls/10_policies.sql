@@ -42,6 +42,9 @@ declare
     'cashflow_categories','workflow_statuses','message_templates',
     'milestone_templates','milestone_template_steps',
     'termin_templates','termin_template_steps','pdf_templates',
+    'signature_templates',
+    'rab_templates','rab_template_rows',
+    'jadwal_templates','jadwal_template_rows','jadwal_template_marked_weeks',
     'kelengkapan_templates','kelengkapan_template_items',
     'company_profile','tax_settings','numbering_settings','dashboard_settings',
     'privacy_settings'
@@ -295,6 +298,23 @@ create policy tax_settings_write on tax_settings for all to authenticated
 create policy rab_actuals_sel on rab_actuals for select to authenticated
   using (is_finance());
 create policy rab_actuals_write on rab_actuals for all to authenticated
+  using (is_finance()) with check (is_finance());
+
+-- ── 3i-ter. Estimasi RAB (per-project, one-time copy of the SPH's RAB) —
+-- same Admin/Finance-only rule as Realisasi RAB above; Tim Teknis/Sales/
+-- client never see project cost planning, only progress. ───────────────────
+drop policy if exists project_rab_estimates_sel on project_rab_estimates;
+create policy project_rab_estimates_sel on project_rab_estimates for select to authenticated
+  using (is_finance());
+drop policy if exists project_rab_estimates_write on project_rab_estimates;
+create policy project_rab_estimates_write on project_rab_estimates for all to authenticated
+  using (is_finance()) with check (is_finance());
+
+drop policy if exists project_rab_items_sel on project_rab_items;
+create policy project_rab_items_sel on project_rab_items for select to authenticated
+  using (is_finance());
+drop policy if exists project_rab_items_write on project_rab_items;
+create policy project_rab_items_write on project_rab_items for all to authenticated
   using (is_finance()) with check (is_finance());
 
 -- ── 3j. Akun Pengguna — self read; Admin manages ───────────────────────────

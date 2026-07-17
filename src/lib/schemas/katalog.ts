@@ -20,7 +20,6 @@ export const layananSchema = z.object({
   legalBasisId: z.string().nullable(),
   dasarHukum: z.string().nullable(), // resolved legal_bases.label
   hargaStandar: z.number().nullable(),
-  isRecurring: z.boolean(), // "Tag Berulang" (PRD Bab 3.2) — e.g. Laporan Semester
   status: katalogStatus, // derived from service_catalog.is_active
   milestoneTemplateId: z.string().nullable(),
   milestoneTemplateNama: z.string().nullable(), // resolved milestone_templates.name
@@ -35,7 +34,6 @@ export const createLayananSchema = z.object({
   authorityId: z.string().min(1, "Kewenangan wajib dipilih."),
   legalBasisId: z.string().optional(),
   hargaStandar: z.number().nullable().optional(),
-  isRecurring: z.boolean().optional(),
   milestoneTemplateId: z.string().nullable().optional(),
 });
 export type CreateLayananInput = z.infer<typeof createLayananSchema>;
@@ -46,7 +44,6 @@ export const updateLayananSchema = z.object({
   authorityId: z.string().min(1).optional(),
   legalBasisId: z.string().nullable().optional(),
   hargaStandar: z.number().nullable().optional(),
-  isRecurring: z.boolean().optional(),
   status: katalogStatus.optional(),
   milestoneTemplateId: z.string().nullable().optional(),
 });

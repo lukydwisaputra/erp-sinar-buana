@@ -74,9 +74,9 @@ describe("toInvoiceTermin", () => {
     expect(termin.status).toBe("—");
   });
 
-  it("derives previousTermins from earlier sibling installments, not stored state", () => {
-    const first = installment({ id: "inv-1", label: "Termin I", totalAfterTax: "30000000" });
-    const second = installment({ id: "inv-2", label: "Termin II", totalAfterTax: "40000000" });
+  it("derives previousTermins from earlier sibling installments' pre-tax value, not stored state", () => {
+    const first = installment({ id: "inv-1", label: "Termin I", currentTermValue: "30000000", totalAfterTax: "33000000" });
+    const second = installment({ id: "inv-2", label: "Termin II", currentTermValue: "40000000", totalAfterTax: "44000000" });
     const termin = toInvoiceTermin({
       installment: second,
       statusLabel: "Belum Lunas",
@@ -86,7 +86,7 @@ describe("toInvoiceTermin", () => {
       indukNumber: "INV/001/06.2026",
       terminIndex: 1,
     });
-    expect(termin.previousTermins).toEqual([{ label: "Termin I", nilai: 30_000_000 }]);
+    expect(termin.previousTermins).toEqual([{ label: "Termin I", nilai: 30_000_000, pemicu: null }]);
   });
 
   it("derives the displayed number from the Induk's number + 1-based termin position, not the row's own (legacy/unused) column", () => {
@@ -138,7 +138,7 @@ describe("toFakturInduk", () => {
   it("resolves layanan names from the service catalog, falling back to the row's own description", () => {
     const induk = toFakturInduk({
       masterInvoice: masterInvoice(),
-      proyekNama: "Proyek Uji",
+      proyekNama: "Proyek Uji", proyekNumber: null, sphNumber: null, pricingByServiceId: new Map(), signatureImage: null,
       companyName: "PT Klien",
       statusLabel: "Belum Lunas",
       statusSystemRole: null,
@@ -148,15 +148,52 @@ describe("toFakturInduk", () => {
       termins,
     });
     expect(induk.layanan).toEqual([
-      { serviceId: "svc-1", nama: "Penyusunan Amdal" },
-      { serviceId: null, nama: "Layanan Kustom" },
+      { serviceId: "svc-1", nama: "Penyusunan Amdal", harga: null, volume: null, satuan: null },
+      { serviceId: null, nama: "Layanan Kustom", harga: null, volume: null, satuan: null },
+    ]);
+  });
+
+  it("fills in harga/volume/satuan from pricingByServiceId when the project has a source SPH", () => {
+    const induk = toFakturInduk({
+      masterInvoice: masterInvoice(),
+      proyekNama: "Proyek Uji", proyekNumber: null, sphNumber: "SPH/001/1.2026",
+      pricingByServiceId: new Map([["svc-1", { harga: 25_000_000, volume: 2, satuan: "Paket" }]]), signatureImage: null,
+      companyName: "PT Klien",
+      statusLabel: "Belum Lunas",
+      statusSystemRole: null,
+      services: services([{ serviceId: "svc-1" }, { serviceId: "svc-2" }]),
+      serviceNamesById: new Map([["svc-1", "Penyusunan Amdal"], ["svc-2", "Dokumen UKL-UPL"]]),
+      terms: terms([{ sortOrder: 0 }]),
+      termins,
+    });
+    expect(induk.layanan).toEqual([
+      { serviceId: "svc-1", nama: "Penyusunan Amdal", harga: 25_000_000, volume: 2, satuan: "Paket" },
+      { serviceId: "svc-2", nama: "Dokumen UKL-UPL", harga: null, volume: null, satuan: null },
+    ]);
+  });
+
+  it("carries the pemicu (keterangan) through to each term scheme item, nullable when unset", () => {
+    const induk = toFakturInduk({
+      masterInvoice: masterInvoice(),
+      proyekNama: "Proyek Uji", proyekNumber: null, sphNumber: null, pricingByServiceId: new Map(), signatureImage: null,
+      companyName: "PT Klien",
+      statusLabel: null,
+      statusSystemRole: null,
+      services: [],
+      serviceNamesById: new Map(),
+      terms: terms([{ sortOrder: 0, pemicu: "Pelunasan" }, { sortOrder: 1 }]),
+      termins,
+    });
+    expect(induk.terminScheme).toEqual([
+      { label: "Termin 0", persen: 50, pemicu: "Pelunasan" },
+      { label: "Termin 1", persen: 50, pemicu: null },
     ]);
   });
 
   it("sorts the term scheme by sortOrder regardless of input order", () => {
     const induk = toFakturInduk({
       masterInvoice: masterInvoice(),
-      proyekNama: "Proyek Uji",
+      proyekNama: "Proyek Uji", proyekNumber: null, sphNumber: null, pricingByServiceId: new Map(), signatureImage: null,
       companyName: "PT Klien",
       statusLabel: "Belum Lunas",
       statusSystemRole: null,
@@ -174,7 +211,7 @@ describe("toFakturInduk", () => {
   it("coerces totalBiaya to a number", () => {
     const induk = toFakturInduk({
       masterInvoice: masterInvoice({ totalCost: "250000000" }),
-      proyekNama: "Proyek Uji",
+      proyekNama: "Proyek Uji", proyekNumber: null, sphNumber: null, pricingByServiceId: new Map(), signatureImage: null,
       companyName: "PT Klien",
       statusLabel: null,
       statusSystemRole: null,
@@ -200,7 +237,7 @@ describe("flattenTermins", () => {
     });
     const induk = toFakturInduk({
       masterInvoice: masterInvoice({ projectId: "proj-1" }),
-      proyekNama: "Proyek Uji",
+      proyekNama: "Proyek Uji", proyekNumber: null, sphNumber: null, pricingByServiceId: new Map(), signatureImage: null,
       companyName: "PT Klien",
       statusLabel: "Belum Lunas",
       statusSystemRole: null,
@@ -225,7 +262,7 @@ describe("flattenTermins", () => {
   it("returns an empty array for induks with no generated termins", () => {
     const induk = toFakturInduk({
       masterInvoice: masterInvoice(),
-      proyekNama: "Proyek Uji",
+      proyekNama: "Proyek Uji", proyekNumber: null, sphNumber: null, pricingByServiceId: new Map(), signatureImage: null,
       companyName: "PT Klien",
       statusLabel: null,
       statusSystemRole: null,

@@ -180,6 +180,61 @@ export const terminTemplateSteps = pgTable("termin_template_steps", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
+/** RAB (budget breakdown) templates, reusable across SPH line items. Rows
+ * carry a `section` discriminator matching the per-item RAB's two groups
+ * (A. Rincian Biaya Personil / B. Rincian Biaya Langsung — see
+ * `quotation_rab_personnel`/`quotation_rab_direct_costs`). Applying a
+ * template to an SPH item is a one-time copy (like Kelengkapan) — no FK
+ * back from the item's RAB rows to this table. */
+export const rabTemplates = pgTable("rab_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  ...timestamps,
+});
+
+export const rabTemplateRows = pgTable("rab_template_rows", {
+  id: pk(),
+  templateId: uuid("template_id")
+    .notNull()
+    .references(() => rabTemplates.id, { onDelete: "cascade" }),
+  section: text("section").notNull(), // "personil" | "langsung"
+  uraian: text("uraian").notNull(),
+  volume: rate("volume").notNull().default("1"),
+  unit: text("unit"), // satuan, e.g. "Bln"/"Ls"
+  unitPrice: money("unit_price").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+/** Estimasi Jadwal (schedule) templates, reusable across SPH line items —
+ * mirrors `activity_schedules`/`activity_schedule_rows`/
+ * `activity_schedule_marked_weeks`' shape (a week-column highlight grid per
+ * activity). One-time copy on apply, same as RAB templates above. */
+export const jadwalTemplates = pgTable("jadwal_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  numMonths: integer("num_months").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  ...timestamps,
+});
+
+export const jadwalTemplateRows = pgTable("jadwal_template_rows", {
+  id: pk(),
+  templateId: uuid("template_id")
+    .notNull()
+    .references(() => jadwalTemplates.id, { onDelete: "cascade" }),
+  activityName: text("activity_name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const jadwalTemplateMarkedWeeks = pgTable("jadwal_template_marked_weeks", {
+  id: pk(),
+  rowId: uuid("row_id")
+    .notNull()
+    .references(() => jadwalTemplateRows.id, { onDelete: "cascade" }),
+  weekNumber: integer("week_number").notNull(),
+});
+
 /** PDF header/footer note templates per document type. Not wired into
  * actual document rendering (sph-cover-letter.tsx etc. stay hardcoded) —
  * CRUD only, same boundary the mock had. */
@@ -190,5 +245,18 @@ export const pdfTemplates = pgTable("pdf_templates", {
   headerNote: text("header_note").notNull().default(""),
   footerNote: text("footer_note").notNull().default(""),
   isActive: boolean("is_active").notNull().default(true),
+  ...timestamps,
+});
+
+/** Digital signature templates (Konfigurasi > Template > Tanda Tangan) —
+ * a drawn/hand-signed signature image (data URI) plus the signatory's name,
+ * picked per-document at SPH/Faktur creation time (quotations/master_invoices
+ * each carry their own useDigitalSignature + signatureTemplateId). When a
+ * document doesn't use one, the printed page just leaves blank space for a
+ * manual signature + wet stamp — no fallback rendering needed here. */
+export const signatureTemplates = pgTable("signature_templates", {
+  id: pk(),
+  name: text("name").notNull(),
+  signatureImage: text("signature_image").notNull(), // data:image/png;base64,... from the draw-signature canvas
   ...timestamps,
 });

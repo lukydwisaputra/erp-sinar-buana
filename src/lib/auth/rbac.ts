@@ -62,3 +62,10 @@ export function requireFinance(session: SessionUser | null): SessionUser {
 export function isClientPortal(session: SessionLike): boolean {
   return session?.role === "viewer";
 }
+
+/** Proyek's Estimasi Jadwal is read-all/write-admin-only — every write
+ * affordance there checks this, on top of the server-side requireRole that's
+ * the real boundary. */
+export function isAdminUser(session: SessionLike): boolean {
+  return session?.role === "admin";
+}

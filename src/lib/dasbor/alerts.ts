@@ -81,8 +81,8 @@ export function alertsPajak(kewajiban: TaxEntry[], today: string): AlertItem[] {
     if (k.taxType === "pph23_dipotong" && !k.buktiPotongReceived) {
       items.push(makeItem(
         "bukti-potong-" + k.id, "bukti_potong_belum", "sedang",
-        "Bukti Potong PPh 23 Belum Diterima",
-        "Periode " + k.taxPeriod.slice(0, 7) + " – PPh 23 credit berisiko",
+        "Bukti Potong PPh Belum Diterima",
+        "Periode " + k.taxPeriod.slice(0, 7) + " – PPh credit berisiko",
         k.id, "pajak", k.dueDate ?? undefined,
       ));
     }

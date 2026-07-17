@@ -8,6 +8,7 @@ import { id as idLocale } from "date-fns/locale";
 
 import type { SphFormValues } from "@/lib/schemas/penawaran";
 import type { PIC } from "@/lib/schemas/perusahaan";
+import { salutationValues, SALUTATION_LABEL } from "@/lib/schemas/common";
 import { BuilderSection } from "@/components/shared/builder-layout";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export type PerusahaanOption = { id: string; nama: string; alamat: string; pic: PIC[] };
 
@@ -69,6 +71,25 @@ export function TujuanSection({
           <FieldError errors={err(errors.perusahaanId)} />
         </Field>
 
+        <div className="flex gap-2">
+          <Field className="w-40">
+            <FieldLabel>Sapaan</FieldLabel>
+            <Select
+              value={form.watch("salutasiPenerima")}
+              onValueChange={(v) => form.setValue("salutasiPenerima", v as SphFormValues["salutasiPenerima"])}
+            >
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {salutationValues.map((v) => <SelectItem key={v} value={v}>{SALUTATION_LABEL[v]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field className="flex-1">
+            <FieldLabel>Jabatan</FieldLabel>
+            <Input {...form.register("jabatanPenerima")} placeholder="Direktur" />
+          </Field>
+        </div>
+
         {selected && selected.pic.length > 0 && (
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm">
@@ -79,24 +100,26 @@ export function TujuanSection({
                   if (!(c === true)) { form.setValue("picNama", ""); form.setValue("picJabatan", ""); }
                 }}
               />
-              Cantumkan nama PIC
+              Cantumkan nama PIC (u.p.)
             </label>
             {picAktif && (
               <PicPicker
                 options={selected.pic}
                 selectedNama={picNama}
-                onPick={(p) => { form.setValue("picNama", p.nama); form.setValue("picJabatan", p.jabatan); }}
+                onPick={(p) => {
+                  form.setValue("picNama", p.nama);
+                  form.setValue("picJabatan", p.jabatan);
+                  form.setValue("picSalutation", p.salutation);
+                }}
               />
             )}
           </div>
         )}
 
-        {!picAktif && (
-          <Field>
-            <FieldLabel>Jabatan Penerima</FieldLabel>
-            <Input {...form.register("jabatanPenerima")} placeholder="Direktur" />
-          </Field>
-        )}
+        <Field>
+          <FieldLabel>Tempat</FieldLabel>
+          <Input {...form.register("tempat")} placeholder="Tempat" />
+        </Field>
 
         <Field data-invalid={!!errors.tanggal} className="w-56">
           <FieldLabel>Tanggal</FieldLabel>
@@ -210,7 +233,7 @@ function PicPicker({
           role="combobox"
           className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}
         >
-          {selected ? `${selected.nama} — ${selected.jabatan}` : "Pilih PIC…"}
+          {selected ? selected.nama : "Pilih PIC…"}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
@@ -225,10 +248,7 @@ function PicPicker({
                   value={p.nama}
                   onSelect={() => { onPick(p); setOpen(false); }}
                 >
-                  <div>
-                    <p>{p.nama}</p>
-                    <p className="text-xs text-muted-foreground">{p.jabatan}</p>
-                  </div>
+                  <p>{p.nama}</p>
                 </CommandItem>
               ))}
             </CommandGroup>

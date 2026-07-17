@@ -9,17 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SectionLabel } from "@/components/shared/detail-drawer";
 import { MoneyInput } from "@/components/shared/money-input";
 import { formatRupiah } from "@/lib/format";
 import { onFormInvalid } from "@/lib/form-toast";
 import { useCreateFakturInduk } from "@/lib/query/faktur";
+import { useSignatureTemplateList } from "@/lib/query/signature-templates";
 import { createFakturIndukSchema, type CreateFakturIndukInput } from "@/lib/schemas/faktur";
 import type { Proyek } from "@/lib/schemas/proyek";
 
 export function FakturIndukCreate({ proyek }: { proyek: Proyek }) {
   const router = useRouter();
   const createFaktur = useCreateFakturInduk();
+  const { data: signatureTemplates = [] } = useSignatureTemplateList();
   const totalKontrak = proyek.nilaiKontrak ?? 0;
 
   const form = useForm<CreateFakturIndukInput>({
@@ -29,7 +32,9 @@ export function FakturIndukCreate({ proyek }: { proyek: Proyek }) {
       serviceIds: proyek.layanan.map((l) => l.serviceId).filter((x): x is string => !!x),
       totalBiaya: totalKontrak,
       notes: "",
-      terminScheme: [{ label: "Termin I", persen: 100 }],
+      terminScheme: [{ label: "Termin I", persen: 100, pemicu: null }],
+      useDigitalSignature: false,
+      signatureTemplateId: null,
     },
   });
   const { control, register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = form;
@@ -43,9 +48,9 @@ export function FakturIndukCreate({ proyek }: { proyek: Proyek }) {
     setValue("serviceIds", next, { shouldValidate: true });
   };
 
-  const addTerm = () => setValue("terminScheme", [...values.terminScheme, { label: `Termin ${values.terminScheme.length + 1}`, persen: 0 }]);
+  const addTerm = () => setValue("terminScheme", [...values.terminScheme, { label: `Termin ${values.terminScheme.length + 1}`, persen: 0, pemicu: null }]);
   const removeTerm = (i: number) => setValue("terminScheme", values.terminScheme.filter((_, idx) => idx !== i), { shouldValidate: true });
-  const updateTerm = (i: number, patch: Partial<{ label: string; persen: number }>) =>
+  const updateTerm = (i: number, patch: Partial<{ label: string; persen: number; pemicu: string | null }>) =>
     setValue("terminScheme", values.terminScheme.map((t, idx) => (idx === i ? { ...t, ...patch } : t)), { shouldValidate: true });
 
   const onSubmit = handleSubmit(async (data) => {
@@ -114,23 +119,30 @@ export function FakturIndukCreate({ proyek }: { proyek: Proyek }) {
           </div>
           <div className="space-y-2">
             {values.terminScheme.map((t, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="space-y-1 rounded-md border border-border p-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={t.label}
+                    onChange={(e) => updateTerm(i, { label: e.target.value })}
+                    placeholder="Termin I"
+                    className="flex-1"
+                  />
+                  <Input
+                    type="number" min={0} max={100}
+                    value={t.persen}
+                    onChange={(e) => updateTerm(i, { persen: Number(e.target.value) || 0 })}
+                    className="w-20 text-right font-mono tabular-nums"
+                  />
+                  <span className="text-sm text-muted-foreground">%</span>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Hapus termin" onClick={() => removeTerm(i)}>
+                    <Trash2Icon className="size-4 text-destructive" />
+                  </Button>
+                </div>
                 <Input
-                  value={t.label}
-                  onChange={(e) => updateTerm(i, { label: e.target.value })}
-                  placeholder="Termin I"
-                  className="flex-1"
+                  value={t.pemicu ?? ""}
+                  onChange={(e) => updateTerm(i, { pemicu: e.target.value || null })}
+                  placeholder="Keterangan (opsional), mis. Pelunasan"
                 />
-                <Input
-                  type="number" min={0} max={100}
-                  value={t.persen}
-                  onChange={(e) => updateTerm(i, { persen: Number(e.target.value) || 0 })}
-                  className="w-20 text-right font-mono tabular-nums"
-                />
-                <span className="text-sm text-muted-foreground">%</span>
-                <Button type="button" variant="ghost" size="icon" aria-label="Hapus termin" onClick={() => removeTerm(i)}>
-                  <Trash2Icon className="size-4 text-destructive" />
-                </Button>
               </div>
             ))}
           </div>
@@ -142,6 +154,33 @@ export function FakturIndukCreate({ proyek }: { proyek: Proyek }) {
           <FieldLabel>Catatan</FieldLabel>
           <Input {...register("notes")} placeholder="Catatan tambahan (opsional)" />
         </Field>
+
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={values.useDigitalSignature}
+              onCheckedChange={(c) => {
+                setValue("useDigitalSignature", c === true);
+                if (c !== true) setValue("signatureTemplateId", null);
+              }}
+            />
+            Gunakan tanda tangan digital
+          </label>
+          {values.useDigitalSignature && (
+            <Field>
+              <FieldLabel>Pilih Tanda Tangan</FieldLabel>
+              <Select
+                value={values.signatureTemplateId ?? ""}
+                onValueChange={(v) => setValue("signatureTemplateId", v)}
+              >
+                <SelectTrigger className="w-full"><SelectValue placeholder="Pilih tanda tangan…" /></SelectTrigger>
+                <SelectContent>
+                  {signatureTemplates.map((s) => <SelectItem key={s.id} value={s.id}>{s.nama}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+        </div>
 
         {values.totalBiaya > 0 && (
           <p className="text-sm text-muted-foreground">

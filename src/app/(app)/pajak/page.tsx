@@ -48,7 +48,7 @@ function daysUntil(iso: string): number {
 const JENIS_META: Record<TaxType, { label: string; variant: "info" | "secondary" | "warning" | "destructive" }> = {
   ppn_keluaran: { label: "PPN Keluaran", variant: "info" },
   ppn_masukan: { label: "PPN Masukan", variant: "secondary" },
-  pph23_dipotong: { label: "PPh 23 Dipotong", variant: "warning" },
+  pph23_dipotong: { label: "PPh Dipotong", variant: "warning" },
   pph21: { label: "PPh 21", variant: "secondary" },
   bpjs_kesehatan: { label: "BPJS Kesehatan", variant: "secondary" },
   bpjs_ketenagakerjaan: { label: "BPJS Ketenagakerjaan", variant: "secondary" },
@@ -414,7 +414,7 @@ export default function Page() {
         <KpiCard label="Total Belum Setor" value={formatRupiahCompact(kpi.totalBelumSetor)} icon={Landmark} />
         <KpiCard label="Terlambat" value={String(kpi.terlambat)} sub={kpi.terlambat > 0 ? "kewajiban jatuh tempo" : "tidak ada yang terlambat"} icon={AlertTriangle} danger={kpi.terlambat > 0} />
         <KpiCard label="Jatuh Tempo 7 Hari" value={String(kpi.jatuhTempo7)} sub={kpi.jatuhTempo7 > 0 ? "kewajiban mendekati tenggat" : "tidak ada mendekati tenggat"} icon={AlertTriangle} warn={kpi.jatuhTempo7 > 0} />
-        <KpiCard label="Bukti Potong Belum" value={String(kpi.buktiPotongBelum)} sub="PPh 23 belum diterima" icon={FileX} warn={kpi.buktiPotongBelum > 0} />
+        <KpiCard label="Bukti Potong Belum" value={String(kpi.buktiPotongBelum)} sub="PPh belum diterima" icon={FileX} warn={kpi.buktiPotongBelum > 0} />
       </div>
 
       {!configLoading && config && <KonfigurasiCard config={config} />}

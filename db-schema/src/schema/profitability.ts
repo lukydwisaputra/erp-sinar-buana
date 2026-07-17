@@ -7,10 +7,11 @@
  * source of HPP / project COGS for Margin Aktual and the Dashboard accrual P&L
  * (BR-15). An entry may optionally link to the cashflow expense it reflects.
  */
-import { date, pgTable, text, uuid } from "drizzle-orm/pg-core";
-import { money, bookkeeping, pk } from "./_shared";
+import { date, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { money, rate, bookkeeping, timestamps, pk } from "./_shared";
 import { rabCategory } from "./enums";
 import { projects } from "./projects";
+import { quotationItems } from "./quotations";
 import { cashflowEntries } from "./cashflow";
 
 export const rabActuals = pgTable("rab_actuals", {
@@ -31,4 +32,37 @@ export const rabActuals = pgTable("rab_actuals", {
     { onDelete: "set null" },
   ),
   ...bookkeeping,
+});
+
+/**
+ * Estimasi RAB — one per project service/item, seeded as a ONE-TIME COPY of
+ * that item's `quotation_rab_personnel`/`quotation_rab_direct_costs` rows at
+ * project-creation time (mirrors `activity_schedules`' parent/child shape,
+ * not the SPH's live tables — editing this never touches the source SPH).
+ * Admin/Keuangan only (same visibility rule as `rab_actuals` above).
+ */
+export const projectRabEstimates = pgTable("project_rab_estimates", {
+  id: pk(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  // Traceability only, e.g. resolving the service name for the section
+  // header — never read back to reconstruct rows (this is a snapshot).
+  quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id, {
+    onDelete: "set null",
+  }),
+  ...timestamps,
+});
+
+export const projectRabItems = pgTable("project_rab_items", {
+  id: pk(),
+  estimateId: uuid("estimate_id")
+    .notNull()
+    .references(() => projectRabEstimates.id, { onDelete: "cascade" }),
+  section: text("section").notNull(), // "personil" | "langsung"
+  uraian: text("uraian").notNull(),
+  volume: rate("volume").notNull().default("1"),
+  unit: text("unit"),
+  unitPrice: money("unit_price").notNull().default("0"),
+  sortOrder: integer("sort_order").notNull().default(0),
 });

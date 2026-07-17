@@ -18,6 +18,13 @@ declare
   v_total numeric;
   v_sum   numeric;
 begin
+  -- The cancellation-fee row (Pembatalan Penawaran) is an independent penalty
+  -- charge, not termin progress against the contract — never guarded by Total
+  -- Biaya.
+  if new.is_cancellation_fee then
+    return new;
+  end if;
+
   select total_cost into v_total
   from public.master_invoices where id = new.master_invoice_id;
 
@@ -72,14 +79,28 @@ begin
       v_pph_due := (date_trunc('month', v_period) + interval '1 month'
                     + (coalesce(v_day_pph, 10) - 1) * interval '1 day')::date;
 
-      -- (1) Service income (full term value) — Kredit, category FAKTUR
-      insert into public.cashflow_entries
-        (type, date, amount, category_id, source, tax_component, description,
-         is_locked, installment_invoice_id)
-      values
-        ('kredit', v_when, new.current_term_value, cashflow_category_id('FAKTUR'),
-         'faktur', 'jasa', 'Pendapatan jasa ' || coalesce(new.number, ''),
-         true, new.id);
+      -- (1) Service income (full term value) — Kredit, category FAKTUR. The
+      -- one-off "Biaya Administrasi Pengembalian" row (Pembatalan Penawaran
+      -- cancellation shortfall) books as ADMIN_PEMBATALAN income instead —
+      -- it isn't service revenue, and never carries PPN/PPh23, so (2)/(3)
+      -- below simply no-op for it.
+      if new.is_cancellation_fee then
+        insert into public.cashflow_entries
+          (type, date, amount, category_id, source, description,
+           is_locked, installment_invoice_id)
+        values
+          ('kredit', v_when, new.current_term_value, cashflow_category_id('ADMIN_PEMBATALAN'),
+           'faktur', 'Biaya Administrasi Pembatalan ' || coalesce(new.number, ''),
+           true, new.id);
+      else
+        insert into public.cashflow_entries
+          (type, date, amount, category_id, source, tax_component, description,
+           is_locked, installment_invoice_id)
+        values
+          ('kredit', v_when, new.current_term_value, cashflow_category_id('FAKTUR'),
+           'faktur', 'jasa', 'Pendapatan jasa ' || coalesce(new.number, ''),
+           true, new.id);
+      end if;
 
       -- (2) Output VAT (held for the state) — Kredit, category PAJAK
       if coalesce(new.ppn, 0) > 0 then
@@ -119,7 +140,11 @@ begin
     end if;
 
     -- Roll up master invoice to LUNAS once paid value covers Total Biaya.
-    if (select coalesce(sum(current_term_value), 0)
+    -- Never for the cancellation-fee row — it's a one-off penalty charge on
+    -- an already-cancelled induk, not real progress toward the original
+    -- contract's completion.
+    if not new.is_cancellation_fee
+       and (select coalesce(sum(current_term_value), 0)
         from public.installment_invoices
         where master_invoice_id = new.master_invoice_id
           and deleted_at is null

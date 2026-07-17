@@ -44,18 +44,18 @@ function SlipCard({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">
-              <p className="font-medium">{slip.karyawanNama}</p>
-              <Badge variant={badge.variant} className="text-xs">{badge.label}</Badge>
-              {slip.number && <span className="font-mono text-xs text-muted-foreground">{slip.number}</span>}
+              <p className="text-base font-medium">{slip.karyawanNama}</p>
+              <Badge variant={badge.variant} className="text-sm">{badge.label}</Badge>
+              {slip.number && <span className="font-mono text-sm text-muted-foreground">{slip.number}</span>}
             </div>
-            <p className="text-xs text-muted-foreground">{slip.jabatan} &middot; Gaji Efektif {formatRupiah(gajiPokokEfektif)}</p>
+            <p className="text-sm text-muted-foreground">{slip.jabatan} &middot; Gaji Efektif {formatRupiah(gajiPokokEfektif)}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right text-xs">
+          <div className="flex items-center gap-4">
+            <div className="text-right text-sm">
               <p className="text-muted-foreground">Kotor</p>
               <p className="font-mono font-medium">{formatRupiah(penggajianKotor)}</p>
             </div>
-            <div className="text-right text-xs">
+            <div className="text-right text-sm">
               <p className="text-muted-foreground">Bersih</p>
               <p className={`font-mono font-semibold ${penggajianBersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(penggajianBersih)}</p>
             </div>
@@ -86,29 +86,28 @@ function SlipCard({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <div className="mb-3 grid grid-cols-3 gap-3 rounded-md bg-muted/30 p-3">
           <div>
-            <p className="mb-1 text-xs font-medium text-muted-foreground">Komponen (Tunjangan/Potongan)</p>
-            <ComponentsEditor
-              components={slip.components}
-              disabled={locked}
-              onChange={(v) => updateSlip.mutate({ batchId, slipId: slip.id, patch: { components: v } })}
-            />
+            <p className="text-xs text-muted-foreground">Lembur</p>
+            <p className="font-mono text-sm font-medium">{formatRupiah(slip.lembur)}</p>
           </div>
-          <div className="flex gap-3 text-xs sm:flex-col">
-            <div className="w-28">
-              <p className="text-muted-foreground">Lembur</p>
-              <p className="font-mono">{formatRupiah(slip.lembur)}</p>
-            </div>
-            <div className="w-28">
-              <p className="text-muted-foreground">Bonus</p>
-              <p className="font-mono">{formatRupiah(slip.bonus)}</p>
-            </div>
-            <div className="w-28">
-              <p className="text-muted-foreground">PPh 21</p>
-              <p className="font-mono">{formatRupiah(slip.pph21)}</p>
-            </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Bonus</p>
+            <p className="font-mono text-sm font-medium">{formatRupiah(slip.bonus)}</p>
           </div>
+          <div>
+            <p className="text-xs text-muted-foreground">PPh 21</p>
+            <p className="font-mono text-sm font-medium">{formatRupiah(slip.pph21)}</p>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-muted-foreground">Komponen (Tunjangan/Potongan)</p>
+          <ComponentsEditor
+            components={slip.components}
+            disabled={locked}
+            onChange={(v) => updateSlip.mutate({ batchId, slipId: slip.id, patch: { components: v } })}
+          />
         </div>
       </div>
 

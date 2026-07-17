@@ -32,3 +32,20 @@ export function terminPersenTotal(termin: SphTerminCalc[]): number {
 export function isTerminValid(termin: SphTerminCalc[]): boolean {
   return terminPersenTotal(termin) === 100;
 }
+
+/** "A", "A dan B", "A, B, dan C" — Indonesian list conjunction. */
+function joinDan(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  if (items.length === 2) return `${items[0]} dan ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, dan ${items[items.length - 1]}`;
+}
+
+/** Auto-generated opening sentence from the picked service names — a starting
+ * point the user can still freely edit, not a fixed template (sph-form.tsx
+ * only (re)writes this while the field still matches the last auto-generated
+ * value, so a manual edit stops it from being overwritten). */
+export function defaultKalimatPembuka(namaLayanan: string[]): string {
+  const names = namaLayanan.map((n) => n.trim()).filter(Boolean);
+  if (!names.length) return "";
+  return `Sehubungan dengan adanya permintaan untuk ${joinDan(names)}. Dengan ini kami menawarkan jasa tersebut, dengan biaya sebagai berikut:`;
+}

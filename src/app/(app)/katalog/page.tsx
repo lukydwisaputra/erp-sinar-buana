@@ -14,7 +14,6 @@ import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/m
 import { StatusBadge, type StatusBadgeConfig } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -135,7 +134,6 @@ function LayananDetail({ l }: { l: Layanan }) {
             label="Harga Standar"
             value={l.hargaStandar === null ? "Diisi manual di SPH" : formatRupiah(l.hargaStandar)}
           />
-          <InfoRow label="Berulang" value={l.isRecurring ? "Ya" : "Tidak"} />
         </InfoList>
       </section>
     </div>
@@ -150,7 +148,6 @@ const layananCreateSchema = z.object({
   authorityId: z.string().min(1, "Kewenangan wajib dipilih."),
   legalBasisId: z.string().optional(),
   hargaStandar: z.string(),
-  isRecurring: z.boolean().optional(),
   milestoneTemplateId: z.string().optional(),
 });
 type LayananCreate = z.infer<typeof layananCreateSchema>;
@@ -163,7 +160,7 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
   const { data: milestoneTemplates = [] } = useMilestoneTemplateList();
   const form = useForm<LayananCreate>({
     resolver: zodResolver(layananCreateSchema),
-    defaultValues: { nama: "", documentTypeId: "", authorityId: "", legalBasisId: "", hargaStandar: "", isRecurring: false, milestoneTemplateId: "" },
+    defaultValues: { nama: "", documentTypeId: "", authorityId: "", legalBasisId: "", hargaStandar: "", milestoneTemplateId: "" },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
 
@@ -177,7 +174,6 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
       authorityId: values.authorityId,
       legalBasisId: values.legalBasisId,
       hargaStandar: hargaNum,
-      isRecurring: values.isRecurring,
       milestoneTemplateId: values.milestoneTemplateId || null,
     });
     onOpenChange(false);
@@ -266,17 +262,6 @@ function LayananCreateForm({ open, onOpenChange }: { open: boolean; onOpenChange
         <FieldDescription>Harga standar; masih dapat disesuaikan per proyek di SPH.</FieldDescription>
       </Field>
 
-      <Field className="flex-row items-center gap-2">
-        <Controller
-          control={control}
-          name="isRecurring"
-          render={({ field }) => (
-            <Checkbox checked={field.value ?? false} onCheckedChange={(c) => field.onChange(c === true)} />
-          )}
-        />
-        <FieldLabel className="font-normal">Berulang (mis. Laporan Semester)</FieldLabel>
-      </Field>
-
       <Field>
         <FieldLabel htmlFor="l-milestone">Template Milestone (opsional)</FieldLabel>
         <Controller
@@ -306,7 +291,6 @@ const layananEditSchema = z.object({
   authorityId: z.string().min(1, "Kewenangan wajib dipilih."),
   legalBasisId: z.string().optional(),
   hargaStandar: z.string(),
-  isRecurring: z.boolean().optional(),
   status: z.enum(["aktif", "terarsip"]),
   milestoneTemplateId: z.string().optional(),
 });
@@ -334,7 +318,6 @@ function LayananEditForm({
     authorityId: l.authorityId ?? "",
     legalBasisId: l.legalBasisId ?? "",
     hargaStandar: l.hargaStandar === null ? "" : String(l.hargaStandar),
-    isRecurring: l.isRecurring,
     status: l.status,
     milestoneTemplateId: l.milestoneTemplateId ?? "",
   }), []);
@@ -360,7 +343,6 @@ function LayananEditForm({
         authorityId: values.authorityId,
         legalBasisId: values.legalBasisId || null,
         hargaStandar: hargaNum,
-        isRecurring: values.isRecurring,
         status: values.status,
         milestoneTemplateId: values.milestoneTemplateId || null,
       },
@@ -449,17 +431,6 @@ function LayananEditForm({
           <InputGroupInput id="e-harga" inputMode="numeric" className="text-right font-mono tabular-nums" {...register("hargaStandar")} />
         </InputGroup>
         <FieldDescription>Harga standar; masih dapat disesuaikan per proyek di SPH.</FieldDescription>
-      </Field>
-
-      <Field className="flex-row items-center gap-2">
-        <Controller
-          control={control}
-          name="isRecurring"
-          render={({ field }) => (
-            <Checkbox checked={field.value ?? false} onCheckedChange={(c) => field.onChange(c === true)} />
-          )}
-        />
-        <FieldLabel className="font-normal">Berulang (mis. Laporan Semester)</FieldLabel>
       </Field>
 
       <Field>

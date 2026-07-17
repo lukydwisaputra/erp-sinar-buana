@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { salutationSchema } from "@/lib/schemas/common";
 
 export const sphStatus = z.enum(["draft", "terkirim", "deal", "ditolak", "dibatalkan"]);
 export type SphStatus = z.infer<typeof sphStatus>;
@@ -68,10 +69,18 @@ export const sphFormSchema = z.object({
   pph23Aktif: z.boolean().default(false),
   pph23Persen: z.coerce.number().default(2),
   jabatanPenerima: z.string().default("Direktur"),
+  salutasiPenerima: salutationSchema.default("bapak_ibu"),
+  tempat: z.string().default(""),
   picAktif: z.boolean().default(false),
   picNama: z.string().default(""),
   picJabatan: z.string().default(""),
+  picSalutation: salutationSchema.default("bapak_ibu"),
   kelengkapan: z.array(sphKelengkapanSchema).default([]),
+  // Digital signature — optional, per-document (Konfigurasi > Template > Tanda
+  // Tangan). Off leaves blank space on the printed cover letter for a manual
+  // signature + wet stamp (existing behavior).
+  useDigitalSignature: z.boolean().default(false),
+  signatureTemplateId: z.string().nullable().default(null),
 });
 export type SphFormValues = z.infer<typeof sphFormSchema>;
 
@@ -79,7 +88,13 @@ export type SphFormValues = z.infer<typeof sphFormSchema>;
  * SPH/00001/5.2026), DB-assigned by the numbering trigger — null until the
  * first insert completes. `id` (uuid) is the internal reference key; `number`
  * is what gets shown on the actual document/UI. */
-export const sphSchema = sphFormSchema.extend({ id: z.string(), number: z.string().nullable(), status: sphStatus });
+export const sphSchema = sphFormSchema.extend({
+  id: z.string(),
+  number: z.string().nullable(),
+  status: sphStatus,
+  // Resolved from signatureTemplateId — read-only, for document rendering.
+  signatureImage: z.string().nullable(),
+});
 export type Sph = z.infer<typeof sphSchema>;
 
 /** API input schemas for POST/PATCH /api/penawaran — same shape the builder
@@ -115,10 +130,15 @@ export const updatePenawaranSchema = z.object({
   pph23Aktif: z.boolean().optional(),
   pph23Persen: z.coerce.number().optional(),
   jabatanPenerima: z.string().optional(),
+  salutasiPenerima: salutationSchema.optional(),
+  tempat: z.string().optional(),
   picAktif: z.boolean().optional(),
   picNama: z.string().optional(),
   picJabatan: z.string().optional(),
+  picSalutation: salutationSchema.optional(),
   kelengkapan: z.array(sphKelengkapanSchema).optional(),
+  useDigitalSignature: z.boolean().optional(),
+  signatureTemplateId: z.string().nullable().optional(),
   status: sphStatus.optional(),
 });
 export type UpdatePenawaranInput = z.infer<typeof updatePenawaranSchema>;

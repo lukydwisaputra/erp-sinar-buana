@@ -26,20 +26,37 @@ export const invoiceTerminSchema = z.object({
   totalSetelahPajak: z.number(),
   grossIncome: z.number(),
   netIncome: z.number(),
+  // Trigger/keterangan copied from the SPH's termin catatan (quotation_term_scheme.milestoneTriggerLabel), e.g. "Pelunasan".
+  pemicu: z.string().nullable(),
   // Derived read-side from earlier sibling installments — never stored.
-  previousTermins: z.array(z.object({ label: z.string(), nilai: z.number() })),
+  previousTermins: z.array(z.object({ label: z.string(), nilai: z.number(), pemicu: z.string().nullable() })),
   catatan: z.string(),
+  // Pembatalan Penawaran — set only on the one-off "Biaya Administrasi
+  // Pengembalian" row generated at cancellation time (termId null).
+  isCancellationFee: z.boolean(),
+  // The last-paid termin whose value was deducted from the admin fee
+  // shortfall — resolved so the UI can render a clickable reference.
+  referencedInstallment: z.object({ id: z.string(), label: z.string(), number: z.string().nullable() }).nullable(),
 });
 export type InvoiceTermin = z.infer<typeof invoiceTerminSchema>;
 
 export const fakturLayananSchema = z.object({
   serviceId: z.string().nullable(),
   nama: z.string(),
+  // Best-effort pricing, traced from the source SPH's quotation_items (same
+  // serviceId) via the Proyek's quotationId — null when the project has no
+  // source SPH, or when no matching line item was found there.
+  harga: z.number().nullable(),
+  volume: z.number().nullable(),
+  satuan: z.string().nullable(),
 });
 
 export const fakturTermSchemeItemSchema = z.object({
   label: z.string(),
   persen: z.coerce.number(),
+  // Trigger/keterangan sourced from the SPH's termin catatan — nullable for
+  // manually-created faktur term schemes with no source SPH.
+  pemicu: z.string().nullable(),
 });
 export type FakturTermSchemeItem = z.infer<typeof fakturTermSchemeItemSchema>;
 
@@ -48,6 +65,8 @@ export const fakturIndukSchema = z.object({
   number: z.string().nullable(), // e.g. INV/001/2026 — assigned by trigger, resets yearly
   proyekId: z.string(),
   proyekNama: z.string(),
+  proyekNumber: z.string().nullable(), // e.g. PRY/014 — the parent Proyek
+  sphNumber: z.string().nullable(), // e.g. SPH/006/6.2026 — resolved via the Proyek's source quotation
   perusahaanId: z.string(),
   perusahaanNama: z.string(),
   layanan: z.array(fakturLayananSchema),
@@ -59,6 +78,14 @@ export const fakturIndukSchema = z.object({
   terminScheme: z.array(fakturTermSchemeItemSchema),
   termins: z.array(invoiceTerminSchema),
   createdAt: z.string(),
+  useDigitalSignature: z.boolean(),
+  signatureTemplateId: z.string().nullable(),
+  // Resolved from signatureTemplateId — read-only, for document rendering.
+  signatureImage: z.string().nullable(),
+  // Pembatalan Penawaran — set together with the BATAL status transition,
+  // cascaded/mirrored from whichever of SPH/Proyek/Faktur triggered it.
+  cancelReason: z.string().nullable(),
+  cancelFee: z.number().nullable(),
 });
 export type FakturInduk = z.infer<typeof fakturIndukSchema>;
 
@@ -71,18 +98,10 @@ export const createFakturIndukSchema = z.object({
   totalBiaya: z.coerce.number().positive("Total biaya harus > 0."),
   notes: z.string().optional(),
   terminScheme: z.array(fakturTermSchemeItemSchema).min(1, "Skema termin tidak boleh kosong."),
+  useDigitalSignature: z.boolean().default(false),
+  signatureTemplateId: z.string().nullable().default(null),
 });
 export type CreateFakturIndukInput = z.infer<typeof createFakturIndukSchema>;
-
-/** Edit an existing Faktur Induk — same billable-service/total-biaya/catatan
- * fields as create, minus `proyekId` (fixed at creation) and `terminScheme`
- * (immutable once set — termins are already generated against it). */
-export const updateFakturIndukSchema = z.object({
-  serviceIds: z.array(z.string()).default([]),
-  totalBiaya: z.coerce.number().positive("Total biaya harus > 0."),
-  notes: z.string().optional(),
-});
-export type UpdateFakturIndukInput = z.infer<typeof updateFakturIndukSchema>;
 
 /** Generate the next Invoice Termin in sequence — the DB trigger
  * (fn_installment_validate) enforces the sum-vs-total-biaya guard; the app

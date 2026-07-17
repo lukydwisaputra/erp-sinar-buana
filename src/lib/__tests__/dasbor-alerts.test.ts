@@ -30,7 +30,8 @@ const mkProyekEntity = (id: string, statusSystemRole: string | null, overrides: 
   id, number: "PRY/" + id, nama: "Proyek " + id, perusahaanId: "C1", perusahaanNama: "PT Klien",
   areaId: null, area: "—", tahun: 2026, layanan: [], statusId: null, status: "Aktif",
   statusSystemRole, nilaiKontrak: 100_000_000,
-  sphId: null, assignees: [], milestones: [], createdAt: "2026-01-01T00:00:00.000Z",
+  sphId: null, sphNumber: null, fakturs: [], assignees: [], milestones: [], createdAt: "2026-01-01T00:00:00.000Z",
+  shareToken: "token-" + id,
   ...overrides,
 });
 

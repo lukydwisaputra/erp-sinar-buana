@@ -1,10 +1,9 @@
 import { z } from "zod";
 
-/** Real `cashflow_entries` shape (read-only visibility only this pass —
- * manual-entry CRUD and forecast/settlement UI stay out of scope; see the
- * Faktur plan). Entries are produced either by a document trigger (Faktur's
- * LUNAS automation) or, previously, manually — manual creation is no longer
- * offered from this app, but old rows may still carry sumber "manual". */
+/** Real `cashflow_entries` shape. Entries are produced either by a document
+ * trigger (Faktur's LUNAS automation, Pembatalan Penawaran) or manually via
+ * `createArusKasEntrySchema` below — manual rows are never `isLocked`, so
+ * they stay editable/cancellable unlike trigger-owned automation rows. */
 export const arusKasJenis = z.enum(["kredit", "debit"]);
 export type ArusKasJenis = z.infer<typeof arusKasJenis>;
 
@@ -24,3 +23,14 @@ export const arusKasEntrySchema = z.object({
   isCancelled: z.boolean(),
 });
 export type ArusKasEntry = z.infer<typeof arusKasEntrySchema>;
+
+/** Manual entry — API input for POST /api/arus-kas. `categoryId` (not a free
+ * label) since every cashflow_entries row is category-keyed by FK. */
+export const createArusKasEntrySchema = z.object({
+  jenis: arusKasJenis,
+  tanggal: z.string().min(1, "Tanggal wajib diisi."),
+  jumlah: z.coerce.number().positive("Jumlah harus > 0."),
+  categoryId: z.string().min(1, "Kategori wajib dipilih."),
+  keterangan: z.string().optional(),
+});
+export type CreateArusKasEntryInput = z.infer<typeof createArusKasEntrySchema>;

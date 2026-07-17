@@ -89,9 +89,9 @@ function TarifCard({ config }: { config: TaxSettings }) {
               <div><p className="text-xs text-muted-foreground">PPN</p><p className="font-mono font-medium">{config.ppnRate}%</p></div>
               <div><p className="text-xs text-muted-foreground">PPN DPP</p><p className="font-mono font-medium">{config.ppnDppNumerator}/{config.ppnDppDenominator}</p></div>
               <div><p className="text-xs text-muted-foreground">Setor PPN</p><p className="font-mono font-medium">Tgl {config.ppnSetorDay}</p></div>
-              <div><p className="text-xs text-muted-foreground">PPh 23</p><p className="font-mono font-medium">{config.pph23Rate}%</p></div>
-              <div><p className="text-xs text-muted-foreground">Setor PPh 23</p><p className="font-mono font-medium">Tgl {config.pph23SetorDay}</p></div>
-              <div><p className="text-xs text-muted-foreground">Lapor PPh 23</p><p className="font-mono font-medium">Tgl {config.pph23LaporDay}</p></div>
+              <div><p className="text-xs text-muted-foreground">PPh</p><p className="font-mono font-medium">{config.pph23Rate}%</p></div>
+              <div><p className="text-xs text-muted-foreground">Setor PPh</p><p className="font-mono font-medium">Tgl {config.pph23SetorDay}</p></div>
+              <div><p className="text-xs text-muted-foreground">Lapor PPh</p><p className="font-mono font-medium">Tgl {config.pph23LaporDay}</p></div>
               <div><p className="text-xs text-muted-foreground">Setor PPh 21</p><p className="font-mono font-medium">Tgl {config.pph21SetorDay}</p></div>
               <div><p className="text-xs text-muted-foreground">Lapor PPh 21</p><p className="font-mono font-medium">Tgl {config.pph21LaporDay}</p></div>
               <div><p className="text-xs text-muted-foreground">Setor BPJS</p><p className="font-mono font-medium">Tgl {config.bpjsSetorDay}</p></div>
@@ -124,7 +124,7 @@ function TarifCard({ config }: { config: TaxSettings }) {
                 </Field>
               </div>
 
-              <p className="text-xs font-medium text-muted-foreground">PPh 23</p>
+              <p className="text-xs font-medium text-muted-foreground">PPh</p>
               <div className="grid grid-cols-3 gap-4">
                 <Field>
                   <FieldLabel>Tarif (%)</FieldLabel>
