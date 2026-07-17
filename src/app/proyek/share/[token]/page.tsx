@@ -50,30 +50,32 @@ function MilestoneNode({ milestone, all, depth }: { milestone: Milestone; all: M
 function ProyekShareView({ proyek }: { proyek: ProyekShare }) {
   const roots = proyek.milestones.filter((m) => !m.parentId);
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <FolderKanban className="size-5 text-muted-foreground" />
-          {proyek.number && <span className="font-mono text-sm text-muted-foreground">{proyek.number}</span>}
-          <Badge variant={statusVariant(proyek.statusSystemRole)}>{proyek.status}</Badge>
-        </div>
-        <h1 className="text-xl font-semibold tracking-tight">{proyek.nama}</h1>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1"><Building2 className="size-3.5" />{proyek.perusahaanNama}</span>
-          <span className="flex items-center gap-1"><MapPin className="size-3.5" />{proyek.area}</span>
-          {proyek.tahun && <span className="flex items-center gap-1"><CalendarDays className="size-3.5" />{proyek.tahun}</span>}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-muted-foreground">Milestone</h2>
-        {roots.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Belum ada milestone.</p>
-        ) : (
-          <div className="space-y-2">
-            {roots.map((m) => <MilestoneNode key={m.id} milestone={m} all={proyek.milestones} depth={0} />)}
+    <div className="min-h-svh bg-background">
+      <div className="mx-auto max-w-3xl space-y-6 p-6">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <FolderKanban className="size-5 text-muted-foreground" />
+            {proyek.number && <span className="font-mono text-sm text-muted-foreground">{proyek.number}</span>}
+            <Badge variant={statusVariant(proyek.statusSystemRole)}>{proyek.status}</Badge>
           </div>
-        )}
+          <h1 className="text-xl font-semibold tracking-tight">{proyek.nama}</h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1"><Building2 className="size-3.5" />{proyek.perusahaanNama}</span>
+            <span className="flex items-center gap-1"><MapPin className="size-3.5" />{proyek.area}</span>
+            {proyek.tahun && <span className="flex items-center gap-1"><CalendarDays className="size-3.5" />{proyek.tahun}</span>}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">Milestone</h2>
+          {roots.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada milestone.</p>
+          ) : (
+            <div className="space-y-2">
+              {roots.map((m) => <MilestoneNode key={m.id} milestone={m} all={proyek.milestones} depth={0} />)}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
