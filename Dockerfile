@@ -62,6 +62,6 @@ ENV HOSTNAME=0.0.0.0
 # does a real `select 1`, so give it ~90s to settle plus 5 retries before the
 # rolling update gives up and rolls back.
 HEALTHCHECK --interval=15s --timeout=10s --start-period=90s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(async r => { console.log('HC', r.status, await r.text()); process.exit(r.ok ? 0 : 1); }).catch(e => { console.log('HC_FETCH_ERR', e.name, e.message, e.cause && e.cause.code); process.exit(1); })"
 
 CMD ["node", "server.js"]
