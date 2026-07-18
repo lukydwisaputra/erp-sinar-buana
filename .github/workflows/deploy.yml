@@ -1,8 +1,8 @@
-name: Build and push image
+name: Build and push images
 
-# Builds the app image on GitHub's runners (the ~4GB/2-vCPU VPS can't build
-# it reliably) and pushes to GHCR. Coolify then deploys by pulling this image
-# instead of building on the box.
+# Builds the app + worker images on GitHub's runners (the ~4GB/2-vCPU VPS
+# can't build them without OOM) and pushes to GHCR. Coolify deploys by
+# pulling these images instead of building on the box.
 on:
   push:
     branches: [testing]
@@ -18,6 +18,14 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: erp-sinar-buana
+            dockerfile: ./Dockerfile
+          - image: erp-sinar-buana-worker
+            dockerfile: ./infra/worker/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -34,7 +42,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=ref,event=branch
             type=sha
@@ -43,9 +51,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
