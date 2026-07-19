@@ -26,6 +26,8 @@ jobs:
             dockerfile: ./Dockerfile
           - image: erp-sinar-buana-worker
             dockerfile: ./infra/worker/Dockerfile
+          - image: erp-migrator
+            dockerfile: ./infra/migrator/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
