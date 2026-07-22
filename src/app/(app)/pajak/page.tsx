@@ -129,8 +129,8 @@ function SettleDialog({ entry, onOpenChange }: { entry: TaxEntry | null; onOpenC
               {errors.settledDate && <FieldError>{errors.settledDate.message}</FieldError>}
             </Field>
             <Field>
-              <FieldLabel>NTPN (opsional)</FieldLabel>
-              <Input className="font-mono" placeholder="No. Bukti Setor" {...register("ntpn")} />
+              <FieldLabel>Keterangan (opsional)</FieldLabel>
+              <Input placeholder="Catatan tambahan…" {...register("ntpn")} />
             </Field>
             {isPph23 && (
               <Field orientation="horizontal" className="items-center">
