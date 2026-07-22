@@ -34,7 +34,7 @@ function JadwalSheet({
           <p>ESTIMASI JADWAL RENCANA KEGIATAN</p>
           <p>{serviceName.toUpperCase()}</p>
           {pageInfo && (
-            <p className="text-[9px] font-normal text-[var(--doc-blue-2)]">
+            <p className="text-[9px] font-normal text-(--doc-blue-2)">
               Halaman {pageInfo.page} dari {pageInfo.total} — Bulan {startMonth}
               {endMonth > startMonth ? `–${endMonth}` : ""}
             </p>
@@ -42,27 +42,27 @@ function JadwalSheet({
         </div>
 
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full border-collapse border border-[var(--doc-rule)] text-[9px]">
-            <thead className="bg-[var(--doc-blue-soft)] text-center font-bold">
+          <table className="w-full border-collapse border border-(--doc-rule) text-[9px]">
+            <thead className="bg-(--doc-blue-soft) text-center font-bold">
               <tr>
-                <th rowSpan={3} className="border border-[var(--doc-rule)] px-2 py-1">NO</th>
-                <th rowSpan={3} className="border border-[var(--doc-rule)] px-2 py-1">KEGIATAN</th>
+                <th rowSpan={3} className="border border-(--doc-rule) px-2 py-1">NO</th>
+                <th rowSpan={3} className="border border-(--doc-rule) px-2 py-1">KEGIATAN</th>
                 {months.map((m) => (
-                  <th key={m} colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1">
+                  <th key={m} colSpan={4} className="border border-(--doc-rule) px-2 py-1">
                     BULAN - {m}
                   </th>
                 ))}
               </tr>
               <tr>
                 {months.map((m) => (
-                  <th key={m} colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1">
+                  <th key={m} colSpan={4} className="border border-(--doc-rule) px-2 py-1">
                     MINGGU
                   </th>
                 ))}
               </tr>
               <tr>
                 {weeks.map((week) => (
-                  <th key={week} className="w-6 border border-[var(--doc-rule)] px-1 py-1 text-center">
+                  <th key={week} className="w-6 border border-(--doc-rule) px-1 py-1 text-center">
                     {((week - 1) % 4) + 1}
                   </th>
                 ))}
@@ -73,13 +73,13 @@ function JadwalSheet({
                 const shaded = highlights[rowIndex] ?? [];
                 return (
                   <tr key={rowIndex}>
-                    <td className="border border-[var(--doc-rule)] px-2 py-1 text-center">{rowIndex + 1}</td>
-                    <td className="border border-[var(--doc-rule)] px-2 py-1">{nama}</td>
+                    <td className="border border-(--doc-rule) px-2 py-1 text-center">{rowIndex + 1}</td>
+                    <td className="border border-(--doc-rule) px-2 py-1">{nama}</td>
                     {weeks.map((week) => (
                       <td
                         key={week}
                         className={cn(
-                          "w-6 border border-[var(--doc-rule)] px-1 py-1 text-center",
+                          "w-6 border border-(--doc-rule) px-1 py-1 text-center",
                           shaded.includes(week) && "bg-primary/25",
                         )}
                       />

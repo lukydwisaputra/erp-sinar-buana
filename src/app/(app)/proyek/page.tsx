@@ -145,7 +145,7 @@ export default function ProyekPage() {
       cell: ({ row }) => (
         <button type="button"
           onClick={() => router.push(`/proyek/${encodeURIComponent(row.original.id)}`)}
-          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+          className="rounded-sm font-mono text-(--link) hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
           {row.original.number ?? "—"}
         </button>
       ),

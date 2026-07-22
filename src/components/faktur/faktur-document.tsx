@@ -21,7 +21,7 @@ function terminRowLabel(label: string, persen: number | undefined, pemicu: strin
 export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: InvoiceTermin }): React.JSX.Element {
   const companyProfile = companyProfileCache.current;
   const { headerNote, footerNote } = pdfTemplateNotesCache.current.invoice;
-  const cell = "border border-[var(--doc-rule)] px-2 py-1";
+  const cell = "border border-(--doc-rule) px-2 py-1";
   const sumLabel = `${cell} text-right font-bold`;
   const sumVal = `${cell} text-right font-mono tabular-nums whitespace-nowrap`;
   const terminPersen = induk.terminScheme.find((t) => t.label === termin.label)?.persen;
@@ -52,9 +52,9 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
         </div>
 
         {/* Table */}
-        <table className="mt-3 w-full border-collapse border border-[var(--doc-rule)]">
+        <table className="mt-3 w-full border-collapse border border-(--doc-rule)">
           <thead>
-            <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
+            <tr className="bg-(--doc-blue-soft) text-center font-bold">
               <th className={cell}>No.</th>
               <th className={cell}>Uraian</th>
               <th className={cell}>Biaya Satuan (Rp)</th>
@@ -130,12 +130,15 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
         {/* Signature */}
         <div className="mt-5 flex flex-col items-end text-right">
           <p>Hormat Kami,</p>
-          {induk.signatureImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={induk.signatureImage} alt="Tanda tangan" className="h-20 w-auto" />
-          ) : (
-            <div className="h-20" />
-          )}
+          {/* Fixed-width invisible bounds so the signature centers under
+              "Hormat Kami," regardless of where the ink sits within its own
+              (mostly transparent) source image. */}
+          <div className="my-2 flex h-20 w-40 justify-center">
+            {induk.signatureImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={induk.signatureImage} alt="Tanda tangan" className="h-20 w-auto" />
+            )}
+          </div>
           <p className="font-bold underline">{companyProfile.direktur.nama}</p>
           <p className="font-bold">{companyProfile.direktur.jabatan}</p>
         </div>

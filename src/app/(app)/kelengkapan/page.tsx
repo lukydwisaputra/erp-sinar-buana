@@ -37,7 +37,7 @@ function makeColumns(
       accessorKey: "number", header: "No. Kelengkapan", meta: { mono: true },
       cell: ({ row }) => (
         <button type="button" onClick={() => onNavigate(row.original)}
-          className="rounded-sm font-mono text-[var(--link)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          className="rounded-sm font-mono text-(--link) hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {row.original.number ?? "—"}
         </button>
       ),

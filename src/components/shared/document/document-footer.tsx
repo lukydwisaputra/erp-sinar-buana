@@ -5,7 +5,7 @@ import { companyProfileCache } from "@/lib/company-profile/cache";
 export function DocumentFooter(): React.JSX.Element {
   const companyProfile = companyProfileCache.current;
   return (
-    <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 bg-[var(--doc-blue-soft)] px-8 py-3 text-[11px] text-[var(--doc-blue)]">
+    <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 bg-(--doc-blue-soft) px-8 py-3 text-[11px] text-(--doc-blue)">
       <span className="inline-flex items-center gap-1">
         <Phone className="size-3.5" /> {companyProfile.telepon}
       </span>

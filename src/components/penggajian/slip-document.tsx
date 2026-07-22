@@ -15,7 +15,7 @@ function rupiah(v: number) {
 
 const cell = "px-4 py-1 text-[11px]";
 const cellR = `${cell} text-right font-mono tabular-nums`;
-const divider = "border-t border-[var(--doc-rule)]";
+const divider = "border-t border-(--doc-rule)";
 
 export function SlipDocument({
   slip,
@@ -45,7 +45,7 @@ export function SlipDocument({
         {headerNote && <p className="text-center whitespace-pre-line">{headerNote}</p>}
 
         {/* Employee meta */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 border border-[var(--doc-rule)] rounded p-3">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 border border-(--doc-rule) rounded p-3">
           <div className="space-y-0.5">
             <div className="flex gap-2"><span className="w-20 text-muted-foreground">Nama</span><span>: {slip.karyawanNama}</span></div>
             <div className="flex gap-2"><span className="w-20 text-muted-foreground">Jabatan</span><span>: {slip.jabatan}</span></div>
@@ -58,9 +58,9 @@ export function SlipDocument({
         </div>
 
         {/* Earnings table */}
-        <table className="w-full border-collapse border border-[var(--doc-rule)]">
+        <table className="w-full border-collapse border border-(--doc-rule)">
           <thead>
-            <tr className="bg-[var(--doc-blue-soft)]">
+            <tr className="bg-(--doc-blue-soft)">
               <th className={`${cell} text-left font-bold`} colSpan={2}>PENDAPATAN</th>
             </tr>
           </thead>
@@ -83,7 +83,7 @@ export function SlipDocument({
             ))}
             <tr><td className={cell}>Lembur</td><td className={cellR}>{rupiah(slip.lembur)}</td></tr>
             <tr><td className={cell}>Bonus</td><td className={cellR}>{rupiah(slip.bonus)}</td></tr>
-            <tr className={`${divider} font-bold bg-[var(--doc-blue-soft)]`}>
+            <tr className={`${divider} font-bold bg-(--doc-blue-soft)`}>
               <td className={cell}>PENGGAJIAN KOTOR</td>
               <td className={cellR}>{formatRupiah(penggajianKotor)}</td>
             </tr>
@@ -91,9 +91,9 @@ export function SlipDocument({
         </table>
 
         {/* Deductions */}
-        <table className="w-full border-collapse border border-[var(--doc-rule)]">
+        <table className="w-full border-collapse border border-(--doc-rule)">
           <thead>
-            <tr className="bg-[var(--doc-blue-soft)]">
+            <tr className="bg-(--doc-blue-soft)">
               <th className={`${cell} text-left font-bold`} colSpan={2}>POTONGAN</th>
             </tr>
           </thead>
@@ -105,7 +105,7 @@ export function SlipDocument({
                 <td className={cellR}>{c.isEmployerPortion ? "–" : formatRupiah(c.amount)}</td>
               </tr>
             ))}
-            <tr className={`${divider} font-bold bg-[var(--doc-blue-soft)]`}>
+            <tr className={`${divider} font-bold bg-(--doc-blue-soft)`}>
               <td className={cell}>TOTAL POTONGAN</td>
               <td className={cellR}>{formatRupiah(totalPotongan)}</td>
             </tr>
@@ -113,9 +113,9 @@ export function SlipDocument({
         </table>
 
         {/* Net pay */}
-        <table className="w-full border-collapse border border-[var(--doc-rule)]">
+        <table className="w-full border-collapse border border-(--doc-rule)">
           <tbody>
-            <tr className="bg-[var(--doc-blue)] text-white font-bold text-xs">
+            <tr className="bg-(--doc-blue) text-white font-bold text-xs">
               <td className={cell}>PENGGAJIAN BERSIH (Take-Home)</td>
               <td className={cellR}>{formatRupiah(penggajianBersih)}</td>
             </tr>
@@ -123,7 +123,7 @@ export function SlipDocument({
         </table>
 
         {/* Bank */}
-        <div className="border border-[var(--doc-rule)] rounded p-3 space-y-0.5">
+        <div className="border border-(--doc-rule) rounded p-3 space-y-0.5">
           <p className="font-medium">Dibayarkan ke:</p>
           <p>{slip.bankNama} &bull; {slip.bankNomor} &bull; a/n {slip.bankAtasNama}</p>
         </div>
@@ -136,7 +136,7 @@ export function SlipDocument({
           <div className="text-center">
             <p>{companyProfile.kota}, {tglPaid}</p>
             <div className="mt-24">
-              <div className="border-b border-[var(--doc-rule)] w-44 mx-auto" />
+              <div className="border-b border-(--doc-rule) w-44 mx-auto" />
               <p className="font-medium mt-1">{companyProfile.direktur.nama}</p>
               <p className="text-muted-foreground">{companyProfile.direktur.jabatan}</p>
             </div>
