@@ -78,35 +78,35 @@ export function SphCoverLetter({
         <p className="mt-2 text-justify indent-8">{values.kalimatPembuka}</p>
 
         {/* 5. Service table */}
-        <table className="mt-4 w-full border-collapse border border-[var(--doc-rule)]">
+        <table className="mt-4 w-full border-collapse border border-(--doc-rule)">
           <thead>
-            <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
-              <th className="border border-[var(--doc-rule)] px-2 py-1">No</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Uraian</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Biaya Satuan (Rp)</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Volume</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Total (Rp)</th>
+            <tr className="bg-(--doc-blue-soft) text-center font-bold">
+              <th className="border border-(--doc-rule) px-2 py-1">No</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Uraian</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Biaya Satuan (Rp)</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Volume</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Total (Rp)</th>
             </tr>
           </thead>
           <tbody>
             {values.items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="border border-[var(--doc-rule)] px-2 py-4 text-center">
+                <td colSpan={5} className="border border-(--doc-rule) px-2 py-4 text-center">
                   Tambahkan layanan…
                 </td>
               </tr>
             ) : (
               values.items.map((it, i) => (
                 <tr key={i}>
-                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-center">{i + 1}</td>
-                  <td className="border border-[var(--doc-rule)] px-2 py-1">{it.nama || "—"}</td>
-                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                  <td className="border border-(--doc-rule) px-2 py-1 text-center">{i + 1}</td>
+                  <td className="border border-(--doc-rule) px-2 py-1">{it.nama || "—"}</td>
+                  <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
                     {formatRupiah(it.harga)}
                   </td>
-                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-center">
+                  <td className="border border-(--doc-rule) px-2 py-1 text-center">
                     {it.volume} {it.satuan}
                   </td>
-                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                  <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
                     {formatRupiah((Number(it.volume) || 0) * (Number(it.harga) || 0))}
                   </td>
                 </tr>
@@ -116,11 +116,11 @@ export function SphCoverLetter({
             <tr>
               <td
                 colSpan={4}
-                className="border border-[var(--doc-rule)] px-2 py-1 text-right font-bold"
+                className="border border-(--doc-rule) px-2 py-1 text-right font-bold"
               >
                 TOTAL BIAYA
               </td>
-              <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
+              <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono font-bold tabular-nums">
                 {formatRupiah(total)}
               </td>
             </tr>
@@ -129,24 +129,24 @@ export function SphCoverLetter({
               <>
                 {values.ppnAktif && (
                   <tr>
-                    <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">DPP</td>
-                    <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                    <td colSpan={4} className="border border-(--doc-rule) px-2 py-1 text-right">DPP</td>
+                    <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
                       {formatRupiah(tax.dpp)}
                     </td>
                   </tr>
                 )}
                 {tax.ppn > 0 && (
                   <tr>
-                    <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">PPN</td>
-                    <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                    <td colSpan={4} className="border border-(--doc-rule) px-2 py-1 text-right">PPN</td>
+                    <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
                       {formatRupiah(tax.ppn)}
                     </td>
                   </tr>
                 )}
                 {tax.pph23 > 0 && (
                   <tr>
-                    <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">PPh</td>
-                    <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums text-destructive">
+                    <td colSpan={4} className="border border-(--doc-rule) px-2 py-1 text-right">PPh</td>
+                    <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums text-destructive">
                       {formatRupiah(-tax.pph23)}
                     </td>
                   </tr>
@@ -154,11 +154,11 @@ export function SphCoverLetter({
                 <tr>
                   <td
                     colSpan={4}
-                    className="border border-[var(--doc-rule)] px-2 py-1 text-right font-bold"
+                    className="border border-(--doc-rule) px-2 py-1 text-right font-bold"
                   >
                     TOTAL BIAYA SETELAH PAJAK
                   </td>
-                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
+                  <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono font-bold tabular-nums">
                     {formatRupiah(totalSetelahPajak)}
                   </td>
                 </tr>
@@ -166,7 +166,7 @@ export function SphCoverLetter({
             )}
             {/* Terbilang */}
             <tr>
-              <td colSpan={5} className="border border-[var(--doc-rule)] px-2 py-1 text-center">
+              <td colSpan={5} className="border border-(--doc-rule) px-2 py-1 text-center">
                 <span className="font-semibold">Terbilang: </span>
                 <span className="font-bold italic">{titleCase(terbilang(totalSetelahPajak))} Rupiah</span>
               </td>
@@ -214,18 +214,22 @@ export function SphCoverLetter({
         <div className="mt-8 flex flex-col items-end text-right">
           <p>Hormat Kami,</p>
           {signatureImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={signatureImage} alt="Tanda tangan" className="my-2 h-20 w-auto" />
+            // Fixed-width invisible bounds so the hand-drawn ink visually
+            // centers under "Hormat Kami," regardless of where it sits
+            // within its own (mostly transparent) source canvas image —
+            // the stamp/logo below doesn't need this, it's already symmetric.
+            <div className="my-2 flex w-40 justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={signatureImage} alt="Tanda tangan" className="h-20 w-auto" />
+            </div>
           ) : companyProfile.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={companyProfile.logo} alt="Cap perusahaan" className="my-2 size-20 object-contain opacity-50" />
           ) : (
-            <>
-              {/* Approximates the round company stamp — blank space for a manual signature + wet stamp. */}
-              <div className="my-2 flex size-20 rotate-[-8deg] items-center justify-center rounded-full border-2 border-[var(--doc-blue)]/60 text-[var(--doc-blue)]/70">
-                <span className="text-base font-bold tracking-tight">SBMJ</span>
-              </div>
-            </>
+            // Approximates the round company stamp — blank space for a manual signature + wet stamp.
+            <div className="my-2 flex size-20 rotate-[-8deg] items-center justify-center rounded-full border-2 border-(--doc-blue)/60 text-(--doc-blue)/70">
+              <span className="text-base font-bold tracking-tight">SBMJ</span>
+            </div>
           )}
           <p className="font-bold underline">{companyProfile.direktur.nama}</p>
           <p className="font-bold">{companyProfile.direktur.jabatan}</p>

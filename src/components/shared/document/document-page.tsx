@@ -13,11 +13,11 @@ export function DocumentPage({
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <div className="doc-page mx-auto flex min-h-[297mm] w-[210mm] flex-col bg-white text-[var(--doc-ink)] ring-1 ring-inset ring-black/8 print:ring-0">
+    <div className="doc-page mx-auto flex min-h-[297mm] w-[210mm] flex-col bg-white text-(--doc-ink) ring-1 ring-inset ring-black/8 print:ring-0">
       <table className="doc-page-table w-full flex-1 border-collapse">
         <thead className="doc-page-head"><tr><td className="p-0">{header}</td></tr></thead>
         <tfoot className="doc-page-foot"><tr><td className="p-0"><DocumentFooter /></td></tr></tfoot>
-        <tbody><tr><td className="p-0 align-top">{children}</td></tr></tbody>
+        <tbody><tr><td className="pt-4 align-top">{children}</td></tr></tbody>
       </table>
     </div>
   );

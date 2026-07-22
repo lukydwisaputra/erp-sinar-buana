@@ -13,23 +13,23 @@ export function DocumentLetterhead({
   const companyProfile = companyProfileCache.current;
   if (variant === "strip") {
     return (
-      <div className="flex items-center gap-2 border-b border-[var(--doc-rule)] px-8 py-1.5">
+      <div className="flex items-center gap-2 border-b border-(--doc-rule) px-8 py-1.5">
         <Logo className="size-7 text-[9px]" />
         <div>
-          <p className="text-[11px] font-bold leading-tight text-[var(--doc-blue)]">{companyProfile.nama}</p>
-          <p className="text-[9px] tracking-wide text-[var(--doc-blue-2)]">{companyProfile.tagline}</p>
+          <p className="text-[11px] font-bold leading-tight text-(--doc-blue)">{companyProfile.nama}</p>
+          <p className="text-[9px] tracking-wide text-(--doc-blue-2)">{companyProfile.tagline}</p>
         </div>
       </div>
     );
   }
   return (
-    <div className="relative flex h-24 items-stretch justify-between overflow-hidden">
+    <div className="relative flex h-20 items-stretch justify-between overflow-hidden">
       <div className="relative h-full w-3/5">
-        <div className="absolute inset-0 bg-[var(--doc-blue)]" style={{ clipPath: "polygon(0 0, 100% 0, 88% 55%, 0 55%)" }} />
-        <div className="absolute inset-0 bg-[var(--doc-blue-2)]" style={{ clipPath: "polygon(0 55%, 88% 55%, 78% 100%, 0 100%)" }} />
+        <div className="absolute inset-0 bg-(--doc-blue)" style={{ clipPath: "polygon(0 0, 100% 0, 88% 55%, 0 55%)" }} />
+        <div className="absolute inset-0 bg-(--doc-blue-2)" style={{ clipPath: "polygon(0 55%, 88% 55%, 78% 100%, 0 100%)" }} />
       </div>
       <div className="flex items-center justify-end gap-4 px-8">
-        <p className="whitespace-nowrap text-lg font-bold leading-tight text-[var(--doc-blue)]">
+        <p className="whitespace-nowrap text-lg font-bold leading-tight text-(--doc-blue)">
           {companyProfile.nama}
         </p>
         <Logo className="size-16 text-xs" />
@@ -45,7 +45,7 @@ function Logo({ className = "" }: { className?: string }): React.JSX.Element {
     return <img src={logo} alt="Logo" className={`object-contain ${className}`} />;
   }
   return (
-    <div className={`flex items-center justify-center rounded-full border-2 border-[var(--doc-blue)] text-[var(--doc-blue)] ${className}`}>
+    <div className={`flex items-center justify-center rounded-full border-2 border-(--doc-blue) text-(--doc-blue) ${className}`}>
       <span className="font-bold tracking-tight">SBMJ</span>
     </div>
   );
