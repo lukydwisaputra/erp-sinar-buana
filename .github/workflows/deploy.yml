@@ -24,10 +24,16 @@ jobs:
         include:
           - image: erp-sinar-buana
             dockerfile: ./Dockerfile
+            context: .
           - image: erp-sinar-buana-worker
             dockerfile: ./infra/worker/Dockerfile
+            context: .
           - image: erp-migrator
             dockerfile: ./infra/migrator/Dockerfile
+            context: .
+          - image: erp-sinar-buana-docs-client
+            dockerfile: ./infra/docs-client/Dockerfile
+            context: ./docs-client
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +58,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
