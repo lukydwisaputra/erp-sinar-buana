@@ -23,17 +23,16 @@ export function DocumentLetterhead({
     );
   }
   return (
-    <div className="relative flex items-stretch justify-between overflow-hidden">
-      <div className="relative h-14 w-3/5">
-        <div className="absolute inset-0 bg-[var(--doc-blue)]" style={{ clipPath: "polygon(0 0, 100% 0, 78% 100%, 0 100%)" }} />
-        <div className="absolute inset-0 bg-[var(--doc-blue-2)]" style={{ clipPath: "polygon(0 55%, 88% 55%, 70% 100%, 0 100%)" }} />
+    <div className="relative flex h-24 items-stretch justify-between overflow-hidden">
+      <div className="relative h-full w-3/5">
+        <div className="absolute inset-0 bg-[var(--doc-blue)]" style={{ clipPath: "polygon(0 0, 100% 0, 88% 55%, 0 55%)" }} />
+        <div className="absolute inset-0 bg-[var(--doc-blue-2)]" style={{ clipPath: "polygon(0 55%, 88% 55%, 78% 100%, 0 100%)" }} />
       </div>
-      <div className="flex flex-col items-end justify-center px-8 py-2 text-right">
-        <Logo className="size-9 text-[9px]" />
-        <p className="whitespace-nowrap text-[11px] font-bold leading-tight text-[var(--doc-blue)]">
+      <div className="flex items-center justify-end gap-4 px-8">
+        <p className="whitespace-nowrap text-lg font-bold leading-tight text-[var(--doc-blue)]">
           {companyProfile.nama}
         </p>
-        <p className="text-[9px] tracking-wide text-[var(--doc-blue-2)]">{companyProfile.tagline}</p>
+        <Logo className="size-16 text-xs" />
       </div>
     </div>
   );

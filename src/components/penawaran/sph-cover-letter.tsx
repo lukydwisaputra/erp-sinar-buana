@@ -127,12 +127,14 @@ export function SphCoverLetter({
             {/* DPP/PPN/PPh breakdown (only when a tax is active) */}
             {taxActive && (
               <>
-                <tr>
-                  <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">DPP</td>
-                  <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
-                    {formatRupiah(tax.dpp)}
-                  </td>
-                </tr>
+                {values.ppnAktif && (
+                  <tr>
+                    <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">DPP</td>
+                    <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+                      {formatRupiah(tax.dpp)}
+                    </td>
+                  </tr>
+                )}
                 {tax.ppn > 0 && (
                   <tr>
                     <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right">PPN</td>
@@ -214,6 +216,9 @@ export function SphCoverLetter({
           {signatureImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={signatureImage} alt="Tanda tangan" className="my-2 h-20 w-auto" />
+          ) : companyProfile.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={companyProfile.logo} alt="Cap perusahaan" className="my-2 size-20 object-contain opacity-50" />
           ) : (
             <>
               {/* Approximates the round company stamp — blank space for a manual signature + wet stamp. */}
