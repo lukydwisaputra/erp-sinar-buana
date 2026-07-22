@@ -55,7 +55,7 @@ function StatusBadge({ status, error }: { status: DeliveryStatus; error: string 
           <TriangleAlert className="size-3 text-destructive" />
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-sm text-left break-words whitespace-pre-wrap">{error}</TooltipContent>
+      <TooltipContent className="max-w-sm text-left wrap-break-word whitespace-pre-wrap">{error}</TooltipContent>
     </Tooltip>
   );
 }
