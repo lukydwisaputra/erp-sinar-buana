@@ -13,7 +13,7 @@ import { MoneyInput } from "@/components/shared/money-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { StatCard, type StatCardInfo } from "@/components/shared/stat-card";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -357,10 +357,42 @@ function SummaryCards({ entries, showDelta = true }: { entries: ArusKasEntry[]; 
   const kreditDelta = deltaPct(kreditNow, kreditPrev);
   const debitDelta = deltaPct(debitNow, debitPrev);
 
-  const cards = [
-    { label: "Saldo", value: formatRupiah(saldo), delta: saldoDelta, good: saldoDelta >= 0 },
-    { label: "Total Pemasukan", value: formatRupiah(totalKredit), delta: kreditDelta, good: kreditDelta >= 0 },
-    { label: "Total Pengeluaran", value: formatRupiah(totalDebit), delta: debitDelta, good: debitDelta <= 0 },
+  const cards: { label: string; value: string; delta: number; good: boolean; info: StatCardInfo }[] = [
+    {
+      label: "Saldo",
+      value: formatRupiah(saldo),
+      delta: saldoDelta,
+      good: saldoDelta >= 0,
+      info: {
+        definisi: "Saldo kas kumulatif dari seluruh riwayat transaksi Arus Kas, bukan hanya bulan berjalan.",
+        basisPerhitungan:
+          "Total Pemasukan dikurangi Total Pengeluaran dari semua entri yang tidak dibatalkan. Persentase di bawah membandingkan selisih pemasukan–pengeluaran bulan ini vs bulan lalu.",
+        sumberData: ["Arus Kas — seluruh entri aktif"],
+      },
+    },
+    {
+      label: "Total Pemasukan",
+      value: formatRupiah(totalKredit),
+      delta: kreditDelta,
+      good: kreditDelta >= 0,
+      info: {
+        definisi: "Total seluruh dana masuk yang tercatat di Arus Kas, sepanjang waktu.",
+        basisPerhitungan: "Jumlah nominal semua entri berjenis Kredit yang tidak dibatalkan. Persentase membandingkan pemasukan bulan ini vs bulan lalu.",
+        sumberData: ["Arus Kas — entri Kredit"],
+      },
+    },
+    {
+      label: "Total Pengeluaran",
+      value: formatRupiah(totalDebit),
+      delta: debitDelta,
+      good: debitDelta <= 0,
+      info: {
+        definisi: "Total seluruh dana keluar yang tercatat di Arus Kas, sepanjang waktu.",
+        basisPerhitungan:
+          "Jumlah nominal semua entri berjenis Debit yang tidak dibatalkan. Persentase membandingkan pengeluaran bulan ini vs bulan lalu (turun = baik).",
+        sumberData: ["Arus Kas — entri Debit"],
+      },
+    },
   ];
 
   return (
@@ -368,20 +400,21 @@ function SummaryCards({ entries, showDelta = true }: { entries: ArusKasEntry[]; 
       {cards.map((c) => {
         const Icon = c.delta >= 0 ? TrendingUp : TrendingDown;
         return (
-          <Card key={c.label}>
-            <CardHeader>
-              <CardDescription className="text-xs tracking-wide uppercase">{c.label}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1">
-              <p className="font-mono text-2xl font-semibold tabular-nums text-foreground">{c.value}</p>
-              {showDelta && (
+          <StatCard
+            key={c.label}
+            label={c.label}
+            value={c.value}
+            info={c.info}
+            sensitive={false}
+            sub={
+              showDelta && (
                 <p className={cn("inline-flex items-center gap-1 text-xs font-medium", c.good ? "text-success" : "text-destructive")}>
                   <Icon className="size-3.5" />
                   {Math.abs(c.delta)}% vs bulan lalu
                 </p>
-              )}
-            </CardContent>
-          </Card>
+              )
+            }
+          />
         );
       })}
     </div>
@@ -519,13 +552,13 @@ function ArusKasPageContent() {
           defaultSorting={[{ id: "tanggal", desc: true }]}
           rowActions={false}
           toolbarActions={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-1 items-center gap-2">
               <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={openFilter}>
                 <SlidersHorizontal className="size-3.5" />
                 Filter
                 {hasFilter && <Badge variant="secondary" className="px-1.5 py-0 text-xs">{filterCount}</Badge>}
               </Button>
-              <Button size="sm" className="h-9" onClick={() => setCreateOpen(true)}>
+              <Button size="sm" className="h-9 ml-auto" onClick={() => setCreateOpen(true)}>
                 <Plus className="size-4" /> Tambah Transaksi
               </Button>
             </div>
