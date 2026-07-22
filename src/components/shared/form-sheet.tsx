@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { usePending } from "@/lib/use-pending";
+import { cn } from "@/lib/utils";
 
 /**
  * Presentational shell for the "Tambah" create forms.
@@ -22,6 +23,7 @@ export function FormSheet({
   onSubmit,
   submitLabel = "Simpan",
   submitDisabled = false,
+  className,
   children,
 }: {
   open: boolean;
@@ -31,12 +33,14 @@ export function FormSheet({
   onSubmit: (e: React.FormEvent) => void;
   submitLabel?: string;
   submitDisabled?: boolean;
+  /** Override the default sm:max-w-md width — wider forms (e.g. multi-column step rows). */
+  className?: string;
   children: React.ReactNode;
 }) {
   const [submitting, run] = usePending();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col overflow-hidden sm:max-w-md">
+      <SheetContent className={cn("flex flex-col overflow-hidden sm:max-w-md", className)}>
         <SheetHeader className="pr-10">
           <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}
