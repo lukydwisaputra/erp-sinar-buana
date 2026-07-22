@@ -94,7 +94,12 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
             {termin.ppn > 0 && <SummaryRow label="DPP" value={formatRupiah(termin.dpp)} labelCls={sumLabel} valCls={sumVal} />}
             {termin.ppn > 0 && <SummaryRow label="PPN" value={formatRupiah(termin.ppn)} labelCls={sumLabel} valCls={sumVal} />}
             {termin.pph23 > 0 && <SummaryRow label="PPh" value={formatRupiah(-termin.pph23)} labelCls={sumLabel} valCls={`${sumVal} text-destructive`} />}
-            <SummaryRow label="TOTAL BIAYA SETELAH PAJAK" value={formatRupiah(termin.totalSetelahPajak)} labelCls={sumLabel} valCls={`${sumVal} font-bold`} />
+            <SummaryRow
+              label={termin.ppn > 0 || termin.pph23 > 0 ? "TOTAL BIAYA SETELAH PAJAK" : "TOTAL BIAYA"}
+              value={formatRupiah(termin.totalSetelahPajak)}
+              labelCls={sumLabel}
+              valCls={`${sumVal} font-bold`}
+            />
             <tr>
               <td colSpan={5} className={`${cell} text-center`}>
                 <span className="font-semibold">Terbilang: </span>
