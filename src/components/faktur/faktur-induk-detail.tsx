@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { CalendarIcon, Download, Send, Plus, Ban, CheckCircle2, X } from "lucide-react";
+import { CalendarIcon, Download, Send, Plus, Ban, CheckCircle2, Pencil, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ import { useWorkflowStatuses } from "@/lib/query/proyek";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
 import { useSession } from "@/lib/query/session";
-import { isClientPortal, isAdminUser } from "@/lib/auth/rbac";
+import { isClientPortal, isAdminUser, isFinance } from "@/lib/auth/rbac";
 import { CancelPembatalanModal } from "@/components/shared/cancel-pembatalan-modal";
 import { useCancelPembatalan } from "@/lib/query/pembatalan";
 import type { FakturInduk, InvoiceTermin } from "@/lib/schemas/faktur";
@@ -186,6 +186,72 @@ function MarkLunasDialog({ induk, termin, lunasStatusId, open, onOpenChange }: {
   );
 }
 
+// ─── Edit termin dialog ───────────────────────────────────────────────────────
+
+function EditTerminDialog({ induk, termin, open, onOpenChange }: {
+  induk: FakturInduk; termin: InvoiceTermin; open: boolean; onOpenChange: (open: boolean) => void;
+}) {
+  const updateTermin = useUpdateTermin();
+  const { data: bankOptions = [] } = useOptionList("rekening_bank");
+  const [tanggal, setTanggal] = React.useState(termin.tanggal);
+  const [jatuhTempo, setJatuhTempo] = React.useState(termin.jatuhTempo ?? "");
+  const [bankAccountId, setBankAccountId] = React.useState(termin.bankAccountId ?? "");
+  const [catatan, setCatatan] = React.useState(termin.catatan);
+
+  React.useEffect(() => {
+    if (open) {
+      setTanggal(termin.tanggal);
+      setJatuhTempo(termin.jatuhTempo ?? "");
+      setBankAccountId(termin.bankAccountId ?? "");
+      setCatatan(termin.catatan);
+    }
+  }, [open, termin]);
+
+  const onSubmit = async () => {
+    await updateTermin.mutateAsync({
+      masterInvoiceId: induk.id,
+      terminId: termin.id,
+      input: { tanggal, jatuhTempo: jatuhTempo || null, bankAccountId: bankAccountId || null, catatan },
+    });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit {termin.label}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <DateField label="Tanggal" value={tanggal} onChange={setTanggal} />
+            <DateField label="Jatuh Tempo" value={jatuhTempo} onChange={setJatuhTempo} />
+          </div>
+          <Field>
+            <FieldLabel>Rekening Bank</FieldLabel>
+            <Select value={bankAccountId} onValueChange={setBankAccountId}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Pilih rekening…" /></SelectTrigger>
+              <SelectContent>
+                {bankOptions.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.nama}{b.extra.bank ? ` — ${b.extra.bank.nomor}` : ""}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field>
+            <FieldLabel>Catatan</FieldLabel>
+            <Input value={catatan} onChange={(e) => setCatatan(e.target.value)} placeholder="Catatan (opsional)" />
+          </Field>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
+          <Button loading={updateTermin.isPending} onClick={onSubmit}>Simpan</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Termin document dialog ──────────────────────────────────────────────────
 
 function TerminDocumentDialog({ induk, termin, open, onOpenChange }: {
@@ -264,9 +330,11 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
   const [refDocOpen, setRefDocOpen] = React.useState(false);
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const [lunasOpen, setLunasOpen] = React.useState(false);
+  const [editOpen, setEditOpen] = React.useState(false);
   const isFinal = termin.statusSystemRole === "LUNAS" || termin.statusSystemRole === "BATAL";
   const { data: session } = useSession();
   const isClient = isClientPortal(session);
+  const isFinanceUser = isFinance(session);
   const referencedTermin = termin.referencedInstallment
     ? induk.termins.find((t) => t.id === termin.referencedInstallment?.id)
     : undefined;
@@ -281,12 +349,17 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
         <Badge variant={statusVariant(termin.statusSystemRole)}>{termin.status}</Badge>
         <div className="ml-auto flex items-center gap-2">
           <Button size="xs" variant="outline" onClick={() => setDocOpen(true)}>Lihat Dokumen</Button>
-          {!isClient && !isFinal && (lunasStatusId || batalStatusId) && (
+          {!isClient && !isFinal && (lunasStatusId || batalStatusId || isFinanceUser) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="xs" variant="outline">Aksi</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {isFinanceUser && (
+                  <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                    <Pencil className="size-3.5" /> Edit
+                  </DropdownMenuItem>
+                )}
                 {lunasStatusId && (
                   <DropdownMenuItem onSelect={() => setLunasOpen(true)}>
                     <CheckCircle2 className="size-3.5" /> Tandai Lunas
@@ -343,6 +416,7 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
         </AlertDialogContent>
       </AlertDialog>
 
+      <EditTerminDialog induk={induk} termin={termin} open={editOpen} onOpenChange={setEditOpen} />
       {lunasStatusId && (
         <MarkLunasDialog induk={induk} termin={termin} lunasStatusId={lunasStatusId} open={lunasOpen} onOpenChange={setLunasOpen} />
       )}
