@@ -377,6 +377,43 @@ export async function cancelSlip(userId: string, batchId: string, slipId: string
   });
 }
 
+/** Bulk convenience over cancelSlip — skips slips already DIBAYAR/BATAL
+ * instead of failing the whole batch, since a partially-final batch should
+ * still cancel what it still can. */
+export async function cancelBatch(userId: string, batchId: string): Promise<PenggajianBatch> {
+  return withUserTransaction(userId, async (tx) => {
+    const parsed = parseBatchId(batchId);
+    if (!parsed) throw new NotFoundError("Batch tidak ditemukan.");
+    const rows = await tx
+      .select()
+      .from(schema.payslips)
+      .where(and(
+        eq(schema.payslips.periodStart, parsed.periodStart),
+        eq(schema.payslips.periodEnd, parsed.periodEnd),
+        isNull(schema.payslips.deletedAt),
+      ));
+    if (!rows.length) throw new NotFoundError("Batch tidak ditemukan.");
+
+    const batalStatusId = await getPenggajianStatusId(tx, "BATAL");
+    for (const row of rows) {
+      const status = await loadStatus(tx, row.statusId);
+      if (status?.systemRole === "DIBAYAR" || status?.systemRole === "BATAL") continue;
+      await tx.update(schema.payslips).set({ statusId: batalStatusId, updatedBy: userId }).where(eq(schema.payslips.id, row.id));
+    }
+
+    const refreshedRows = await tx
+      .select()
+      .from(schema.payslips)
+      .where(and(
+        eq(schema.payslips.periodStart, parsed.periodStart),
+        eq(schema.payslips.periodEnd, parsed.periodEnd),
+        isNull(schema.payslips.deletedAt),
+      ));
+    const slips = await assembleSlips(tx, refreshedRows);
+    return toPenggajianBatch(batchId, refreshedRows, slips);
+  });
+}
+
 async function getPenggajianStatusId(tx: Tx, systemRole: "DIBAYAR" | "BATAL"): Promise<string> {
   const [row] = await tx
     .select({ id: schema.workflowStatuses.id })

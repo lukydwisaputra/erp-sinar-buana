@@ -93,3 +93,19 @@ export function useCancelSlip() {
     onError: (error) => toast.error(apiErrorMessage(error, "Gagal membatalkan slip.")),
   });
 }
+
+export function useCancelBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) =>
+      apiClient.post<PenggajianBatch>(`/api/penggajian/${encodeURIComponent(batchId)}/batal`, {}),
+    onSuccess: (_, batchId) => {
+      qc.invalidateQueries({ queryKey: ["penggajian", batchId] });
+      qc.invalidateQueries({ queryKey: ["penggajian"] });
+      qc.invalidateQueries({ queryKey: ["arus-kas"] });
+      qc.invalidateQueries({ queryKey: ["tax-entries"] });
+      toast.success("Batch berhasil dibatalkan.");
+    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal membatalkan batch.")),
+  });
+}
