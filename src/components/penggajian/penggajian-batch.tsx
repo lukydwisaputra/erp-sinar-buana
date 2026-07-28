@@ -15,7 +15,7 @@ import {
 import { ComponentsEditor } from "@/components/penggajian/components-editor";
 import { formatRupiah, formatTanggalPanjang } from "@/lib/format";
 import { calcSlip, type PenggajianBatch, type SlipGaji } from "@/lib/schemas/penggajian";
-import { useBatch, useUpdateSlip, useMarkSlipDibayar, useCancelSlip } from "@/lib/query/penggajian";
+import { useBatch, useUpdateSlip, useMarkSlipDibayar, useCancelSlip, useCancelBatch } from "@/lib/query/penggajian";
 
 function periodStr(p: PenggajianBatch["periode"]) {
   return `${formatTanggalPanjang(p.mulai)} – ${formatTanggalPanjang(p.selesai)}`;
@@ -158,6 +158,8 @@ function SlipCard({ slip, batchId }: { slip: SlipGaji; batchId: string }) {
 
 export function PenggajianBatchDetail({ batchId }: { batchId: string }) {
   const { data: batch, isLoading } = useBatch(batchId);
+  const cancelBatch = useCancelBatch();
+  const [confirmCancelBatch, setConfirmCancelBatch] = React.useState(false);
 
   if (isLoading) {
     return (
@@ -209,6 +211,11 @@ export function PenggajianBatchDetail({ batchId }: { batchId: string }) {
             <p className="text-xs text-muted-foreground">Total Bersih</p>
             <p className={`font-mono font-semibold ${totals.bersih < 0 ? "text-destructive" : ""}`}>{formatRupiah(totals.bersih)}</p>
           </div>
+          {paid < total && (
+            <Button variant="outline" size="sm" onClick={() => setConfirmCancelBatch(true)}>
+              <Ban className="mr-1.5 size-3.5" /> Batalkan Batch
+            </Button>
+          )}
         </div>
       </div>
 
@@ -217,6 +224,28 @@ export function PenggajianBatchDetail({ batchId }: { batchId: string }) {
           <SlipCard key={slip.id} slip={slip} batchId={batch.id} />
         ))}
       </div>
+
+      <AlertDialog open={confirmCancelBatch} onOpenChange={setConfirmCancelBatch}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan seluruh batch?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Setiap slip yang belum dibayar di batch ini akan ditandai Dibatalkan. Slip yang sudah dibayar atau
+              sudah dibatalkan tidak akan terpengaruh.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Kembali</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={cancelBatch.isPending}
+              onClick={() => cancelBatch.mutate(batchId, { onSuccess: () => setConfirmCancelBatch(false) })}
+            >
+              Ya, Batalkan Batch
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
