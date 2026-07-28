@@ -474,6 +474,7 @@ export async function updateTermin(userId: string, masterInvoiceId: string, term
       .set({
         ...(input.statusId !== undefined && { statusId: input.statusId }),
         ...(input.paidDate !== undefined && { paidDate: input.paidDate }),
+        ...(input.tanggal !== undefined && { date: input.tanggal }),
         ...(input.jatuhTempo !== undefined && { dueDate: input.jatuhTempo }),
         ...(input.bankAccountId !== undefined && { bankAccountId: input.bankAccountId }),
         ...(input.catatan !== undefined && { notes: input.catatan || null }),

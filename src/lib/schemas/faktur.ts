@@ -124,6 +124,7 @@ export type GenerateTerminInput = z.infer<typeof generateTerminSchema>;
 export const updateTerminSchema = z.object({
   statusId: z.string().optional(),
   paidDate: z.string().nullable().optional(),
+  tanggal: z.string().optional(),
   jatuhTempo: z.string().nullable().optional(),
   bankAccountId: z.string().nullable().optional(),
   catatan: z.string().optional(),
