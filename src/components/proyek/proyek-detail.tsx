@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   FolderKanban, Building2, MapPin, CalendarDays, Check,
   ChevronUp, ChevronDown, Trash2, Plus, CalendarIcon, CornerDownRight, ChevronDown as ChevronDownIcon,
-  FileText, Receipt, Link2,
+  FileText, Receipt, Link2, Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -45,7 +45,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { Proyek, Milestone } from "@/lib/schemas/proyek";
 import { MilestoneModal } from "@/components/proyek/milestone-modal";
 import { RealisasiRabForm } from "@/components/realisasi-rab/realisasi-rab-form";
-import { useRealisasiRabByProyek } from "@/lib/query/realisasi-rab";
+import { useRealisasiRabByProyek, useRemoveRealisasiRab } from "@/lib/query/realisasi-rab";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import type { RealisasiRab } from "@/lib/schemas/realisasi-rab";
 import { formatRupiah } from "@/lib/format";
 import { CancelPembatalanModal } from "@/components/shared/cancel-pembatalan-modal";
 import { useCancelPembatalan } from "@/lib/query/pembatalan";
@@ -715,6 +717,9 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
   const { data: statusOptions = [] } = useWorkflowStatuses("proyek");
   const [modalMilestone, setModalMilestone] = React.useState<Milestone | null>(null);
   const [realisasiOpen, setRealisasiOpen] = React.useState(false);
+  const [editingRealisasi, setEditingRealisasi] = React.useState<RealisasiRab | null>(null);
+  const [deletingRealisasi, setDeletingRealisasi] = React.useState<RealisasiRab | null>(null);
+  const removeRealisasi = useRemoveRealisasiRab();
   const [ubahOpen, setUbahOpen] = React.useState(false);
   const [cancelOpen, setCancelOpen] = React.useState(false);
   const cancelPembatalan = useCancelPembatalan();
@@ -856,9 +861,17 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
           ) : (
             <div className="space-y-1">
               {realisasiList.map((r) => (
-                <div key={r.id} className="flex justify-between text-sm py-1 border-b last:border-0">
+                <div key={r.id} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
                   <span className="text-muted-foreground">{r.tanggal} · {r.kategori === "personil" ? "A" : "B"} · {r.rabLineLabel}</span>
-                  <span className="font-medium tabular-nums">{formatRupiah(r.jumlah)}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium tabular-nums">{formatRupiah(r.jumlah)}</span>
+                    <Button variant="ghost" size="icon" className="size-7" onClick={() => setEditingRealisasi(r)}>
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="size-7" onClick={() => setDeletingRealisasi(r)}>
+                      <Trash2 className="size-3.5 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               ))}
               <div className="flex justify-between text-sm pt-2 font-semibold">
@@ -868,6 +881,26 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
             </div>
           )}
           <RealisasiRabForm proyekId={proyek.id} open={realisasiOpen} onOpenChange={setRealisasiOpen} />
+          <RealisasiRabForm
+            proyekId={proyek.id}
+            open={!!editingRealisasi}
+            onOpenChange={(o) => { if (!o) setEditingRealisasi(null); }}
+            editing={editingRealisasi}
+          />
+          <ConfirmDeleteDialog
+            open={!!deletingRealisasi}
+            onOpenChange={(o) => { if (!o) setDeletingRealisasi(null); }}
+            entityLabel="Realisasi RAB"
+            target={deletingRealisasi?.rabLineLabel}
+            loading={removeRealisasi.isPending}
+            onConfirm={() => {
+              if (!deletingRealisasi) return;
+              removeRealisasi.mutate(
+                { id: deletingRealisasi.id, proyekId: proyek.id },
+                { onSuccess: () => setDeletingRealisasi(null) },
+              );
+            }}
+          />
         </div>
       )}
     </div>

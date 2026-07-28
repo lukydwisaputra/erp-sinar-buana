@@ -1,17 +1,19 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MoneyInput } from "@/components/shared/money-input";
-import { useCreateRealisasiRab } from "@/lib/query/realisasi-rab";
-import type { RealisasiRabFormValues } from "@/lib/schemas/realisasi-rab";
+import { useCreateRealisasiRab, useUpdateRealisasiRab } from "@/lib/query/realisasi-rab";
+import type { RealisasiRab, RealisasiRabFormValues } from "@/lib/schemas/realisasi-rab";
 
 interface RealisasiRabFormProps {
   proyekId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Present = edit an existing actual; absent = create a new one. */
+  editing?: RealisasiRab | null;
 }
 
 const EMPTY = (proyekId: string): RealisasiRabFormValues => ({
@@ -23,10 +25,27 @@ const EMPTY = (proyekId: string): RealisasiRabFormValues => ({
   keterangan: "",
 });
 
-export function RealisasiRabForm({ proyekId, open, onOpenChange }: RealisasiRabFormProps) {
-  const [form, setForm] = useState<RealisasiRabFormValues>(() => EMPTY(proyekId));
+const FROM_EXISTING = (r: RealisasiRab): RealisasiRabFormValues => ({
+  proyekId: r.proyekId,
+  kategori: r.kategori,
+  rabLineLabel: r.rabLineLabel,
+  jumlah: r.jumlah,
+  tanggal: r.tanggal,
+  keterangan: r.keterangan,
+});
+
+export function RealisasiRabForm({ proyekId, open, onOpenChange, editing }: RealisasiRabFormProps) {
+  const [form, setForm] = useState<RealisasiRabFormValues>(() => (editing ? FROM_EXISTING(editing) : EMPTY(proyekId)));
   const [formKey, setFormKey] = useState(0);
-  const { mutateAsync } = useCreateRealisasiRab();
+  const { mutateAsync: createAsync } = useCreateRealisasiRab();
+  const { mutateAsync: updateAsync } = useUpdateRealisasiRab();
+
+  useEffect(() => {
+    if (open) {
+      setForm(editing ? FROM_EXISTING(editing) : EMPTY(proyekId));
+      setFormKey((k) => k + 1);
+    }
+  }, [open, editing, proyekId]);
 
   const set = <K extends keyof RealisasiRabFormValues>(key: K, val: RealisasiRabFormValues[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -38,7 +57,11 @@ export function RealisasiRabForm({ proyekId, open, onOpenChange }: RealisasiRabF
     form.keterangan.trim().length === 0;
 
   const handleSubmit = async () => {
-    await mutateAsync(form);
+    if (editing) {
+      await updateAsync({ id: editing.id, proyekId, input: form });
+    } else {
+      await createAsync(form);
+    }
     setForm(EMPTY(proyekId));
     setFormKey((k) => k + 1);
     onOpenChange(false);
@@ -48,7 +71,7 @@ export function RealisasiRabForm({ proyekId, open, onOpenChange }: RealisasiRabF
     <FormSheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Catat Realisasi RAB"
+      title={editing ? "Ubah Realisasi RAB" : "Catat Realisasi RAB"}
       description="Masukkan biaya aktual yang telah dikeluarkan untuk proyek ini."
       onSubmit={handleSubmit}
       submitDisabled={submitDisabled}
