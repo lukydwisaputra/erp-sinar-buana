@@ -47,4 +47,11 @@ COPY src/lib/observability ./src/lib/observability
 RUN useradd --system --uid 1001 worker
 USER worker
 
+# scripts/worker.ts touches /tmp/worker-heartbeat every 15s once its queues
+# are registered — this process has no HTTP server, so a stale heartbeat
+# file is the only way Docker/Coolify can tell "running" apart from "wedged"
+# (e.g. stuck on a hung Chromium page.goto with no timeout).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD find /tmp/worker-heartbeat -newermt '-60 seconds' | grep -q . || exit 1
+
 CMD ["node", "scripts/worker.ts"]

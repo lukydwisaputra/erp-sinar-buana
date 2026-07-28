@@ -15,6 +15,7 @@
  * step — Node's native TS type-stripping handles both).
  */
 import { setDefaultResultOrder } from "node:dns";
+import { writeFileSync } from "node:fs";
 import postgres from "postgres";
 import { PgBoss } from "pg-boss";
 import nodemailer from "nodemailer";
@@ -48,6 +49,15 @@ const renderSecret = process.env.INTERNAL_RENDER_SECRET;
 const sql = postgres(databaseUrl);
 const boss = new PgBoss(databaseUrl);
 boss.on("error", (err: Error) => reportError(err, { source: "pg-boss" }));
+
+// Liveness signal for infra/worker/Dockerfile's HEALTHCHECK — this process
+// has no HTTP server to poll, so a periodically-touched file is the
+// cheapest way for Docker/Coolify to tell "running" apart from "wedged"
+// (e.g. stuck on a hung Chromium page.goto with no timeout).
+const HEARTBEAT_FILE = "/tmp/worker-heartbeat";
+function touchHeartbeat() {
+  try { writeFileSync(HEARTBEAT_FILE, String(Date.now())); } catch { /* non-fatal — HEALTHCHECK just goes red */ }
+}
 
 // One browser instance for the worker's whole lifetime — launching Chromium
 // per email would be needlessly slow. Started lazily on first use, not at
@@ -252,6 +262,9 @@ async function sweepOverdueTaxEntries(): Promise<void> {
 
 async function main() {
   await boss.start();
+  touchHeartbeat();
+  setInterval(touchHeartbeat, 15_000).unref();
+
   await boss.createQueue(DELIVERY_EMAIL_QUEUE);
   await boss.work<EmailDeliveryJob>(DELIVERY_EMAIL_QUEUE, async ([job]) => {
     console.log("[worker] processing delivery", job.data.deliveryId);
@@ -284,6 +297,31 @@ async function main() {
   });
   console.log("[worker] scheduled", TAX_OVERDUE_SWEEP_QUEUE, "daily at 01:00");
 }
+
+// Coolify sends SIGTERM on every redeploy/stop — without this, an in-flight
+// job (email send, headless-Chromium PDF render) gets killed mid-flight
+// instead of finishing, leaving e.g. a document_deliveries row stuck
+// 'queued' or double-sending on the next retry. `graceful: true` stops
+// accepting new work and waits for active jobs to finish (bounded by
+// timeout) before resolving.
+let shuttingDown = false;
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[worker] received ${signal}, draining in-flight jobs...`);
+  try {
+    await boss.stop({ graceful: true, timeout: 25_000 });
+    if (browserPromise) await (await browserPromise).close();
+    await sql.end();
+    console.log("[worker] shutdown complete");
+    process.exit(0);
+  } catch (err) {
+    reportError(err, { source: "shutdown" });
+    process.exit(1);
+  }
+}
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
 
 main().catch((err) => {
   reportError(err, { source: "main" });
