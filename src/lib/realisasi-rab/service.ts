@@ -48,6 +48,31 @@ export async function create(userId: string, input: RealisasiRabFormValues): Pro
   });
 }
 
+export async function update(userId: string, id: string, input: RealisasiRabFormValues): Promise<RealisasiRab> {
+  return withUserTransaction(userId, async (tx) => {
+    const [existing] = await tx
+      .select({ id: schema.rabActuals.id })
+      .from(schema.rabActuals)
+      .where(and(eq(schema.rabActuals.id, id), isNull(schema.rabActuals.deletedAt)))
+      .limit(1);
+    if (!existing) throw new NotFoundError("Realisasi RAB tidak ditemukan.");
+
+    const [row] = await tx
+      .update(schema.rabActuals)
+      .set({
+        rabCategory: RAB_CATEGORY_BY_KATEGORI[input.kategori],
+        rabLineLabel: input.rabLineLabel,
+        amount: String(input.jumlah),
+        date: input.tanggal,
+        note: input.keterangan,
+        updatedBy: userId,
+      })
+      .where(eq(schema.rabActuals.id, id))
+      .returning();
+    return toRealisasiRab(row);
+  });
+}
+
 export async function remove(userId: string, id: string): Promise<void> {
   await withUserTransaction(userId, async (tx) => {
     const [existing] = await tx
