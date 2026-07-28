@@ -106,10 +106,18 @@ BACKUP_DIR=/var/backups/sbmj-erp infra/scripts/backup.sh    # pg_dump + gzip, pr
 infra/scripts/restore.sh <path-to-dump.sql.gz>               # drops + recreates the DB, asks for confirmation
 ```
 
-Schedule `backup.sh` with cron (see the script's own header for an example
-line) or a Coolify Scheduled Task — there's no automatic backup for a
-custom-image Postgres service like this one (`pg_cron` baked in), only for
-Coolify's own managed database resources.
+`infra/scripts/backup.sh` is the host-side version (`docker compose exec`) —
+schedule it with cron for local/self-managed setups (see the script's own
+header for an example line).
+
+On Coolify, use `infra/postgres/backup.sh` instead — it's baked into the
+Database image (`/usr/local/bin/backup.sh` in the running container) since
+Coolify Scheduled Tasks execute inside the target resource, not on the host.
+Needs a persistent volume at `/backups` first (`docker-compose.yml`'s
+`pg_backups` volume for local parity — on Coolify add an equivalent Storage
+mount, or every backup is lost on the next redeploy) — see
+[`COOLIFY.md`](COOLIFY.md)'s Known Gaps section for the exact Scheduled Task
+setup.
 
 ## Coolify notes
 
@@ -129,7 +137,8 @@ Coolify's own managed database resources.
   `app`'s internal `/print/**` routes, to MinIO, and to SMTP).
 - The `5434`/`9000`/`9001` port mappings here are **dev-only**; remove them in
   the Coolify definitions (Coolify assigns its own domains/ports instead).
-- Schedule `infra/scripts/backup.sh` as a periodic task for Postgres backups
+- Schedule `infra/postgres/backup.sh` (baked into the Database image) as a
+  Coolify Scheduled Task for Postgres backups
   ([NFR Bab 13](../planning/prd/13-non-fungsional.md)) — see above.
 - **Company-logo upload** is wired to MinIO (`src/lib/storage/s3.ts`,
   `POST /api/company-profile/logo`) — small server-proxied uploads, not the

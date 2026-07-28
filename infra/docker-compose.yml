@@ -26,6 +26,7 @@ services:
       - cron.database_name=${POSTGRES_DB:-sbmj_erp}
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - pg_backups:/backups   # infra/postgres/backup.sh's output — see that file for the Coolify Scheduled Task setup
       - ./postgres/init:/docker-entrypoint-initdb.d:ro   # roles + auth stub (first boot)
     ports:
       # Host port is configurable — this machine already has other local
@@ -138,4 +139,5 @@ services:
 
 volumes:
   pg_data:
+  pg_backups:
   minio_data:
