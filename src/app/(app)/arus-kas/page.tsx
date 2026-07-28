@@ -4,10 +4,11 @@ import { useSearchParams } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
-import { ArrowRightLeft, CalendarIcon, Plus, SlidersHorizontal, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowRightLeft, CalendarIcon, EllipsisIcon, Pencil, Plus, SlidersHorizontal, Trash2, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
 import { ComboboxCreate } from "@/components/shared/combobox-create";
 import { MoneyInput } from "@/components/shared/money-input";
@@ -23,13 +24,16 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import {
   ChartContainer, ChartTooltip, ChartTooltipContent,
   ChartLegend, ChartLegendContent, type ChartConfig,
 } from "@/components/ui/chart";
 import { formatRupiah } from "@/lib/format";
-import { useArusKasList, useCreateArusKas } from "@/lib/query/arus-kas";
+import { useArusKasList, useCreateArusKas, useUpdateArusKas, useRemoveArusKas } from "@/lib/query/arus-kas";
 import { useKategoriArusKasList, useCreateKategoriArusKas } from "@/lib/query/expense-nature";
 import type { ArusKasEntry, ArusKasJenis, ArusKasSumber } from "@/lib/schemas/arus-kas";
 
@@ -142,8 +146,11 @@ function todayISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function EntryDialog({ open, onOpenChange, entry }: {
+  open: boolean; onOpenChange: (open: boolean) => void; entry?: ArusKasEntry | null;
+}) {
   const createEntry = useCreateArusKas();
+  const updateEntry = useUpdateArusKas();
   const { data: categories = [] } = useKategoriArusKasList();
   const createCategory = useCreateKategoriArusKas();
 
@@ -152,19 +159,30 @@ function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [jumlah, setJumlah] = React.useState(0);
   const [categoryId, setCategoryId] = React.useState("");
   const [keterangan, setKeterangan] = React.useState("");
+  const [formKey, setFormKey] = React.useState(0);
 
   React.useEffect(() => {
     if (open) {
-      setJenis("kredit"); setTanggal(todayISO()); setJumlah(0);
-      setCategoryId(""); setKeterangan("");
+      setJenis(entry?.jenis ?? "kredit");
+      setTanggal(entry?.tanggal ?? todayISO());
+      setJumlah(entry?.jumlah ?? 0);
+      setCategoryId(entry?.categoryId ?? "");
+      setKeterangan(entry?.keterangan ?? "");
+      setFormKey((k) => k + 1);
     }
-  }, [open]);
+  }, [open, entry]);
 
   const isValid = !!categoryId && jumlah > 0 && !!tanggal;
+  const isPending = entry ? updateEntry.isPending : createEntry.isPending;
 
   const onSubmit = async () => {
     if (!isValid) return;
-    await createEntry.mutateAsync({ jenis, tanggal, jumlah, categoryId, keterangan: keterangan.trim() || undefined });
+    const input = { jenis, tanggal, jumlah, categoryId, keterangan: keterangan.trim() || undefined };
+    if (entry) {
+      await updateEntry.mutateAsync({ id: entry.id, input });
+    } else {
+      await createEntry.mutateAsync(input);
+    }
     onOpenChange(false);
   };
 
@@ -182,7 +200,7 @@ function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Tambah Transaksi</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{entry ? "Edit Transaksi" : "Tambah Transaksi"}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <Field>
             <FieldLabel>Jenis</FieldLabel>
@@ -201,7 +219,7 @@ function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
           <Field>
             <FieldLabel>Jumlah</FieldLabel>
-            <MoneyInput defaultValue={jumlah} onValueChange={setJumlah} className="w-full" />
+            <MoneyInput key={formKey} defaultValue={jumlah} onValueChange={setJumlah} className="w-full" />
           </Field>
 
           <Field>
@@ -222,7 +240,7 @@ function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
-          <Button loading={createEntry.isPending} disabled={!isValid} onClick={onSubmit}>Simpan</Button>
+          <Button loading={isPending} disabled={!isValid} onClick={onSubmit}>Simpan</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -413,6 +431,9 @@ function ArusKasPageContent() {
   const kategoriParam = searchParams.get("kategori");
 
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [editingEntry, setEditingEntry] = React.useState<ArusKasEntry | null>(null);
+  const [deletingEntry, setDeletingEntry] = React.useState<ArusKasEntry | null>(null);
+  const removeEntry = useRemoveArusKas();
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [pendingJenis, setPendingJenis] = React.useState<ArusKasJenis[]>([]);
   const [pendingKategori, setPendingKategori] = React.useState<string[]>([]);
@@ -508,6 +529,28 @@ function ArusKasPageContent() {
       id: "status", header: "", meta: { collapse: true },
       cell: ({ row }) => (row.original.isCancelled ? <Badge variant="secondary">Dibatalkan</Badge> : null),
     },
+    {
+      id: "aksi", header: "", enableSorting: false, meta: { collapse: true },
+      cell: ({ row }) => row.original.sumber !== "manual" ? null : (
+        <div className="flex justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-7" aria-label="Aksi baris">
+                <EllipsisIcon className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setEditingEntry(row.original)}>
+                <Pencil className="size-3.5" /> Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onSelect={() => setDeletingEntry(row.original)}>
+                <Trash2 className="size-3.5" /> Hapus
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -517,7 +560,23 @@ function ArusKasPageContent() {
         <h1 className="text-xl font-semibold tracking-tight">Arus Kas</h1>
       </div>
 
-      <CreateEntryDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <EntryDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <EntryDialog
+        open={!!editingEntry}
+        onOpenChange={(o) => { if (!o) setEditingEntry(null); }}
+        entry={editingEntry}
+      />
+      <ConfirmDeleteDialog
+        open={!!deletingEntry}
+        onOpenChange={(o) => { if (!o) setDeletingEntry(null); }}
+        entityLabel="Transaksi"
+        target={deletingEntry?.keterangan || "transaksi ini"}
+        loading={removeEntry.isPending}
+        onConfirm={() => {
+          if (!deletingEntry) return;
+          removeEntry.mutate(deletingEntry.id, { onSuccess: () => setDeletingEntry(null) });
+        }}
+      />
 
       {!isLoading && !isError && <TrendLineChart entries={allEntries} dateRange={appliedTanggal} />}
       {!isLoading && !isError && <SummaryCards entries={allEntries} showDelta={!hasDateFilter} />}
