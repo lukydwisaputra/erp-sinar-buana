@@ -24,7 +24,7 @@ const mkFaktur = (id: string, jatuhTempo: string, statusSystemRole: string | nul
 
 const mkKewajiban = (id: string, dueDate: string, settlementStatus: "belum_disetor" | "sudah_disetor" = "belum_disetor"): TaxEntry => ({
   id, taxType: "ppn_keluaran", nature: "kewajiban", taxPeriod: "2026-06-01", jumlah: 5_000_000,
-  dueDate, settlementStatus, settledDate: null, ntpn: null, buktiPotongReceived: true, notes: "",
+  dueDate, settlementStatus, settledDate: null, buktiPotongReceived: true, notes: "",
   companyId: null, employeeId: null,
 });
 

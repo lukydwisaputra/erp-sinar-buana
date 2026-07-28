@@ -21,7 +21,7 @@ const mkKewajiban = (
   opts: Partial<TaxEntry> = {},
 ): TaxEntry => ({
   id, taxType: "ppn_keluaran", nature: "kewajiban", taxPeriod: "2026-06-01", jumlah: 5_000_000,
-  dueDate, settlementStatus: "belum_disetor", settledDate: null, ntpn: null,
+  dueDate, settlementStatus: "belum_disetor", settledDate: null,
   buktiPotongReceived: true, notes: "", companyId: null, employeeId: null,
   ...opts,
 });

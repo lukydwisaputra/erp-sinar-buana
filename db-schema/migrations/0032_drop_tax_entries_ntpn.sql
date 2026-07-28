@@ -1,13 +1,15 @@
--- ============================================================================
--- Tax Center automation (PRD Bab 10.6).
---   * Tax entry -> "Sudah Disetor":
---       - nature = kewajiban -> create a locked cashflow Debit (category PAJAK,
---         or BPJS for BPJS types), linked to the tax entry.
---       - nature = kredit (PPh23 withheld) -> NO cash movement (it's a tax credit).
---   * Also flips overdue unsettled entries to 'terlambat' on write (a scheduled
---     job should sweep the table daily for time-based transitions).
--- ============================================================================
-
+-- NTPN (Nomor Transaksi Penerimaan Negara) is no longer the relevant tax
+-- settlement reference now that payments go through Coretax (see 7adbd71's
+-- UI relabel to a generic "Keterangan" — this migration finishes that by
+-- retiring the column itself). Any existing NTPN text is dropped along with
+-- it; the app now writes settlement notes into the pre-existing (previously
+-- unused) "notes" column instead of a dedicated ntpn column.
+--
+-- The trigger function must be redefined to stop referencing new.ntpn
+-- BEFORE the column is dropped — this is CREATE OR REPLACE (safe to rerun,
+-- same as db-schema/sql/triggers/40_tax_automation.sql), applied here too
+-- so the fix ships atomically with the column drop instead of depending on
+-- someone remembering to also re-run the trigger file by hand.
 create or replace function fn_tax_entry_after_change()
 returns trigger language plpgsql
 security definer set search_path = public as $$
@@ -43,21 +45,5 @@ begin
   end if;
   return new;
 end;
-$$;
-
-drop trigger if exists trg_tax_entry_after_change on tax_entries;
-create trigger trg_tax_entry_after_change
-  after insert or update on tax_entries
-  for each row execute function fn_tax_entry_after_change();
-
--- ── Overdue sweep (call from a scheduled job / pg_cron) ─────────────────────
--- Flips unsettled, past-due entries to 'terlambat' (🔴). Run daily.
-create or replace function mark_overdue_tax_entries()
-returns void language sql as $$
-  update public.tax_entries
-     set settlement_status = 'terlambat'
-   where settlement_status = 'belum_disetor'
-     and due_date is not null
-     and due_date < current_date
-     and deleted_at is null;
-$$;
+$$;--> statement-breakpoint
+ALTER TABLE "tax_entries" DROP COLUMN "ntpn";

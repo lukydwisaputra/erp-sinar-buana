@@ -96,12 +96,12 @@ function SettleDialog({ entry, onOpenChange }: { entry: TaxEntry | null; onOpenC
 
   const form = useForm<SettleForm>({
     resolver: zodResolver(settleFormSchema),
-    defaultValues: { settledDate: todayISO(), ntpn: "", buktiPotongReceived: false },
+    defaultValues: { settledDate: todayISO(), notes: "", buktiPotongReceived: false },
   });
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = form;
 
   React.useEffect(() => {
-    if (entry) reset({ settledDate: todayISO(), ntpn: entry.ntpn ?? "", buktiPotongReceived: entry.buktiPotongReceived });
+    if (entry) reset({ settledDate: todayISO(), notes: entry.notes ?? "", buktiPotongReceived: entry.buktiPotongReceived });
   }, [entry, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
@@ -110,7 +110,7 @@ function SettleDialog({ entry, onOpenChange }: { entry: TaxEntry | null; onOpenC
       id: entry.id,
       input: {
         settledDate: values.settledDate,
-        ntpn: values.ntpn || undefined,
+        notes: values.notes || undefined,
         buktiPotongReceived: isPph23 ? values.buktiPotongReceived : undefined,
       },
     });
@@ -130,7 +130,7 @@ function SettleDialog({ entry, onOpenChange }: { entry: TaxEntry | null; onOpenC
             </Field>
             <Field>
               <FieldLabel>Keterangan (opsional)</FieldLabel>
-              <Input placeholder="Catatan tambahan…" {...register("ntpn")} />
+              <Input placeholder="Catatan tambahan…" {...register("notes")} />
             </Field>
             {isPph23 && (
               <Field orientation="horizontal" className="items-center">
@@ -202,7 +202,7 @@ function buildColumns(
       accessorKey: "buktiPotongReceived", header: "Bukti Potong",
       cell: ({ row }) => <BuktiPotongCell entry={row.original} />,
     },
-    { accessorKey: "ntpn", header: "Keterangan", meta: { className: "min-w-48 text-muted-foreground" }, cell: ({ row }) => row.original.ntpn || <span className="text-muted-foreground">—</span> },
+    { accessorKey: "notes", header: "Keterangan", meta: { className: "min-w-48 text-muted-foreground" }, cell: ({ row }) => row.original.notes || <span className="text-muted-foreground">—</span> },
     {
       accessorKey: "settlementStatus", header: "Status",
       cell: ({ row }) => { const m = STATUS_META[row.original.settlementStatus]; return <Badge variant={m.variant}>{m.label}</Badge>; },
@@ -426,7 +426,7 @@ export default function Page() {
           columns={columns}
           data={filteredData}
           loading={isLoading}
-          searchColumns={["ntpn"]}
+          searchColumns={["notes"]}
           searchPlaceholder="Cari keterangan…"
           emptyMessage="Belum ada kewajiban pajak"
           defaultSorting={[{ id: "taxPeriod", desc: true }]}

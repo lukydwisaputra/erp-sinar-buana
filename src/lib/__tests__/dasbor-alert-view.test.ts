@@ -6,7 +6,7 @@ vi.mock("@/lib/faktur/service", () => ({
 vi.mock("@/lib/tax/service", () => ({
   listTaxEntries: vi.fn(async () => [
     { id: "K1", taxType: "ppn_keluaran", nature: "kewajiban", taxPeriod: "2020-01-01", jumlah: 5_000_000,
-      dueDate: "2020-01-30", settlementStatus: "belum_disetor", settledDate: null, ntpn: null,
+      dueDate: "2020-01-30", settlementStatus: "belum_disetor", settledDate: null,
       buktiPotongReceived: true, notes: "", companyId: null, employeeId: null },
   ]),
 }));

@@ -35,8 +35,8 @@ export default function PajakPage() {
 
       <h2>Menyetor &amp; membatalkan</h2>
       <p>
-        <strong>Tandai Selesai</strong> meminta tanggal setor dan NTPN (nomor bukti
-        setor, opsional); untuk PPh 23 juga ada centang &quot;Bukti potong sudah
+        <strong>Tandai Selesai</strong> meminta tanggal setor dan keterangan
+        (catatan tambahan, opsional); untuk PPh 23 juga ada centang &quot;Bukti potong sudah
         diterima&quot;. Entri yang sudah disetor bisa <strong>dibatalkan</strong>{" "}
         kembali ke Belum Disetor bila keliru — jurnal arus kas yang sudah tercatat dari
         penyetoran sebelumnya <strong>tidak</strong> ikut terhapus saat dibatalkan.

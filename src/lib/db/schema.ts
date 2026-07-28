@@ -778,7 +778,6 @@ export const taxEntries = pgTable("tax_entries", {
   dueDate: date("due_date"),
   settlementStatus: taxSettlementStatus("settlement_status").notNull().default("belum_disetor"),
   settledDate: date("settled_date"),
-  ntpn: text("ntpn"),
   proofAttachmentUrl: text("proof_attachment_url"),
   buktiPotongReceived: boolean("bukti_potong_received").notNull().default(false),
   buktiPotongAttachmentUrl: text("bukti_potong_attachment_url"),

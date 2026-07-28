@@ -46,7 +46,7 @@ export async function settleTaxEntry(
       .set({
         settlementStatus: "sudah_disetor",
         settledDate: input.settledDate,
-        ntpn: input.ntpn || null,
+        notes: input.notes || null,
         buktiPotongReceived: input.buktiPotongReceived ?? existing.buktiPotongReceived,
         updatedAt: new Date(),
       })
@@ -68,7 +68,7 @@ export async function unsettleTaxEntry(userId: string, id: string): Promise<TaxE
       .set({
         settlementStatus: "belum_disetor",
         settledDate: null,
-        ntpn: null,
+        notes: null,
         updatedAt: new Date(),
       })
       .where(eq(schema.taxEntries.id, id))
