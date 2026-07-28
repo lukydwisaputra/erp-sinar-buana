@@ -21,7 +21,7 @@ const rr = (jumlah: number, tanggal: string): RealisasiRab => ({
   id: "RRB-1", proyekId: "P1", kategori: "personil", rabLineLabel: "x", jumlah, tanggal, keterangan: "",
 });
 const ak = (jumlah: number, kategori: string, tanggal: string): ArusKasEntry => ({
-  id: "AKS-1", jenis: "debit", tanggal, jumlah, kategori, sumber: "manual", keterangan: "", proyekId: null, locked: false, isCancelled: false,
+  id: "AKS-1", jenis: "debit", tanggal, jumlah, kategori, categoryId: null, sumber: "manual", keterangan: "", proyekId: null, locked: false, isCancelled: false,
 });
 // All categories Opex except "pajak" which is non-P&L.
 const natureOf = (k: string): SifatBeban => (k === "pajak" ? "non_laba_rugi" : "operasional");

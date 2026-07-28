@@ -12,7 +12,7 @@ const TODAY = "2026-06-22";
 
 // Helpers
 const ak = (jenis: "kredit" | "debit", jumlah: number): ArusKasEntry => ({
-  id: "ak1", jenis, tanggal: "2026-06-01", jumlah, kategori: "test",
+  id: "ak1", jenis, tanggal: "2026-06-01", jumlah, kategori: "test", categoryId: null,
   sumber: "manual", keterangan: "", proyekId: null, locked: false, isCancelled: false,
 });
 

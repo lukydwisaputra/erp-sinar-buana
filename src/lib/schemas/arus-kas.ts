@@ -16,6 +16,7 @@ export const arusKasEntrySchema = z.object({
   tanggal: z.string(),
   jumlah: z.number(),
   kategori: z.string(),
+  categoryId: z.string().nullable(),
   sumber: arusKasSumber,
   keterangan: z.string(),
   proyekId: z.string().nullable(),
@@ -34,3 +35,15 @@ export const createArusKasEntrySchema = z.object({
   keterangan: z.string().optional(),
 });
 export type CreateArusKasEntryInput = z.infer<typeof createArusKasEntrySchema>;
+
+/** Manual entry — API input for PATCH /api/arus-kas/[id]. Same shape as
+ * create; the service rejects the update entirely if the target row isn't
+ * source==='manual'. */
+export const updateArusKasEntrySchema = z.object({
+  jenis: arusKasJenis,
+  tanggal: z.string().min(1, "Tanggal wajib diisi."),
+  jumlah: z.coerce.number().positive("Jumlah harus > 0."),
+  categoryId: z.string().min(1, "Kategori wajib dipilih."),
+  keterangan: z.string().optional(),
+});
+export type UpdateArusKasEntryInput = z.infer<typeof updateArusKasEntrySchema>;
