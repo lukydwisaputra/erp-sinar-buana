@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Lock, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Lock, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ import { onFormInvalid } from "@/lib/form-toast";
 import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
   useWorkflowStatusAdminList, useCreateWorkflowStatus, useUpdateWorkflowStatus,
-  useDeleteWorkflowStatus,
+  useDeleteWorkflowStatus, useMoveWorkflowStatus,
 } from "@/lib/query/workflow-status-admin";
 import {
   workflowStatusEntity, workflowStatusSystemRole,
@@ -52,6 +52,7 @@ function makeColumns(
   onSetRole: (row: WorkflowStatusRow, role: WorkflowStatusSystemRole | null) => void,
   onToggleAktif: (row: WorkflowStatusRow, isActive: boolean) => void,
   onDelete: (row: WorkflowStatusRow) => void,
+  onMove: (row: WorkflowStatusRow, direction: "up" | "down") => void,
 ): ColumnDef<WorkflowStatusRow>[] {
   return [
     rowNumberColumn<WorkflowStatusRow>(),
@@ -101,6 +102,13 @@ function makeColumns(
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => onEditLabel(row.original)}>
               <Pencil className="size-3.5" /> Ubah Label
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onMove(row.original, "up")}>
+              <ChevronUp className="size-3.5" /> Naikkan
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onMove(row.original, "down")}>
+              <ChevronDown className="size-3.5" /> Turunkan
             </DropdownMenuItem>
             {!row.original.isSystem && (
               <>
@@ -194,6 +202,7 @@ function EntitySection({ entity }: { entity: WorkflowStatusEntityAdmin }) {
   const { data, isLoading } = useWorkflowStatusAdminList(entity);
   const { mutate: updateStatus } = useUpdateWorkflowStatus();
   const { mutate: deleteStatus, isPending: isDeleting } = useDeleteWorkflowStatus();
+  const { mutate: moveStatus } = useMoveWorkflowStatus();
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<WorkflowStatusRow | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<WorkflowStatusRow | null>(null);
@@ -203,6 +212,7 @@ function EntitySection({ entity }: { entity: WorkflowStatusEntityAdmin }) {
     (row, role) => updateStatus({ id: row.id, input: { systemRole: role } }),
     (row, isActive) => updateStatus({ id: row.id, input: { isActive } }),
     setDeleteTarget,
+    (row, direction) => moveStatus({ id: row.id, direction, entity }),
   );
 
   return (
