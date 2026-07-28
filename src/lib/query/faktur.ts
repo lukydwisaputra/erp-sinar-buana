@@ -83,17 +83,6 @@ export function useUpdateTermin() {
   });
 }
 
-/** Cancel a termin — a thin convenience wrapper over useUpdateTermin, resolves
- * the real "Batal" statusId via the caller's already-fetched status options. */
-export function useCancelTermin() {
-  const update = useUpdateTermin();
-  return {
-    ...update,
-    cancel: (masterInvoiceId: string, terminId: string, batalStatusId: string) =>
-      update.mutate({ masterInvoiceId, terminId, input: { statusId: batalStatusId } }),
-  };
-}
-
 /** Called from Penawaran's delete flow (cleans up the Faktur Induk set born
  * from the deleted SPH's project) — same composability pattern as
  * query/proyek.ts's cancelProyekBySph plain-async-function export. */
