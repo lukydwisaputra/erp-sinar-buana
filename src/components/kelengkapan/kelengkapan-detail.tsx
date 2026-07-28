@@ -12,7 +12,10 @@ import type { SphKelengkapan } from "@/lib/schemas/penawaran";
 
 export function KelengkapanDetail({ template }: { template: KelengkapanTemplate }) {
   const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  React.useEffect(() => {
+    const markMounted = () => setMounted(true);
+    markMounted();
+  }, []);
 
   const preview: SphKelengkapan = {
     templateId: template.id,

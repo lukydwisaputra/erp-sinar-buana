@@ -13,7 +13,10 @@ import type { CreateComponentInput } from "@/lib/schemas/penggajian";
 function InlineMoneyInput({ value, disabled, onChange }: { value: number; disabled?: boolean; onChange: (v: number) => void }) {
   const [focused, setFocused] = React.useState(false);
   const [text, setText] = React.useState(value ? formatIntIDR(value) : "");
-  React.useEffect(() => { if (!focused) setText(value ? formatIntIDR(value) : ""); }, [value, focused]);
+  React.useEffect(() => {
+    const syncText = () => setText(value ? formatIntIDR(value) : "");
+    if (!focused) syncText();
+  }, [value, focused]);
   return (
     <div className="flex items-center gap-1 rounded-md border border-input bg-transparent px-2 h-9 focus-within:ring-1 focus-within:ring-ring">
       <span className="text-xs text-muted-foreground shrink-0">Rp</span>

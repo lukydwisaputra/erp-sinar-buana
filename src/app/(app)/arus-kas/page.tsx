@@ -162,14 +162,15 @@ function EntryDialog({ open, onOpenChange, entry }: {
   const [formKey, setFormKey] = React.useState(0);
 
   React.useEffect(() => {
-    if (open) {
+    const resetForm = () => {
       setJenis(entry?.jenis ?? "kredit");
       setTanggal(entry?.tanggal ?? todayISO());
       setJumlah(entry?.jumlah ?? 0);
       setCategoryId(entry?.categoryId ?? "");
       setKeterangan(entry?.keterangan ?? "");
       setFormKey((k) => k + 1);
-    }
+    };
+    if (open) resetForm();
   }, [open, entry]);
 
   const isValid = !!categoryId && jumlah > 0 && !!tanggal;

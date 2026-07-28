@@ -288,7 +288,10 @@ function MilestoneRow({
   const [showDelete, setShowDelete] = React.useState(false);
   const namaRef = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => { setNama(m.nama); }, [m.nama]);
+  React.useEffect(() => {
+    const syncNama = () => setNama(m.nama);
+    syncNama();
+  }, [m.nama]);
   React.useEffect(() => { if (isNew) namaRef.current?.focus(); }, [isNew]);
 
   const save = (patch: {

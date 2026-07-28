@@ -95,7 +95,8 @@ function GenerateTerminDialog({ induk, nextTerm, open, onOpenChange }: {
   const [catatan, setCatatan] = React.useState("");
 
   React.useEffect(() => {
-    if (open) { setTanggal(todayISO()); setJatuhTempo(plusDaysISO(14)); setBankAccountId(""); setCatatan(""); }
+    const resetForm = () => { setTanggal(todayISO()); setJatuhTempo(plusDaysISO(14)); setBankAccountId(""); setCatatan(""); };
+    if (open) resetForm();
   }, [open]);
 
   const nilai = (nextTerm.persen / 100) * induk.totalBiaya;
@@ -156,7 +157,8 @@ function MarkLunasDialog({ induk, termin, lunasStatusId, open, onOpenChange }: {
   const [paidDate, setPaidDate] = React.useState(todayISO());
 
   React.useEffect(() => {
-    if (open) setPaidDate(todayISO());
+    const resetPaidDate = () => setPaidDate(todayISO());
+    if (open) resetPaidDate();
   }, [open]);
 
   const onSubmit = async () => {
@@ -199,12 +201,13 @@ function EditTerminDialog({ induk, termin, open, onOpenChange }: {
   const [catatan, setCatatan] = React.useState(termin.catatan);
 
   React.useEffect(() => {
-    if (open) {
+    const resetForm = () => {
       setTanggal(termin.tanggal);
       setJatuhTempo(termin.jatuhTempo ?? "");
       setBankAccountId(termin.bankAccountId ?? "");
       setCatatan(termin.catatan);
-    }
+    };
+    if (open) resetForm();
   }, [open, termin]);
 
   const onSubmit = async () => {
@@ -262,7 +265,10 @@ function TerminDocumentDialog({ induk, termin, open, onOpenChange }: {
   const { data: perusahaanOptions = [] } = usePerusahaanList();
   const { data: session } = useSession();
   const isClient = isClientPortal(session);
-  React.useEffect(() => setMounted(true), []);
+  React.useEffect(() => {
+    const markMounted = () => setMounted(true);
+    markMounted();
+  }, []);
 
   return (
     <>

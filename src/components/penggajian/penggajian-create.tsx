@@ -37,7 +37,8 @@ function InlineMoneyInput({ value, onChange }: { value: number; onChange: (v: nu
   const [text, setText] = React.useState(value ? formatIntIDR(value) : "");
 
   React.useEffect(() => {
-    if (!focused) setText(value ? formatIntIDR(value) : "");
+    const syncText = () => setText(value ? formatIntIDR(value) : "");
+    if (!focused) syncText();
   }, [value, focused]);
 
   return (

@@ -60,7 +60,8 @@ export function KirimDokumenDialog({
   const emailTerkonfigurasi = pengirimanConfig?.emailAkun?.terkonfigurasi ?? false;
 
   React.useEffect(() => {
-    if (open) setIndex(0);
+    const resetIndex = () => setIndex(0);
+    if (open) resetIndex();
   }, [open]);
 
   const tujuan = tujuanOptions[index];

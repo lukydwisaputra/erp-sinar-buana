@@ -25,7 +25,8 @@ export function CancelPembatalanModal({
   const [touched, setTouched] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) { setAlasan(""); setBiayaAdministrasi(undefined); setTouched(false); }
+    const resetForm = () => { setAlasan(""); setBiayaAdministrasi(undefined); setTouched(false); };
+    if (open) resetForm();
   }, [open]);
 
   const invalid = touched && alasan.trim().length === 0;

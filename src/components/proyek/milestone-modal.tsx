@@ -416,13 +416,15 @@ export function MilestoneModal({
   const MIN_DESC_HEIGHT = 120;
 
   React.useEffect(() => {
-    if (!milestone) return;
-    isAutoExpand.current = false;
-    setNama(milestone.nama);
-    setEditingTitle(false);
-    setDescExpanded(false);
-    setDescription(milestone.description ?? "");
-    // needsExpand is computed exclusively by useLayoutEffect after description lands
+    const resetForm = (m: NonNullable<typeof milestone>) => {
+      isAutoExpand.current = false;
+      setNama(m.nama);
+      setEditingTitle(false);
+      setDescExpanded(false);
+      setDescription(m.description ?? "");
+      // needsExpand is computed exclusively by useLayoutEffect after description lands
+    };
+    if (milestone) resetForm(milestone);
   }, [milestone?.id]);
 
   React.useLayoutEffect(() => {

@@ -41,10 +41,11 @@ export function RealisasiRabForm({ proyekId, open, onOpenChange, editing }: Real
   const { mutateAsync: updateAsync } = useUpdateRealisasiRab();
 
   useEffect(() => {
-    if (open) {
+    const resetForm = () => {
       setForm(editing ? FROM_EXISTING(editing) : EMPTY(proyekId));
       setFormKey((k) => k + 1);
-    }
+    };
+    if (open) resetForm();
   }, [open, editing, proyekId]);
 
   const set = <K extends keyof RealisasiRabFormValues>(key: K, val: RealisasiRabFormValues[K]) =>

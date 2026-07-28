@@ -1,28 +1,26 @@
-/**
- * Sinar Buana ERP — Tailwind theme extension (drop-in)
- *
- * Maps the CSS custom properties from ./globals.css onto Tailwind's color/utility
- * system so classes like `bg-background`, `text-muted-foreground`, `bg-success`,
- * and `font-mono` resolve to the design tokens. shadcn/ui consumes this shape
- * directly — `npx shadcn init` will produce a near-identical block.
- *
- * NOTE: tokens store the *full* OKLCH colour (Tailwind v4 / current shadcn), so
- * we reference them with `var(--token)` — NOT `hsl(var(--token))`. Wrapping an
- * oklch() value in hsl() would silently break every colour.
- *
- * On Tailwind v4 you can skip this file entirely and map tokens with `@theme`:
- *   @theme inline { --color-background: var(--background); --color-primary: var(--primary); … }
- *
- * Tailwind v3 wiring (when apps/web exists):
- *   // tailwind.config.ts
- *   import { erpTheme } from "../docs/design/tokens/tailwind-theme"; // or copy inline
- *   export default {
- *     darkMode: "class",
- *     content: ["./src/**/*.{ts,tsx}"],
- *     theme: { extend: erpTheme },
- *     plugins: [require("tailwindcss-animate")],
- *   };
- */
+// Sinar Buana ERP — Tailwind theme extension (drop-in)
+//
+// Maps the CSS custom properties from ./globals.css onto Tailwind's color/utility
+// system so classes like `bg-background`, `text-muted-foreground`, `bg-success`,
+// and `font-mono` resolve to the design tokens. shadcn/ui consumes this shape
+// directly — `npx shadcn init` will produce a near-identical block.
+//
+// NOTE: tokens store the *full* OKLCH colour (Tailwind v4 / current shadcn), so
+// we reference them with `var(--token)` — NOT `hsl(var(--token))`. Wrapping an
+// oklch() value in hsl() would silently break every colour.
+//
+// On Tailwind v4 you can skip this file entirely and map tokens with `@theme`:
+//   @theme inline { --color-background: var(--background); --color-primary: var(--primary); … }
+//
+// Tailwind v3 wiring (when apps/web exists):
+//   // tailwind.config.ts
+//   import { erpTheme } from "../docs/design/tokens/tailwind-theme"; // or copy inline
+//   export default {
+//     darkMode: "class",
+//     content: ["./src/**/*.{ts,tsx}"],
+//     theme: { extend: erpTheme },
+//     plugins: [require("tailwindcss-animate")],
+//   };
 import type { Config } from "tailwindcss";
 
 export const erpTheme: NonNullable<Config["theme"]>["extend"] = {

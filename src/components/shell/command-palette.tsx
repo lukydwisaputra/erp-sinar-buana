@@ -48,7 +48,8 @@ export function CommandPalette() {
   }, []);
 
   useEffect(() => {
-    if (!open) setSearch("");
+    const clearSearch = () => setSearch("");
+    if (!open) clearSearch();
   }, [open]);
 
   const go = (href: string) => { setOpen(false); router.push(href); };

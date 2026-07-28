@@ -33,7 +33,10 @@ export function DocumentBuilder({
   const [fs, setFs] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const [sending, runSend] = usePending();
-  React.useEffect(() => setMounted(true), []);
+  React.useEffect(() => {
+    const markMounted = () => setMounted(true);
+    markMounted();
+  }, []);
 
   return (
     <>

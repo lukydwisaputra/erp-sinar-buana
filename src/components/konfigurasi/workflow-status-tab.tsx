@@ -129,7 +129,10 @@ function EditLabelDialog({ row, onOpenChange }: { row: WorkflowStatusRow | null;
   const { mutate, isPending } = useUpdateWorkflowStatus();
   const [label, setLabel] = React.useState("");
 
-  React.useEffect(() => { if (row) setLabel(row.label); }, [row]);
+  React.useEffect(() => {
+    const syncLabel = (r: WorkflowStatusRow) => setLabel(r.label);
+    if (row) syncLabel(row);
+  }, [row]);
 
   return (
     <Dialog open={!!row} onOpenChange={onOpenChange}>

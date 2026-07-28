@@ -13,14 +13,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Quality gate — build/deploy never run on a red test suite or type error.
-  # No DB needed: the test suite is pure unit/mapping tests against
-  # Drizzle/Zod types, not integration tests against Postgres.
-  #
-  # `npm run lint` is deliberately NOT in this gate yet — it currently fails
-  # with ~20 pre-existing errors (mostly react-hooks/set-state-in-effect)
-  # unrelated to any one change; add it once that backlog is cleared, or CI
-  # blocks on day one for reasons no single PR caused.
+  # Quality gate — build/deploy never run on a red test suite, type error, or
+  # lint error. No DB needed: the test suite is pure unit/mapping tests
+  # against Drizzle/Zod types, not integration tests against Postgres.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -31,6 +26,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
+      - run: npm run lint
       - run: npm test
 
   build:
