@@ -45,7 +45,7 @@ export function KelengkapanDetail({ template }: { template: KelengkapanTemplate 
             </Button>
           </div>
           <div className="p-4">
-            <div className="mx-auto max-w-[794px]">
+            <div className="mx-auto max-w-198.5">
               <ScaleToFit>
                 <SphKelengkapanPage kelengkapan={preview} />
               </ScaleToFit>
