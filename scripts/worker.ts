@@ -64,6 +64,7 @@ type DeliveryRow = {
   installment_invoice_id: string | null;
   payslip_id: string | null;
   document_number: string;
+  recipient_name: string;
 };
 
 const PRINT_PATH_BY_DOC_TYPE: Record<string, (delivery: DeliveryRow) => string | null> = {
@@ -116,7 +117,7 @@ async function resolveTokens(tx: postgres.TransactionSql, delivery: DeliveryRow)
       select c.name as company_name
       from quotations q join companies c on c.id = q.company_id
       where q.id = ${delivery.quotation_id}`;
-    return { no_sph: delivery.document_number, nama_perusahaan: row?.company_name ?? "" };
+    return { no_sph: delivery.document_number, nama_perusahaan: row?.company_name ?? "", pic: delivery.recipient_name };
   }
   if (delivery.document_type === "invoice" && delivery.installment_invoice_id) {
     const [row] = await tx`
@@ -129,6 +130,7 @@ async function resolveTokens(tx: postgres.TransactionSql, delivery: DeliveryRow)
       no_inv: delivery.document_number,
       nama_perusahaan: row?.company_name ?? "",
       jatuh_tempo: row?.due_date ? formatTanggal(row.due_date) : "",
+      pic: delivery.recipient_name,
     };
   }
   if (delivery.document_type === "slip_gaji" && delivery.payslip_id) {

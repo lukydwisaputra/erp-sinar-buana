@@ -124,11 +124,11 @@ end $$;
 -- ── Message templates (defaults; tokens substituted by the app) ─────────────
 insert into message_templates (channel, document_type, subject, body) values
   ('email','sph','Penawaran Harga {no_sph} - {nama_perusahaan}',
-    'Yth. {pic},\n\nBersama ini kami sampaikan Surat Penawaran Harga {no_sph}. Dokumen terlampir.\n\nHormat kami,\nPT SINAR BUANA MANDIRI JAYA'),
+    E'Yth. {pic},\n\nBersama ini kami sampaikan Surat Penawaran Harga {no_sph}. Dokumen terlampir.\n\nHormat kami,\nPT SINAR BUANA MANDIRI JAYA'),
   ('email','invoice','Invoice {no_inv} - {nama_perusahaan}',
-    'Yth. {pic},\n\nTerlampir Invoice {no_inv} dengan jatuh tempo {jatuh_tempo}.\n\nTerima kasih.'),
+    E'Yth. {pic},\n\nTerlampir Invoice {no_inv} dengan jatuh tempo {jatuh_tempo}.\n\nTerima kasih.'),
   ('email','slip_gaji','Slip Gaji {periode}',
-    'Yth. {nama_karyawan},\n\nTerlampir slip gaji periode {periode}.\n\nRahasia & hanya untuk Anda.'),
+    E'Yth. {nama_karyawan},\n\nTerlampir slip gaji periode {periode}.\n\nRahasia & hanya untuk Anda.'),
   ('whatsapp','sph',null,
     'Halo {pic}, berikut Penawaran Harga {no_sph} dari PT SBMJ. Mohon cek lampiran PDF. Terima kasih.'),
   ('whatsapp','invoice',null,

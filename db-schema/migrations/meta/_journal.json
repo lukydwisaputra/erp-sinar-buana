@@ -218,6 +218,13 @@
       "when": 1784292086988,
       "tag": "0030_proyek_share_token",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1785300000000,
+      "tag": "0031_fix_message_template_literal_newlines",
+      "breakpoints": true
     }
   ]
 }
