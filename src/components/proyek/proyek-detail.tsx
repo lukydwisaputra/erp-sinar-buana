@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   FolderKanban, Building2, MapPin, CalendarDays, Check,
   ChevronUp, ChevronDown, Trash2, Plus, CalendarIcon, CornerDownRight, ChevronDown as ChevronDownIcon,
-  FileText, Receipt, Link2, Pencil,
+  FileText, Receipt, Link2, Pencil, History,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -25,6 +25,7 @@ import {
 import {
   useProyek, useUpdateProyek, useWorkflowStatuses, type WorkflowStatusOption,
   useUpdateMilestone, useMoveMilestone, useAddMilestone, useDeleteMilestone,
+  useProyekLog,
 } from "@/lib/query/proyek";
 import { useKaryawanList } from "@/lib/query/karyawan";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
@@ -709,6 +710,44 @@ function UbahProyekForm({ proyek, open, onOpenChange, statusOptions }: { proyek:
   );
 }
 
+// ── Aktivitas — status-change audit trail (project_status_log, DB-trigger-
+// written) — staff-only, mirrors the API route's role gate (not Viewer). ──
+function ProyekAktivitas({ proyekId }: { proyekId: string }) {
+  const { data: log = [], isLoading } = useProyekLog(proyekId);
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2">
+        <History className="size-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Aktivitas</h3>
+      </div>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Memuat…</p>
+      ) : log.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Belum ada perubahan status.</p>
+      ) : (
+        <div className="space-y-1">
+          {log.map((entry) => (
+            <div key={entry.id} className="flex items-start justify-between gap-4 border-b py-1.5 text-sm last:border-0">
+              <span>
+                {entry.fromStatus ? (
+                  <>Status berubah dari <strong>{entry.fromStatus}</strong> ke <strong>{entry.toStatus}</strong></>
+                ) : (
+                  <>Status awal diset ke <strong>{entry.toStatus}</strong></>
+                )}
+                {entry.changedByNama && <span className="text-muted-foreground"> — oleh {entry.changedByNama}</span>}
+              </span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {format(new Date(entry.changedAt), "d MMM yyyy HH:mm", { locale: idLocale })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
   const router = useRouter();
   const { data } = useProyek(initial.id, initial);
@@ -903,6 +942,8 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
           />
         </div>
       )}
+
+      {!isClient && <ProyekAktivitas proyekId={proyek.id} />}
     </div>
   );
 }
