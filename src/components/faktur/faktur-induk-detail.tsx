@@ -147,6 +147,45 @@ function GenerateTerminDialog({ induk, nextTerm, open, onOpenChange }: {
   );
 }
 
+// ─── Mark Lunas dialog ────────────────────────────────────────────────────────
+
+function MarkLunasDialog({ induk, termin, lunasStatusId, open, onOpenChange }: {
+  induk: FakturInduk; termin: InvoiceTermin; lunasStatusId: string; open: boolean; onOpenChange: (open: boolean) => void;
+}) {
+  const updateTermin = useUpdateTermin();
+  const [paidDate, setPaidDate] = React.useState(todayISO());
+
+  React.useEffect(() => {
+    if (open) setPaidDate(todayISO());
+  }, [open]);
+
+  const onSubmit = async () => {
+    await updateTermin.mutateAsync({
+      masterInvoiceId: induk.id,
+      terminId: termin.id,
+      input: { statusId: lunasStatusId, paidDate },
+    });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Tandai {termin.label} Lunas</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <DateField label="Tanggal Lunas" value={paidDate} onChange={setPaidDate} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button>
+          <Button loading={updateTermin.isPending} onClick={onSubmit}>Tandai Lunas</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Termin document dialog ──────────────────────────────────────────────────
 
 function TerminDocumentDialog({ induk, termin, open, onOpenChange }: {
@@ -224,6 +263,7 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
   const [docOpen, setDocOpen] = React.useState(false);
   const [refDocOpen, setRefDocOpen] = React.useState(false);
   const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [lunasOpen, setLunasOpen] = React.useState(false);
   const isFinal = termin.statusSystemRole === "LUNAS" || termin.statusSystemRole === "BATAL";
   const { data: session } = useSession();
   const isClient = isClientPortal(session);
@@ -248,7 +288,7 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {lunasStatusId && (
-                  <DropdownMenuItem onSelect={() => updateTermin.mutate({ masterInvoiceId: induk.id, terminId: termin.id, input: { statusId: lunasStatusId, paidDate: todayISO() } })}>
+                  <DropdownMenuItem onSelect={() => setLunasOpen(true)}>
                     <CheckCircle2 className="size-3.5" /> Tandai Lunas
                   </DropdownMenuItem>
                 )}
@@ -302,6 +342,10 @@ function TerminRow({ induk, termin, batalStatusId, lunasStatusId }: {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {lunasStatusId && (
+        <MarkLunasDialog induk={induk} termin={termin} lunasStatusId={lunasStatusId} open={lunasOpen} onOpenChange={setLunasOpen} />
+      )}
     </div>
   );
 }
