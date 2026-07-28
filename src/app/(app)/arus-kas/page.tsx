@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/shared/data-table";
 import { ErrorState } from "@/components/shared/error-state";
 import { MultiSelectFilter, type MultiSelectOption } from "@/components/shared/multi-select-filter";
+import { ComboboxCreate } from "@/components/shared/combobox-create";
 import { MoneyInput } from "@/components/shared/money-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-  Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import {
@@ -151,13 +152,11 @@ function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const [jumlah, setJumlah] = React.useState(0);
   const [categoryId, setCategoryId] = React.useState("");
   const [keterangan, setKeterangan] = React.useState("");
-  const [newCategoryOpen, setNewCategoryOpen] = React.useState(false);
-  const [newCategoryName, setNewCategoryName] = React.useState("");
 
   React.useEffect(() => {
     if (open) {
       setJenis("kredit"); setTanggal(todayISO()); setJumlah(0);
-      setCategoryId(""); setKeterangan(""); setNewCategoryOpen(false); setNewCategoryName("");
+      setCategoryId(""); setKeterangan("");
     }
   }, [open]);
 
@@ -169,13 +168,15 @@ function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     onOpenChange(false);
   };
 
-  const onCreateCategory = async () => {
-    const nama = newCategoryName.trim();
-    if (!nama) return;
-    const created = await createCategory.mutateAsync({ kategori: nama, sifat: "operasional" });
+  const categoryOptions = React.useMemo<MultiSelectOption[]>(
+    () => categories.map((c) => ({ value: c.id, label: c.kategori })),
+    [categories],
+  );
+
+  const onCategoryChange = async (v: string) => {
+    if (categories.some((c) => c.id === v)) { setCategoryId(v); return; }
+    const created = await createCategory.mutateAsync({ kategori: v, sifat: "operasional" });
     setCategoryId(created.id);
-    setNewCategoryOpen(false);
-    setNewCategoryName("");
   };
 
   return (
@@ -205,30 +206,13 @@ function CreateEntryDialog({ open, onOpenChange }: { open: boolean; onOpenChange
 
           <Field>
             <FieldLabel>Kategori</FieldLabel>
-            <Select
+            <ComboboxCreate
+              options={categoryOptions}
               value={categoryId}
-              onValueChange={(v) => { if (v === "__new__") { setNewCategoryOpen(true); return; } setCategoryId(v); }}
-            >
-              <SelectTrigger className="w-full"><SelectValue placeholder="Pilih kategori…" /></SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.kategori}</SelectItem>)}
-                <SelectSeparator />
-                <SelectItem value="__new__">+ Tambah kategori baru…</SelectItem>
-              </SelectContent>
-            </Select>
-            {newCategoryOpen && (
-              <div className="flex items-center gap-2 pt-1">
-                <Input
-                  autoFocus
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="Nama kategori baru"
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onCreateCategory(); } }}
-                />
-                <Button type="button" size="sm" loading={createCategory.isPending} onClick={onCreateCategory}>Tambah</Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => { setNewCategoryOpen(false); setNewCategoryName(""); }}>Batal</Button>
-              </div>
-            )}
+              onChange={(v) => { void onCategoryChange(v); }}
+              placeholder="Pilih kategori…"
+              searchPlaceholder="Cari atau ketik kategori baru…"
+            />
           </Field>
 
           <Field>
