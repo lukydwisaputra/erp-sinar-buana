@@ -202,7 +202,7 @@ function buildColumns(
       accessorKey: "buktiPotongReceived", header: "Bukti Potong",
       cell: ({ row }) => <BuktiPotongCell entry={row.original} />,
     },
-    { accessorKey: "notes", header: "Keterangan", meta: { className: "min-w-48 text-muted-foreground" }, cell: ({ row }) => row.original.notes || <span className="text-muted-foreground">—</span> },
+    { accessorKey: "ntpn", header: "Keterangan", meta: { className: "min-w-48 text-muted-foreground" }, cell: ({ row }) => row.original.ntpn || <span className="text-muted-foreground">—</span> },
     {
       accessorKey: "settlementStatus", header: "Status",
       cell: ({ row }) => { const m = STATUS_META[row.original.settlementStatus]; return <Badge variant={m.variant}>{m.label}</Badge>; },
@@ -426,7 +426,7 @@ export default function Page() {
           columns={columns}
           data={filteredData}
           loading={isLoading}
-          searchColumns={["notes"]}
+          searchColumns={["ntpn"]}
           searchPlaceholder="Cari keterangan…"
           emptyMessage="Belum ada kewajiban pajak"
           defaultSorting={[{ id: "taxPeriod", desc: true }]}
