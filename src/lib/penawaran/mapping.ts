@@ -21,6 +21,7 @@ import type {
   quotationKelengkapanItems,
 } from "@/lib/db/schema";
 import type { Sph, SphStatus, SphItem, SphKelengkapan } from "@/lib/schemas/penawaran";
+import type { Salutation } from "@/lib/schemas/common";
 
 export type QuotationRow = typeof quotations.$inferSelect;
 export type QuotationItemRow = typeof quotationItems.$inferSelect;
@@ -159,6 +160,9 @@ export type ToSphInput = ItemAssemblyInput & {
   statusLabel: string | null;
   kelengkapanAttachments: QuotationKelengkapanRow[];
   kelengkapanItems: QuotationKelengkapanItemRow[];
+  /** Resolved from quotation.signatureTemplateId — null when not using a
+   * digital signature, or the linked template was deleted (FK set null). */
+  signatureImage: string | null;
 };
 
 export function toSph(input: ToSphInput): Sph {
@@ -188,10 +192,16 @@ export function toSph(input: ToSphInput): Sph {
     pph23Aktif: q.pph23Active,
     pph23Persen: q.pph23Percent !== null ? Number(q.pph23Percent) : 2,
     jabatanPenerima: q.recipientTitle ?? "Direktur",
+    salutasiPenerima: (q.recipientSalutation as Salutation) ?? "bapak_ibu",
+    tempat: q.place ?? "",
     picAktif: q.picOverrideActive,
     picNama: q.picOverrideName ?? "",
     picJabatan: q.picOverridePosition ?? "",
+    picSalutation: (q.picOverrideSalutation as Salutation) ?? "bapak_ibu",
     kelengkapan: toSphKelengkapan(input.kelengkapanAttachments, input.kelengkapanItems),
+    useDigitalSignature: q.useDigitalSignature,
+    signatureTemplateId: q.signatureTemplateId,
+    signatureImage: input.signatureImage,
   };
 }
 
@@ -211,9 +221,14 @@ export function quotationColumnsFromInput(input: {
   pph23Aktif?: boolean;
   pph23Persen?: number;
   jabatanPenerima?: string;
+  salutasiPenerima?: Salutation;
+  tempat?: string;
   picAktif?: boolean;
   picNama?: string;
   picJabatan?: string;
+  picSalutation?: Salutation;
+  useDigitalSignature?: boolean;
+  signatureTemplateId?: string | null;
 }) {
   return {
     ...(input.perusahaanId !== undefined && { companyId: input.perusahaanId }),
@@ -230,8 +245,13 @@ export function quotationColumnsFromInput(input: {
     ...(input.pph23Aktif !== undefined && { pph23Active: input.pph23Aktif }),
     ...(input.pph23Persen !== undefined && { pph23Percent: String(input.pph23Persen) }),
     ...(input.jabatanPenerima !== undefined && { recipientTitle: input.jabatanPenerima || null }),
+    ...(input.salutasiPenerima !== undefined && { recipientSalutation: input.salutasiPenerima }),
+    ...(input.tempat !== undefined && { place: input.tempat || null }),
     ...(input.picAktif !== undefined && { picOverrideActive: input.picAktif }),
     ...(input.picNama !== undefined && { picOverrideName: input.picNama || null }),
     ...(input.picJabatan !== undefined && { picOverridePosition: input.picJabatan || null }),
+    ...(input.picSalutation !== undefined && { picOverrideSalutation: input.picSalutation }),
+    ...(input.useDigitalSignature !== undefined && { useDigitalSignature: input.useDigitalSignature }),
+    ...(input.signatureTemplateId !== undefined && { signatureTemplateId: input.signatureTemplateId }),
   };
 }

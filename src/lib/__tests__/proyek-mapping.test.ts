@@ -19,7 +19,6 @@ function project(overrides: Partial<ProjectRow> = {}): ProjectRow {
     statusId: "status-1",
     contractValue: "100000000",
     quotationId: "quo-1",
-    recurringPeriod: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date(),
     createdBy: null,
@@ -100,6 +99,8 @@ function baseInput(overrides: Partial<ToProyekInput> = {}): ToProyekInput {
     milestones: [milestone()],
     milestoneAssignees: [milestoneAssignee()],
     milestoneStatusLabelsById: new Map([["mstatus-1", "Belum"]]),
+    sphNumber: null,
+    fakturs: [],
     ...overrides,
   };
 }

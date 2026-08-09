@@ -43,6 +43,8 @@ export const karyawanSchema = z.object({
   email: z.string().nullable(),
   telepon: z.string().nullable(),
   tanggalMasuk: z.string().nullable(), // employees.join_date
+  kontrakUrl: z.string().nullable(), // employees.contract_file_url
+  kontrakFileName: z.string().nullable(), // employees.contract_file_name
   status: karyawanStatus, // derived from employees.is_active
 });
 export type Karyawan = z.infer<typeof karyawanSchema>;
@@ -61,6 +63,8 @@ export const createKaryawanSchema = z.object({
   email: optionalEmail,
   telepon: z.string().optional(),
   tanggalMasuk: z.string().min(1, "Tanggal masuk wajib diisi."),
+  kontrakUrl: z.string().optional(),
+  kontrakFileName: z.string().optional(),
 });
 export type CreateKaryawanInput = z.infer<typeof createKaryawanSchema>;
 
@@ -77,6 +81,8 @@ export const updateKaryawanSchema = z.object({
   email: optionalEmail,
   telepon: z.string().optional(),
   tanggalMasuk: z.string().min(1).optional(),
+  kontrakUrl: z.string().optional(),
+  kontrakFileName: z.string().optional(),
   status: karyawanStatus.optional(),
 });
 export type UpdateKaryawanInput = z.infer<typeof updateKaryawanSchema>;

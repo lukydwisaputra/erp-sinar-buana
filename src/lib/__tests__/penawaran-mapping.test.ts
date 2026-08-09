@@ -160,6 +160,7 @@ function baseInput(overrides: Partial<ToSphInput> = {}): ToSphInput {
     markedWeeks: [markedWeek()],
     kelengkapanAttachments: [],
     kelengkapanItems: [],
+    signatureImage: null,
     ...overrides,
   };
 }

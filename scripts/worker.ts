@@ -15,6 +15,7 @@
  * step — Node's native TS type-stripping handles both).
  */
 import { setDefaultResultOrder } from "node:dns";
+import { writeFileSync } from "node:fs";
 import postgres from "postgres";
 import { PgBoss } from "pg-boss";
 import nodemailer from "nodemailer";
@@ -49,6 +50,15 @@ const sql = postgres(databaseUrl);
 const boss = new PgBoss(databaseUrl);
 boss.on("error", (err: Error) => reportError(err, { source: "pg-boss" }));
 
+// Liveness signal for infra/worker/Dockerfile's HEALTHCHECK — this process
+// has no HTTP server to poll, so a periodically-touched file is the
+// cheapest way for Docker/Coolify to tell "running" apart from "wedged"
+// (e.g. stuck on a hung Chromium page.goto with no timeout).
+const HEARTBEAT_FILE = "/tmp/worker-heartbeat";
+function touchHeartbeat() {
+  try { writeFileSync(HEARTBEAT_FILE, String(Date.now())); } catch { /* non-fatal — HEALTHCHECK just goes red */ }
+}
+
 // One browser instance for the worker's whole lifetime — launching Chromium
 // per email would be needlessly slow. Started lazily on first use, not at
 // boot, so a worker that never sends anything doesn't pay the startup cost.
@@ -64,6 +74,7 @@ type DeliveryRow = {
   installment_invoice_id: string | null;
   payslip_id: string | null;
   document_number: string;
+  recipient_name: string;
 };
 
 const PRINT_PATH_BY_DOC_TYPE: Record<string, (delivery: DeliveryRow) => string | null> = {
@@ -116,7 +127,7 @@ async function resolveTokens(tx: postgres.TransactionSql, delivery: DeliveryRow)
       select c.name as company_name
       from quotations q join companies c on c.id = q.company_id
       where q.id = ${delivery.quotation_id}`;
-    return { no_sph: delivery.document_number, nama_perusahaan: row?.company_name ?? "" };
+    return { no_sph: delivery.document_number, nama_perusahaan: row?.company_name ?? "", pic: delivery.recipient_name };
   }
   if (delivery.document_type === "invoice" && delivery.installment_invoice_id) {
     const [row] = await tx`
@@ -129,6 +140,7 @@ async function resolveTokens(tx: postgres.TransactionSql, delivery: DeliveryRow)
       no_inv: delivery.document_number,
       nama_perusahaan: row?.company_name ?? "",
       jatuh_tempo: row?.due_date ? formatTanggal(row.due_date) : "",
+      pic: delivery.recipient_name,
     };
   }
   if (delivery.document_type === "slip_gaji" && delivery.payslip_id) {
@@ -211,7 +223,10 @@ async function processDelivery(deliveryId: string): Promise<void> {
 /** Sends the "reset your password" link. No owning document, no PDF — a plain
  * transactional email via the same email_accounts singleton processDelivery uses. */
 async function sendPasswordResetEmail(job: PasswordResetEmailJob): Promise<void> {
-  const [account] = await sql`select * from email_accounts where singleton = true`;
+  const [account] = await sql.begin(async (tx) => {
+    await tx`set local role service_role`;
+    return tx`select * from email_accounts where singleton = true`;
+  });
   if (!account?.is_configured) {
     throw new Error("Akun email belum dikonfigurasi — tautan reset tidak terkirim.");
   }
@@ -247,6 +262,9 @@ async function sweepOverdueTaxEntries(): Promise<void> {
 
 async function main() {
   await boss.start();
+  touchHeartbeat();
+  setInterval(touchHeartbeat, 15_000).unref();
+
   await boss.createQueue(DELIVERY_EMAIL_QUEUE);
   await boss.work<EmailDeliveryJob>(DELIVERY_EMAIL_QUEUE, async ([job]) => {
     console.log("[worker] processing delivery", job.data.deliveryId);
@@ -258,8 +276,15 @@ async function main() {
   await boss.createQueue(PASSWORD_RESET_EMAIL_QUEUE);
   await boss.work<PasswordResetEmailJob>(PASSWORD_RESET_EMAIL_QUEUE, async ([job]) => {
     console.log("[worker] sending password-reset email to", job.data.to);
-    await sendPasswordResetEmail(job.data);
-    console.log("[worker] sent password-reset email to", job.data.to);
+    try {
+      await sendPasswordResetEmail(job.data);
+      console.log("[worker] sent password-reset email to", job.data.to);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[worker] failed to send password-reset email to", job.data.to, "-", message);
+      reportError(err, { source: "sendPasswordResetEmail", to: job.data.to });
+      throw err; // re-throw so pg-boss's own retry/backoff still applies
+    }
   });
   console.log("[worker] listening on", PASSWORD_RESET_EMAIL_QUEUE);
 
@@ -272,6 +297,31 @@ async function main() {
   });
   console.log("[worker] scheduled", TAX_OVERDUE_SWEEP_QUEUE, "daily at 01:00");
 }
+
+// Coolify sends SIGTERM on every redeploy/stop — without this, an in-flight
+// job (email send, headless-Chromium PDF render) gets killed mid-flight
+// instead of finishing, leaving e.g. a document_deliveries row stuck
+// 'queued' or double-sending on the next retry. `graceful: true` stops
+// accepting new work and waits for active jobs to finish (bounded by
+// timeout) before resolving.
+let shuttingDown = false;
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[worker] received ${signal}, draining in-flight jobs...`);
+  try {
+    await boss.stop({ graceful: true, timeout: 25_000 });
+    if (browserPromise) await (await browserPromise).close();
+    await sql.end();
+    console.log("[worker] shutdown complete");
+    process.exit(0);
+  } catch (err) {
+    reportError(err, { source: "shutdown" });
+    process.exit(1);
+  }
+}
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
 
 main().catch((err) => {
   reportError(err, { source: "main" });

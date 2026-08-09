@@ -6,23 +6,19 @@ import {
 import type { AppRole } from "@/lib/schemas/pengguna";
 
 const ALL_ROLES: AppRole[] = ["admin", "keuangan", "sales", "tim_teknis", "viewer"];
-// Internal staff only — excludes Viewer, which since the client-portal pass
-// (planning/prd/02-peran-rbac.md predates this; see 00_helpers.sql's
-// current_client_company_id()) means an external client-contact (PIC)
-// account, not an internal read-only role. A client only gets Penawaran/
-// Proyek/Faktur, each scoped server-side (RLS) to their own company.
-const STAFF_ROLES: AppRole[] = ["admin", "keuangan", "sales", "tim_teknis"];
 
 export type NavItem = { label: string; href: string; icon: LucideIcon; roles: AppRole[] };
 export type NavGroup = { label: string; items: NavItem[] };
 
 // Role lists follow the RBAC matrix (planning/prd/02-peran-rbac.md §2.2) —
-// coarse "can see this module in the sidebar" gating. The real boundary is
-// server-side (src/lib/auth/rbac.ts requireRole in each Route Handler); this
-// is UX only (US-01.6 "Sembunyikan menu tak berhak").
+// "can see this module" gating. Data access is still enforced server-side
+// (src/lib/auth/rbac.ts requireRole in each Route Handler) — this list is
+// what drives both the sidebar filter (US-01.6) AND <RouteGuard>'s
+// direct-URL check below, so a role hidden from a menu can't just type the
+// URL in and land on the page anyway.
 export const NAV: NavGroup[] = [
   { label: "Utama", items: [
-    { label: "Dasbor", href: "/dasbor", icon: LayoutDashboard, roles: STAFF_ROLES },
+    { label: "Dasbor", href: "/dasbor", icon: LayoutDashboard, roles: ["admin", "keuangan"] },
   ]},
   { label: "Penjualan", items: [
     { label: "Penawaran", href: "/penawaran", icon: FileText, roles: ALL_ROLES },
@@ -30,18 +26,22 @@ export const NAV: NavGroup[] = [
   ]},
   { label: "Keuangan", items: [
     { label: "Faktur", href: "/faktur", icon: ReceiptText, roles: ["admin", "keuangan", "viewer"] },
-    { label: "Penggajian", href: "/penggajian", icon: Wallet, roles: ["admin", "keuangan", "sales", "tim_teknis"] },
+    { label: "Penggajian", href: "/penggajian", icon: Wallet, roles: ["admin", "keuangan", "tim_teknis"] },
     { label: "Arus Kas", href: "/arus-kas", icon: ArrowRightLeft, roles: ["admin", "keuangan"] },
     { label: "Pajak", href: "/pajak", icon: Landmark, roles: ["admin", "keuangan"] },
   ]},
+  // Sidebar-only: hidden from every non-admin role. Non-admin roles still
+  // reach the underlying data via other pages/APIs that share these same
+  // list endpoints (Faktur Induk detail, Proyek detail/list, SPH form,
+  // Penggajian's create-payslip form) — this is UX-only, not a backend gate.
   { label: "Master Data", items: [
-    { label: "Perusahaan", href: "/perusahaan", icon: Building2, roles: STAFF_ROLES },
-    { label: "Katalog Layanan", href: "/katalog", icon: BookOpen, roles: STAFF_ROLES },
-    { label: "Karyawan", href: "/karyawan", icon: Users, roles: ["admin", "keuangan", "tim_teknis"] },
-    { label: "Kelengkapan Administrasi", href: "/kelengkapan", icon: ClipboardList, roles: STAFF_ROLES },
+    { label: "Perusahaan", href: "/perusahaan", icon: Building2, roles: ["admin"] },
+    { label: "Katalog Layanan", href: "/katalog", icon: BookOpen, roles: ["admin"] },
+    { label: "Karyawan", href: "/karyawan", icon: Users, roles: ["admin"] },
+    { label: "Kelengkapan Administrasi", href: "/kelengkapan", icon: ClipboardList, roles: ["admin"] },
   ]},
   { label: "Administrasi", items: [
-    { label: "Pengiriman Dokumen", href: "/dokumen", icon: Send, roles: ["admin", "keuangan", "sales"] },
+    { label: "Pengiriman Dokumen", href: "/dokumen", icon: Send, roles: ["admin"] },
     { label: "Konfigurasi", href: "/konfigurasi", icon: Settings, roles: ["admin"] },
     { label: "Pengguna", href: "/pengguna", icon: UserCog, roles: ["admin"] },
     { label: "Profil Perusahaan", href: "/profil-perusahaan", icon: Building, roles: ["admin"] },
@@ -60,4 +60,25 @@ export function navForRole(role: AppRole | undefined): NavGroup[] {
     ...group,
     items: group.items.filter((item) => item.roles.includes(role)),
   })).filter((group) => group.items.length > 0);
+}
+
+const NAV_ITEMS = NAV.flatMap((g) => g.items);
+
+/** Matches a pathname to its NAV entry by first path segment, so nested/
+ * dynamic routes (`/faktur/123/edit`) resolve to the same item as their
+ * listing page (`/faktur`). Routes with no NAV entry (`/profil`, `/dasbor`'s
+ * own sub-paths, `/login`, etc.) return undefined — RouteGuard treats that
+ * as unrestricted. */
+export function findNavItemForPath(pathname: string): NavItem | undefined {
+  const firstSegment = "/" + (pathname.split("/").filter(Boolean)[0] ?? "");
+  return NAV_ITEMS.find((item) => item.href === firstSegment);
+}
+
+/** Where to send a role bounced off a page it can't access — its own first
+ * available menu item, or `/profil` (always reachable) if it has none. */
+export function firstAllowedPath(role: AppRole): string {
+  for (const group of navForRole(role)) {
+    if (group.items.length > 0) return group.items[0].href;
+  }
+  return "/profil";
 }

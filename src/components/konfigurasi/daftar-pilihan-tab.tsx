@@ -4,7 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
@@ -17,18 +17,17 @@ import {
 import { Field, FieldError, FieldLabel, FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { onFormInvalid } from "@/lib/form-toast";
 import { rowNumberColumn } from "@/components/konfigurasi/row-number-column";
 import {
-  useOptionList, useCreateOption, useUpdateOption, useDeleteOption,
+  useOptionList, useCreateOption, useUpdateOption, useDeleteOption, useMoveOption,
 } from "@/lib/query/daftar-pilihan";
 import {
-  calcMethod, komponenGajiKind, daftarPilihanKategori,
+  calcMethod, komponenGajiKind,
   type CalcMethod, type KomponenGajiKind, type DaftarPilihanKategori, type OptionItem,
 } from "@/lib/schemas/daftar-pilihan";
 
-const KATEGORI_META: Record<DaftarPilihanKategori, {
+export const KATEGORI_META: Record<DaftarPilihanKategori, {
   label: string; hasPengali?: boolean; hasKomponenGaji?: boolean; hasBank?: boolean;
 }> = {
   jenis_dokumen: { label: "Jenis Dokumen" },
@@ -57,6 +56,7 @@ function makeColumns(
   onEdit: (item: OptionItem) => void,
   onDelete: (item: OptionItem) => void,
   onToggleAktif: (item: OptionItem, aktif: boolean) => void,
+  onMove: (item: OptionItem, direction: "up" | "down") => void,
 ): ColumnDef<OptionItem>[] {
   const columns: ColumnDef<OptionItem>[] = [
     rowNumberColumn<OptionItem>(),
@@ -121,6 +121,13 @@ function makeColumns(
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => onEdit(row.original)}>
               <Pencil className="size-3.5" /> Ubah
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onMove(row.original, "up")}>
+              <ChevronUp className="size-3.5" /> Naikkan
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onMove(row.original, "down")}>
+              <ChevronDown className="size-3.5" /> Turunkan
             </DropdownMenuItem>
             {!row.original.locked && (
               <>
@@ -233,7 +240,7 @@ function OptionFormFields({ meta, register, control, errors }: {
             <Input type="number" step="1" {...register("defaultValue")} />
             <FieldDescription>Nominal (Rp) atau persentase, tergantung cara hitung.</FieldDescription>
           </Field>
-          <Field className="flex-row items-center gap-2">
+          <Field orientation="horizontal">
             <Controller
               name="isEmployerPortion"
               control={control}
@@ -259,7 +266,7 @@ function OptionFormFields({ meta, register, control, errors }: {
             <FieldLabel>Nomor Rekening</FieldLabel>
             <Input {...register("bankNomor")} />
           </Field>
-          <Field className="flex-row items-center gap-2">
+          <Field orientation="horizontal">
             <Controller
               name="isDefault"
               control={control}
@@ -367,11 +374,12 @@ function EditOptionForm({
   );
 }
 
-function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
+export function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
   const meta = KATEGORI_META[kategori];
   const { data, isLoading } = useOptionList(kategori, { includeInactive: true });
   const { mutate: updateOption } = useUpdateOption();
   const { mutate: deleteOption, isPending: isDeleting } = useDeleteOption();
+  const { mutate: moveOption } = useMoveOption();
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<OptionItem | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<OptionItem | null>(null);
@@ -381,6 +389,7 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
     setEditTarget,
     setDeleteTarget,
     (item, aktif) => updateOption({ id: item.id, kategori, patch: { aktif } }),
+    (item, direction) => moveOption({ id: item.id, kategori, direction }),
   );
 
   return (
@@ -416,20 +425,5 @@ function KategoriList({ kategori }: { kategori: DaftarPilihanKategori }) {
         rowActions={false}
       />
     </div>
-  );
-}
-
-export function DaftarPilihanTab() {
-  return (
-    <Tabs defaultValue="jenis_dokumen">
-      <TabsList variant="line">
-        {daftarPilihanKategori.options.map((k) => (
-          <TabsTrigger key={k} value={k}>{KATEGORI_META[k].label}</TabsTrigger>
-        ))}
-      </TabsList>
-      {daftarPilihanKategori.options.map((k) => (
-        <TabsContent key={k} value={k}><KategoriList kategori={k} /></TabsContent>
-      ))}
-    </Tabs>
   );
 }

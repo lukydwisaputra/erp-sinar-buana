@@ -10,11 +10,11 @@
  *   computed and SNAPSHOT onto each installment so historical invoices stay
  *   correct if rates change later (PRD Bab 10).
  */
-import { date, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { type AnyPgColumn, boolean, date, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { money, rate, bookkeeping, pk, timestamps } from "./_shared";
 import { projects } from "./projects";
 import { companies, serviceCatalog } from "./master-data";
-import { bankAccounts, workflowStatuses } from "./config";
+import { bankAccounts, workflowStatuses, signatureTemplates } from "./config";
 
 // ── A. Faktur Induk (Master Invoice) ──────────────────────────────────────────
 
@@ -35,6 +35,16 @@ export const masterInvoices = pgTable("master_invoices", {
     onDelete: "set null",
   }), // Belum Lunas / Lunas (entity = 'faktur')
   notes: text("notes"),
+  // Digital signature — optional, applies to every termin generated under
+  // this induk (one signatory per invoice, not per termin). Off leaves blank
+  // space on the printed page for a manual signature + wet stamp.
+  useDigitalSignature: boolean("use_digital_signature").notNull().default(false),
+  signatureTemplateId: uuid("signature_template_id").references(() => signatureTemplates.id, {
+    onDelete: "set null",
+  }),
+  // Cancellation record — mirrored from the same cascade as quotations/projects.
+  cancelReason: text("cancel_reason"),
+  cancelFee: money("cancel_fee"),
   ...bookkeeping,
 });
 
@@ -63,6 +73,11 @@ export const masterInvoiceTerms = pgTable("master_invoice_terms", {
     .references(() => masterInvoices.id, { onDelete: "cascade" }),
   label: text("label").notNull(), // e.g. "TERMIN III (Pelunasan)"
   percentage: rate("percentage").notNull(), // e.g. 40.0000
+  // Trigger/keterangan copied from the source SPH's quotation_term_scheme
+  // (milestoneTriggerLabel) at Faktur-creation time — displayed alongside the
+  // label, e.g. "Termin III (Pelunasan)", but kept as a separate field so the
+  // presentation layer can format label/persen/keterangan differently.
+  pemicu: text("pemicu"),
   sortOrder: integer("sort_order").notNull().default(0),
   // milestone link is on milestones.linkedMasterInvoiceId / project side; the
   // term may also be generated manually.
@@ -94,6 +109,20 @@ export const installmentInvoices = pgTable("installment_invoices", {
     onDelete: "set null",
   }),
   label: text("label").notNull(), // "TERMIN III (Pelunasan)"
+  pemicu: text("pemicu"), // snapshot of master_invoice_terms.pemicu at generation time
+  // Set only on the special "Biaya Administrasi Pengembalian" row generated at
+  // cancellation time (termId null — not part of the original term scheme).
+  // Marks the Lunas-automation trigger to categorize its cashflow entry as
+  // ADMIN_PEMBATALAN instead of the default FAKTUR/"Pendapatan jasa" bucket,
+  // and skip the induk LUNAS roll-up (this isn't real contract progress).
+  isCancellationFee: boolean("is_cancellation_fee").notNull().default(false),
+  // Only set on that same special row — points at the last-paid termin whose
+  // value was deducted from the admin fee shortfall, so the printed/displayed
+  // keterangan can link to it ("sudah dikurangi dari Termin II — klik untuk lihat detail").
+  referencedInstallmentId: uuid("referenced_installment_id").references(
+    (): AnyPgColumn => installmentInvoices.id,
+    { onDelete: "set null" },
+  ),
   date: date("date").notNull(),
   dueDate: date("due_date"), // Jatuh Tempo — editable (default = date + N days)
   bankAccountId: uuid("bank_account_id").references(() => bankAccounts.id, {

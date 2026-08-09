@@ -5,19 +5,28 @@ import { SESSION_COOKIE_NAME } from "@/lib/auth/cookie";
 // Optimistic-only (docs/architecture.md §5, Next 16 Proxy guide): checks
 // cookie *presence*, not validity — the real check is the DB round-trip in
 // getCurrentSession(), run by every Route Handler / page that needs it.
-// `/print` is a special case: it's never visited by a logged-in browser at
-// all (only the worker's headless Playwright instance, for PDF-attachment
-// rendering — see src/app/print/**) and carries its own shared-secret check
-// server-side, so it must bypass the session-cookie redirect entirely rather
-// than redirect to /login like every other unauthenticated request.
-const PUBLIC_PATHS = ["/login", "/accept-invite", "/reset-password", "/print"];
+// Redirects a logged-in browser away, since there's nothing for an
+// authenticated user to do here (auth forms only).
+const PUBLIC_PATHS = ["/login", "/accept-invite", "/reset-password"];
+
+// Never redirected either way, logged in or not — each carries its own
+// access check server-side, not the session cookie.
+// `/print`: only ever visited by the worker's headless Playwright instance
+// (PDF-attachment rendering, see src/app/print/**), gated by a shared secret.
+// `/proyek/share`: a real human's anonymous, read-only Proyek link (see
+// src/lib/proyek/share-service.ts), gated by its token — including staff who
+// open their own copied link while still logged in.
+const ANONYMOUS_PATHS = ["/print", "/proyek/share"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSessionCookie = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
-  const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
-  if (isPublicPath) {
+  if (ANONYMOUS_PATHS.some((path) => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
+
+  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
     if (hasSessionCookie) {
       return NextResponse.redirect(new URL("/dasbor", request.url));
     }

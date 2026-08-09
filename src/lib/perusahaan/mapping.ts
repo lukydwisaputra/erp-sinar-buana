@@ -9,6 +9,7 @@ import type {
   Perusahaan,
   CreatePerusahaanInput,
 } from "@/lib/schemas/perusahaan";
+import type { Salutation } from "@/lib/schemas/common";
 
 export type CompanyRow = typeof companies.$inferSelect;
 export type ContactRow = typeof companyContacts.$inferSelect;
@@ -42,7 +43,7 @@ export function toPerusahaan(
     npwp: company.npwp,
     alamat: company.address,
     kota: company.city,
-    kabupaten: company.regency,
+    provinsi: company.province,
     email: company.email,
     status: company.isActive ? "aktif" : "nonaktif",
     pic: sortContacts(contacts).map((c) => ({
@@ -50,6 +51,7 @@ export function toPerusahaan(
       jabatan: c.position ?? "",
       telepon: c.phone,
       email: c.email ?? "",
+      salutation: c.salutation as Salutation,
     })),
     metrik: computeMetrik(jumlahPenawaran, proyekAktif, nilaiKontrak, piutang),
   };
@@ -62,6 +64,7 @@ export function toContactRows(pic: CreatePerusahaanInput["pic"], companyId: stri
     phone: p.telepon,
     email: p.email || null,
     position: p.jabatan || null,
+    salutation: p.salutation,
     isPrimary: i === 0,
   }));
 }

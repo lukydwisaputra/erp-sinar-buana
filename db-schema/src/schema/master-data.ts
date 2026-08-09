@@ -32,13 +32,13 @@ export const companies = pgTable("companies", {
   numberMonth: integer("number_month"),
   name: text("name").notNull(),
   address: text("address").notNull(),
-  city: text("city").notNull(), // Kota
-  regency: text("regency").notNull(), // Kabupaten
+  city: text("city").notNull(), // Kota/Kabupaten (single combined field)
+  province: text("province").notNull(),
   adminAreaId: uuid("admin_area_id").references(() => adminAreas.id, {
     onDelete: "set null",
   }),
   country: text("country").notNull().default("Indonesia"),
-  npwp: text("npwp").notNull(), // ≤16 digits, validated app/CHECK side
+  npwp: text("npwp"), // ≤16 digits, validated app/CHECK side; often unknown until closing
   email: text("email"),
   isActive: boolean("is_active").notNull().default(true),
   ...bookkeeping,
@@ -54,6 +54,7 @@ export const companyContacts = pgTable("company_contacts", {
   phone: text("phone").notNull(),
   email: text("email"),
   position: text("position"), // Jabatan (PRD Bab 3.1)
+  salutation: text("salutation").notNull().default("bapak_ibu"), // Bapak/Ibu/Bapak-Ibu — used in the SPH cover letter's "u.p." line
   isPrimary: boolean("is_primary").notNull().default(false),
   ...bookkeeping,
 });
@@ -104,7 +105,6 @@ export const serviceCatalog = pgTable("service_catalog", {
     onDelete: "set null",
   }),
   standardPrice: money("standard_price"), // optional reference price
-  isRecurring: boolean("is_recurring").notNull().default(false), // Laporan Semester tag
   milestoneTemplateId: uuid("milestone_template_id").references(
     () => milestoneTemplates.id,
     { onDelete: "set null" },
@@ -141,6 +141,11 @@ export const employees = pgTable("employees", {
   // Contact for sending payslips (PRD Bab 5.2 — WA/email to the employee only)
   phone: text("phone"),
   email: text("email"),
+  // Surat kontrak (PDF, MinIO-backed — src/lib/storage/s3.ts). File name kept
+  // alongside the storage URL (a random-UUID key) so downloads/preview show
+  // the original name instead of the opaque key.
+  contractFileUrl: text("contract_file_url"),
+  contractFileName: text("contract_file_name"),
   isActive: boolean("is_active").notNull().default(true),
   ...bookkeeping,
 });

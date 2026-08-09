@@ -1,17 +1,15 @@
-import { asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { withUserTransaction } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { ConflictError, NotFoundError } from "@/lib/api-error";
 import { toArusKasEntry, toCashflowCategoryRow, toDbSifat } from "@/lib/arus-kas/mapping";
-import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
+import type { ArusKasEntry, CreateArusKasEntryInput, UpdateArusKasEntryInput } from "@/lib/schemas/arus-kas";
 import type {
   CashflowCategoryRow,
   CreateCashflowCategoryInput,
   SifatBeban,
 } from "@/lib/schemas/expense-nature";
 
-/** Read-only visibility — rows are produced by document triggers (Faktur's
- * LUNAS automation); manual-entry CRUD stays out of scope this pass. */
 export async function listArusKas(userId: string): Promise<ArusKasEntry[]> {
   return withUserTransaction(userId, async (tx) => {
     const rows = await tx
@@ -27,6 +25,85 @@ export async function listArusKas(userId: string): Promise<ArusKasEntry[]> {
     const labelById = new Map(categories.map((c) => [c.id, c.label]));
 
     return rows.map((r) => toArusKasEntry(r, r.categoryId ? labelById.get(r.categoryId) ?? null : null));
+  });
+}
+
+/** Manual entry — never `isLocked` (that flag is reserved for trigger-owned
+ * automation rows, e.g. Faktur's Lunas automation), so it stays editable via
+ * the normal Konfigurasi/Arus Kas surfaces later if that's ever built. */
+export async function createArusKasEntry(userId: string, input: CreateArusKasEntryInput): Promise<ArusKasEntry> {
+  return withUserTransaction(userId, async (tx) => {
+    const [category] = await tx
+      .select({ id: schema.cashflowCategories.id, label: schema.cashflowCategories.label })
+      .from(schema.cashflowCategories)
+      .where(eq(schema.cashflowCategories.id, input.categoryId))
+      .limit(1);
+    if (!category) throw new NotFoundError("Kategori tidak ditemukan.");
+
+    const [row] = await tx
+      .insert(schema.cashflowEntries)
+      .values({
+        type: input.jenis,
+        date: input.tanggal,
+        amount: String(input.jumlah),
+        categoryId: input.categoryId,
+        source: "manual",
+        description: input.keterangan || null,
+        isLocked: false,
+        createdBy: userId,
+        updatedBy: userId,
+      })
+      .returning();
+    return toArusKasEntry(row, category.label);
+  });
+}
+
+export async function updateArusKasEntry(userId: string, id: string, input: UpdateArusKasEntryInput): Promise<ArusKasEntry> {
+  return withUserTransaction(userId, async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(schema.cashflowEntries)
+      .where(and(eq(schema.cashflowEntries.id, id), isNull(schema.cashflowEntries.deletedAt)))
+      .limit(1);
+    if (!existing) throw new NotFoundError("Transaksi tidak ditemukan.");
+    if (existing.source !== "manual") throw new ConflictError("Hanya transaksi manual yang dapat diedit.");
+
+    const [category] = await tx
+      .select({ id: schema.cashflowCategories.id, label: schema.cashflowCategories.label })
+      .from(schema.cashflowCategories)
+      .where(eq(schema.cashflowCategories.id, input.categoryId))
+      .limit(1);
+    if (!category) throw new NotFoundError("Kategori tidak ditemukan.");
+
+    const [row] = await tx
+      .update(schema.cashflowEntries)
+      .set({
+        type: input.jenis,
+        date: input.tanggal,
+        amount: String(input.jumlah),
+        categoryId: input.categoryId,
+        description: input.keterangan || null,
+        updatedBy: userId,
+      })
+      .where(eq(schema.cashflowEntries.id, id))
+      .returning();
+    return toArusKasEntry(row, category.label);
+  });
+}
+
+export async function removeArusKasEntry(userId: string, id: string): Promise<void> {
+  await withUserTransaction(userId, async (tx) => {
+    const [existing] = await tx
+      .select({ id: schema.cashflowEntries.id, source: schema.cashflowEntries.source })
+      .from(schema.cashflowEntries)
+      .where(and(eq(schema.cashflowEntries.id, id), isNull(schema.cashflowEntries.deletedAt)))
+      .limit(1);
+    if (!existing) throw new NotFoundError("Transaksi tidak ditemukan.");
+    if (existing.source !== "manual") throw new ConflictError("Hanya transaksi manual yang dapat dihapus.");
+    await tx
+      .update(schema.cashflowEntries)
+      .set({ deletedAt: new Date(), deletedBy: userId })
+      .where(eq(schema.cashflowEntries.id, id));
   });
 }
 

@@ -2,10 +2,10 @@
 import * as React from "react";
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useController } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Users, Wallet, CalendarDays, CalendarIcon, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Users, Wallet, CalendarDays, CalendarIcon, MoreHorizontal, Pencil, Plus, SlidersHorizontal, Trash2, FileUp, FileText, Eye, Download } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -21,14 +21,11 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldLabel, FieldError } from "@/components/ui/field";
+import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  InputGroup, InputGroupAddon, InputGroupInput, InputGroupText,
-} from "@/components/ui/input-group";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
@@ -36,8 +33,9 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { StatTile, InfoRow, InfoList, SectionLabel, initials } from "@/components/shared/detail-drawer";
+import { MoneyInput } from "@/components/shared/money-input";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
-import { useKaryawanList, useCreateKaryawan, useUpdateKaryawan, useDeleteKaryawan } from "@/lib/query/karyawan";
+import { useKaryawanList, useCreateKaryawan, useUpdateKaryawan, useDeleteKaryawan, useUploadKontrak } from "@/lib/query/karyawan";
 import { useOptionList } from "@/lib/query/daftar-pilihan";
 import { onFormInvalid } from "@/lib/form-toast";
 import { ptkpStatusValues, type Karyawan } from "@/lib/schemas/karyawan";
@@ -164,6 +162,21 @@ function KaryawanDetail({ k }: { k: Karyawan }) {
           <InfoRow label="Email" value={k.email ? <a href={`mailto:${k.email}`} className="text-(--link) hover:underline">{k.email}</a> : "—"} />
           <InfoRow label="No. HP" value={<span className="font-mono">{k.telepon ?? "—"}</span>} />
           <InfoRow label="Tanggal Masuk" value={tanggalID(k.tanggalMasuk)} />
+          <InfoRow
+            label="Surat Kontrak"
+            value={
+              k.kontrakUrl ? (
+                <div className="flex items-center gap-3">
+                  <a href={k.kontrakUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-(--link) hover:underline">
+                    <Eye className="size-3.5" /> Pratinjau
+                  </a>
+                  <a href={k.kontrakUrl} download={k.kontrakFileName ?? undefined} className="inline-flex items-center gap-1 text-(--link) hover:underline">
+                    <Download className="size-3.5" /> Unduh
+                  </a>
+                </div>
+              ) : "—"
+            }
+          />
         </InfoList>
       </section>
     </div>
@@ -185,6 +198,8 @@ const karyawanFormSchema = z.object({
   email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]).optional(),
   telepon: z.string().optional(),
   tanggalMasuk: z.string().min(1, "Tanggal masuk wajib diisi."),
+  kontrakUrl: z.string().optional(),
+  kontrakFileName: z.string().optional(),
   status: z.enum(["aktif", "terarsip"]).optional(),
 });
 type KaryawanForm = z.input<typeof karyawanFormSchema>;
@@ -200,6 +215,7 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
       gajiPokok: undefined,
       bankNama: "", bankNomor: "", bankAtasNama: "",
       npwp: "", email: "", telepon: "", tanggalMasuk: "", ptkpStatus: undefined,
+      kontrakUrl: "", kontrakFileName: "",
     },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
@@ -218,6 +234,8 @@ function KaryawanCreateForm({ open, onOpenChange }: { open: boolean; onOpenChang
       email: values.email,
       telepon: values.telepon,
       tanggalMasuk: values.tanggalMasuk,
+      kontrakUrl: values.kontrakUrl,
+      kontrakFileName: values.kontrakFileName,
     });
     onOpenChange(false);
     reset();
@@ -264,6 +282,8 @@ function KaryawanEditForm({
     email: k.email ?? "",
     telepon: k.telepon ?? "",
     tanggalMasuk: k.tanggalMasuk ?? "",
+    kontrakUrl: k.kontrakUrl ?? "",
+    kontrakFileName: k.kontrakFileName ?? "",
     status: k.status,
   }), []);
   const form = useForm<KaryawanForm>({
@@ -292,6 +312,8 @@ function KaryawanEditForm({
         email: values.email,
         telepon: values.telepon,
         tanggalMasuk: values.tanggalMasuk,
+        kontrakUrl: values.kontrakUrl,
+        kontrakFileName: values.kontrakFileName,
         status: values.status ?? karyawan.status,
       },
     });
@@ -334,11 +356,67 @@ function DateField({ label, value, onChange, error }: {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar mode="single" selected={date} locale={idLocale} autoFocus
+          <Calendar mode="single" selected={date} locale={idLocale} autoFocus captionLayout="dropdown"
             onSelect={(d) => { onChange(d ? format(d, "yyyy-MM-dd") : ""); setOpen(false); }} />
         </PopoverContent>
       </Popover>
       <FieldError errors={error ? [error] : undefined} />
+    </Field>
+  );
+}
+
+/* ---------- kontrak field ---------- */
+
+/** Surat kontrak (PDF) — upload/replace/remove + preview/download, mirroring
+ * profil-perusahaan's LogoField upload flow (upload returns a URL immediately,
+ * persisted on form submit — no employee id needed for the upload itself). */
+function KontrakField({ control }: { control: ReturnType<typeof useForm<KaryawanForm>>["control"] }) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const { mutateAsync: uploadKontrak, isPending } = useUploadKontrak();
+  const { field: urlField } = useController({ control, name: "kontrakUrl" });
+  const { field: nameField } = useController({ control, name: "kontrakFileName" });
+  const url = urlField.value ?? "";
+  const fileName = nameField.value ?? "";
+  const onChange = (v: { url: string; fileName: string }) => {
+    urlField.onChange(v.url);
+    nameField.onChange(v.fileName);
+  };
+
+  return (
+    <Field>
+      <FieldLabel>Surat Kontrak (opsional)</FieldLabel>
+      {url ? (
+        <div className="flex items-center gap-2 rounded-md border border-input px-3 py-2">
+          <FileText className="size-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate text-sm">{fileName || "surat-kontrak.pdf"}</span>
+          <a href={url} target="_blank" rel="noopener noreferrer" title="Pratinjau" className="text-muted-foreground hover:text-foreground">
+            <Eye className="size-4" />
+          </a>
+          <a href={url} download={fileName || undefined} title="Unduh" className="text-muted-foreground hover:text-foreground">
+            <Download className="size-4" />
+          </a>
+          <button type="button" title="Hapus" disabled={isPending} onClick={() => onChange({ url: "", fileName: "" })} className="text-muted-foreground hover:text-destructive">
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      ) : null}
+      <Button type="button" variant="outline" size="sm" disabled={isPending} onClick={() => inputRef.current?.click()} className="w-fit">
+        <FileUp className="size-3.5" /> {isPending ? "Mengunggah…" : url ? "Ganti Berkas" : "Unggah Surat Kontrak"}
+      </Button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          const result = await uploadKontrak(file).catch(() => null);
+          if (result) onChange({ url: result.url, fileName: result.fileName });
+        }}
+      />
+      <FieldDescription>Format PDF, maksimal 10MB.</FieldDescription>
     </Field>
   );
 }
@@ -406,10 +484,13 @@ function KaryawanFormFields({
 
       <Field data-invalid={!!errors.gajiPokok}>
         <FieldLabel htmlFor="k-gaji">Gaji Pokok</FieldLabel>
-        <InputGroup>
-          <InputGroupAddon><InputGroupText>Rp</InputGroupText></InputGroupAddon>
-          <InputGroupInput id="k-gaji" type="number" inputMode="numeric" placeholder="12000000" aria-invalid={!!errors.gajiPokok} className="text-right font-mono tabular-nums" {...register("gajiPokok")} />
-        </InputGroup>
+        <Controller
+          control={control}
+          name="gajiPokok"
+          render={({ field }) => (
+            <MoneyInput defaultValue={Number(field.value) || 0} onValueChange={field.onChange} className="w-full" />
+          )}
+        />
         <FieldError errors={errors.gajiPokok ? [errors.gajiPokok] : undefined} />
       </Field>
 
@@ -469,6 +550,8 @@ function KaryawanFormFields({
           />
         )}
       />
+
+      <KontrakField control={control} />
 
       {withStatus && (
         <Field>

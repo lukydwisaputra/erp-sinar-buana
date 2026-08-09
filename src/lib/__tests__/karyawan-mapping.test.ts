@@ -19,6 +19,8 @@ function employee(overrides: Partial<Parameters<typeof toKaryawan>[0]> = {}) {
     joinDate: "2021-02-10",
     phone: "0812-1111-2201",
     email: "budi@sinarbuana.co.id",
+    contractFileUrl: null,
+    contractFileName: null,
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),

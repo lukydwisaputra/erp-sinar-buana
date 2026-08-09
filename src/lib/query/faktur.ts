@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiClient, apiErrorMessage } from "@/lib/api-client";
-import type { FakturInduk, CreateFakturIndukInput, UpdateFakturIndukInput, GenerateTerminInput, UpdateTerminInput } from "@/lib/schemas/faktur";
+import type { FakturInduk, CreateFakturIndukInput, GenerateTerminInput, UpdateTerminInput } from "@/lib/schemas/faktur";
 
 // Faktur is Keuangan-only end to end now — callers outside the Faktur module
 // itself (Dasbor, the milestone→Faktur Induk linking picker) must pass
@@ -39,20 +39,6 @@ export function useCreateFakturInduk() {
   });
 }
 
-export function useUpdateFakturInduk() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateFakturIndukInput }) =>
-      apiClient.patch<FakturInduk>(`/api/faktur/${id}`, input),
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: ["faktur", id] });
-      qc.invalidateQueries({ queryKey: ["faktur"] });
-      toast.success("Faktur Induk berhasil diperbarui.");
-    },
-    onError: (error) => toast.error(apiErrorMessage(error, "Gagal memperbarui Faktur Induk.")),
-  });
-}
-
 export function useGenerateTermin() {
   const qc = useQueryClient();
   return useMutation({
@@ -64,6 +50,21 @@ export function useGenerateTermin() {
       toast.success("Invoice Termin berhasil dibuat.");
     },
     onError: (error) => toast.error(apiErrorMessage(error, "Gagal membuat Invoice Termin.")),
+  });
+}
+
+/** The relabeled "Buat Termin X" action once the Faktur Induk is cancelled and
+ * biaya administrasi exceeds what's already been paid (Pembatalan Penawaran). */
+export function useGenerateCancellationFeeTermin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (masterInvoiceId: string) => apiClient.post<FakturInduk>(`/api/faktur/${masterInvoiceId}/biaya-administrasi`),
+    onSuccess: (_, masterInvoiceId) => {
+      qc.invalidateQueries({ queryKey: ["faktur", masterInvoiceId] });
+      qc.invalidateQueries({ queryKey: ["faktur"] });
+      toast.success("Invoice Biaya Administrasi Pengembalian berhasil dibuat.");
+    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal membuat invoice. Coba lagi.")),
   });
 }
 
@@ -80,17 +81,6 @@ export function useUpdateTermin() {
     },
     onError: (error) => toast.error(apiErrorMessage(error, "Gagal memperbarui Invoice Termin.")),
   });
-}
-
-/** Cancel a termin — a thin convenience wrapper over useUpdateTermin, resolves
- * the real "Batal" statusId via the caller's already-fetched status options. */
-export function useCancelTermin() {
-  const update = useUpdateTermin();
-  return {
-    ...update,
-    cancel: (masterInvoiceId: string, terminId: string, batalStatusId: string) =>
-      update.mutate({ masterInvoiceId, terminId, input: { statusId: batalStatusId } }),
-  };
 }
 
 /** Called from Penawaran's delete flow (cleans up the Faktur Induk set born

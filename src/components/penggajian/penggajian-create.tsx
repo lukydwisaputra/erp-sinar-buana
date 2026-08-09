@@ -32,19 +32,17 @@ const statusFilterOptions = [
   { label: "Probation", value: "probation" },
 ];
 
-const inputCls =
-  "w-full rounded px-1 py-0.5 text-right text-xs font-mono bg-transparent outline-none ring-inset focus:ring-1 focus:ring-ring hover:bg-muted/50 transition-colors";
-
 function InlineMoneyInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [focused, setFocused] = React.useState(false);
   const [text, setText] = React.useState(value ? formatIntIDR(value) : "");
 
   React.useEffect(() => {
-    if (!focused) setText(value ? formatIntIDR(value) : "");
+    const syncText = () => setText(value ? formatIntIDR(value) : "");
+    if (!focused) syncText();
   }, [value, focused]);
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex items-center gap-1 rounded-md border border-input bg-transparent px-2 h-9 focus-within:ring-1 focus-within:ring-ring">
       <span className="text-xs text-muted-foreground shrink-0">Rp</span>
       <input
         inputMode="numeric"
@@ -59,7 +57,7 @@ function InlineMoneyInput({ value, onChange }: { value: number; onChange: (v: nu
           setFocused(false);
           setText(value ? formatIntIDR(value) : "");
         }}
-        className={inputCls}
+        className="w-full min-w-0 text-right text-sm font-mono bg-transparent outline-none"
       />
     </div>
   );
@@ -271,10 +269,10 @@ export function PenggajianCreate() {
                 <div key={row.karyawanId} className="rounded-lg border border-border p-3">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium">{k.nama}</p>
-                      <p className="text-xs text-muted-foreground">{k.jabatan} &middot; Gaji Efektif {formatRupiah(gajiPokokEfektif)}</p>
+                      <p className="text-base font-medium">{k.nama}</p>
+                      <p className="text-sm text-muted-foreground">{k.jabatan} &middot; Gaji Efektif {formatRupiah(gajiPokokEfektif)}</p>
                     </div>
-                    <div className="flex items-center gap-4 text-right text-xs">
+                    <div className="flex items-center gap-4 text-right text-sm">
                       <div>
                         <p className="text-muted-foreground">Kotor</p>
                         <p className="font-mono font-medium">{formatRupiah(penggajianKotor)}</p>
@@ -286,25 +284,24 @@ export function PenggajianCreate() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <div className="mb-3 grid grid-cols-3 gap-3 rounded-md bg-muted/30 p-3">
                     <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">Komponen (Tunjangan/Potongan)</p>
-                      <ComponentsEditor components={row.components} onChange={(v) => updateRow(idx, { components: v })} />
+                      <label className="text-xs text-muted-foreground">Lembur</label>
+                      <InlineMoneyInput value={row.lembur} onChange={(v) => updateRow(idx, { lembur: v })} />
                     </div>
-                    <div className="flex gap-3 sm:flex-col">
-                      <div className="w-28">
-                        <label className="text-[10px] text-muted-foreground">Lembur</label>
-                        <InlineMoneyInput value={row.lembur} onChange={(v) => updateRow(idx, { lembur: v })} />
-                      </div>
-                      <div className="w-28">
-                        <label className="text-[10px] text-muted-foreground">Bonus</label>
-                        <InlineMoneyInput value={row.bonus} onChange={(v) => updateRow(idx, { bonus: v })} />
-                      </div>
-                      <div className="w-28">
-                        <label className="text-[10px] text-muted-foreground">PPh 21</label>
-                        <InlineMoneyInput value={row.pph21} onChange={(v) => updateRow(idx, { pph21: v })} />
-                      </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Bonus</label>
+                      <InlineMoneyInput value={row.bonus} onChange={(v) => updateRow(idx, { bonus: v })} />
                     </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">PPh 21</label>
+                      <InlineMoneyInput value={row.pph21} onChange={(v) => updateRow(idx, { pph21: v })} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-1.5 text-sm font-medium text-muted-foreground">Komponen (Tunjangan/Potongan)</p>
+                    <ComponentsEditor components={row.components} onChange={(v) => updateRow(idx, { components: v })} />
                   </div>
                 </div>
               );

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldLabel, FieldError } from "@/components/ui/field";
+import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -36,6 +36,7 @@ import {
   usePerusahaanList, useCreatePerusahaan, useUpdatePerusahaan, useDeletePerusahaan,
 } from "@/lib/query/perusahaan";
 import { onFormInvalid } from "@/lib/form-toast";
+import { salutationSchema, salutationValues, SALUTATION_LABEL } from "@/lib/schemas/common";
 import type { Perusahaan } from "@/lib/schemas/perusahaan";
 
 const STATUS_BADGE: Record<Perusahaan["status"], StatusBadgeConfig> = {
@@ -112,7 +113,7 @@ function makeColumns(
         );
       },
     },
-    { accessorKey: "kota", header: "Kota" },
+    { accessorKey: "kota", header: "Kota/Kabupaten" },
     {
       accessorKey: "status",
       header: "Status",
@@ -172,10 +173,10 @@ function PerusahaanDetail({ p }: { p: Perusahaan }) {
       <section>
         <SectionLabel>Informasi Perusahaan</SectionLabel>
         <InfoList>
-          <InfoRow label="NPWP" value={<span className="font-mono">{p.npwp}</span>} />
+          <InfoRow label="NPWP" value={p.npwp ? <span className="font-mono">{p.npwp}</span> : "—"} />
           <InfoRow label="Alamat" value={p.alamat} />
-          <InfoRow label="Kota" value={p.kota} />
-          <InfoRow label="Kabupaten" value={p.kabupaten} />
+          <InfoRow label="Kota/Kabupaten" value={p.kota} />
+          <InfoRow label="Provinsi" value={p.provinsi} />
           {p.email && (
             <InfoRow label="Email" value={<a href={`mailto:${p.email}`} className="text-(--link) hover:underline">{p.email}</a>} />
           )}
@@ -192,21 +193,22 @@ const picSchema = z.object({
   jabatan: z.string(),
   telepon: z.string().min(1, "Nomor HP wajib."),
   email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
+  salutation: salutationSchema,
 });
 
 const perusahaanFormSchema = z.object({
   nama: z.string().min(1, "Nama perusahaan wajib diisi."),
   alamat: z.string().min(1, "Alamat wajib diisi."),
-  kota: z.string().min(1, "Kota wajib diisi."),
-  kabupaten: z.string().min(1, "Kabupaten wajib diisi."),
-  npwp: z.string().regex(/^\d{1,16}$/, "NPWP wajib diisi, maksimal 16 digit angka."),
+  kota: z.string().min(1, "Kota/Kabupaten wajib diisi."),
+  provinsi: z.string().min(1, "Provinsi wajib diisi."),
+  npwp: z.union([z.literal(""), z.string().regex(/^\d{1,16}$/, "NPWP maksimal 16 digit angka.")]),
   email: z.union([z.literal(""), z.string().email("Format email tidak valid.")]),
   status: z.enum(["aktif", "nonaktif"]).optional(),
   pic: z.array(picSchema).min(1, "Minimal satu PIC."),
 });
 type PerusahaanForm = z.infer<typeof perusahaanFormSchema>;
 
-const emptyPic = { nama: "", jabatan: "", telepon: "", email: "" };
+const emptyPic = { nama: "", jabatan: "", telepon: "", email: "", salutation: "bapak_ibu" as const };
 
 /* ---------- create form ---------- */
 
@@ -214,7 +216,7 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
   const { mutateAsync, isPending } = useCreatePerusahaan();
   const form = useForm<PerusahaanForm>({
     resolver: zodResolver(perusahaanFormSchema),
-    defaultValues: { nama: "", alamat: "", kota: "", kabupaten: "", npwp: "", email: "", pic: [{ ...emptyPic }] },
+    defaultValues: { nama: "", alamat: "", kota: "", provinsi: "", npwp: "", email: "", pic: [{ ...emptyPic }] },
   });
   const { register, handleSubmit, control, reset, formState: { errors } } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "pic" });
@@ -224,7 +226,7 @@ function PerusahaanCreateForm({ open, onOpenChange }: { open: boolean; onOpenCha
       nama: values.nama,
       alamat: values.alamat,
       kota: values.kota,
-      kabupaten: values.kabupaten,
+      provinsi: values.provinsi,
       npwp: values.npwp,
       email: values.email,
       pic: values.pic,
@@ -267,8 +269,8 @@ function PerusahaanEditForm({
       nama: perusahaan.nama,
       alamat: perusahaan.alamat,
       kota: perusahaan.kota,
-      kabupaten: perusahaan.kabupaten,
-      npwp: perusahaan.npwp,
+      provinsi: perusahaan.provinsi,
+      npwp: perusahaan.npwp ?? "",
       email: perusahaan.email ?? "",
       status: perusahaan.status,
       pic: perusahaan.pic,
@@ -283,8 +285,8 @@ function PerusahaanEditForm({
         nama: perusahaan.nama,
         alamat: perusahaan.alamat,
         kota: perusahaan.kota,
-        kabupaten: perusahaan.kabupaten,
-        npwp: perusahaan.npwp,
+        provinsi: perusahaan.provinsi,
+        npwp: perusahaan.npwp ?? "",
         email: perusahaan.email ?? "",
         status: perusahaan.status,
         pic: perusahaan.pic,
@@ -299,7 +301,7 @@ function PerusahaanEditForm({
         nama: values.nama,
         alamat: values.alamat,
         kota: values.kota,
-        kabupaten: values.kabupaten,
+        provinsi: values.provinsi,
         npwp: values.npwp,
         email: values.email,
         status: values.status ?? perusahaan.status,
@@ -308,6 +310,7 @@ function PerusahaanEditForm({
           jabatan: p.jabatan,
           telepon: p.telepon,
           email: p.email || "",
+          salutation: p.salutation,
         })),
       },
     });
@@ -363,15 +366,15 @@ function PerusahaanFormFields({
       </Field>
 
       <Field data-invalid={!!errors.kota}>
-        <FieldLabel htmlFor="p-kota">Kota</FieldLabel>
-        <Input id="p-kota" placeholder="Jakarta" aria-invalid={!!errors.kota} {...register("kota")} />
+        <FieldLabel htmlFor="p-kota">Kota/Kabupaten</FieldLabel>
+        <Input id="p-kota" placeholder="Bandung" aria-invalid={!!errors.kota} {...register("kota")} />
         <FieldError errors={errors.kota ? [errors.kota] : undefined} />
       </Field>
 
-      <Field data-invalid={!!errors.kabupaten}>
-        <FieldLabel htmlFor="p-kabupaten">Kabupaten</FieldLabel>
-        <Input id="p-kabupaten" placeholder="Kota Jakarta Selatan" aria-invalid={!!errors.kabupaten} {...register("kabupaten")} />
-        <FieldError errors={errors.kabupaten ? [errors.kabupaten] : undefined} />
+      <Field data-invalid={!!errors.provinsi}>
+        <FieldLabel htmlFor="p-provinsi">Provinsi</FieldLabel>
+        <Input id="p-provinsi" placeholder="Jawa Barat" aria-invalid={!!errors.provinsi} {...register("provinsi")} />
+        <FieldError errors={errors.provinsi ? [errors.provinsi] : undefined} />
       </Field>
 
       <NpwpField id="p-npwp" error={errors.npwp} {...register("npwp")} />
@@ -431,6 +434,25 @@ function PerusahaanFormFields({
             <Field>
               <FieldLabel htmlFor={`p-pic-${i}-jabatan`}>Jabatan (opsional)</FieldLabel>
               <Input id={`p-pic-${i}-jabatan`} placeholder="Direktur Operasional" {...register(`pic.${i}.jabatan`)} />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor={`p-pic-${i}-salutation`}>Sapaan</FieldLabel>
+              <Controller
+                control={control}
+                name={`pic.${i}.salutation`}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id={`p-pic-${i}-salutation`} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {salutationValues.map((v) => <SelectItem key={v} value={v}>{SALUTATION_LABEL[v]}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldDescription>Dipakai pada baris &quot;u.p.&quot; di surat Penawaran.</FieldDescription>
             </Field>
 
             <PhoneField id={`p-pic-${i}-telepon`} error={errors.pic?.[i]?.telepon} {...register(`pic.${i}.telepon`)} />

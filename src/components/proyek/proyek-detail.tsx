@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   FolderKanban, Building2, MapPin, CalendarDays, Check,
   ChevronUp, ChevronDown, Trash2, Plus, CalendarIcon, CornerDownRight, ChevronDown as ChevronDownIcon,
+  FileText, Receipt, Link2, Pencil, History,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -22,20 +23,35 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  useProyek, useUpdateProyekStatus, useWorkflowStatuses, type WorkflowStatusOption,
+  useProyek, useUpdateProyek, useWorkflowStatuses, type WorkflowStatusOption,
   useUpdateMilestone, useMoveMilestone, useAddMilestone, useDeleteMilestone,
+  useProyekLog,
 } from "@/lib/query/proyek";
 import { useKaryawanList } from "@/lib/query/karyawan";
+import { useOptionList } from "@/lib/query/daftar-pilihan";
+import { useForm, Controller, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormSheet } from "@/components/shared/form-sheet";
+import { Field, FieldLabel, FieldError } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePerusahaanList } from "@/lib/query/perusahaan";
 import { useSession } from "@/lib/query/session";
-import { isFinance as checkFinanceAccess, isClientPortal } from "@/lib/auth/rbac";
+import { isFinance as checkFinanceAccess, isClientPortal, isAdminUser } from "@/lib/auth/rbac";
 import { ProyekJadwal } from "@/components/proyek/proyek-jadwal";
+import { ProyekRab } from "@/components/proyek/proyek-rab";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Proyek, Milestone } from "@/lib/schemas/proyek";
 import { MilestoneModal } from "@/components/proyek/milestone-modal";
 import { RealisasiRabForm } from "@/components/realisasi-rab/realisasi-rab-form";
-import { useRealisasiRabByProyek } from "@/lib/query/realisasi-rab";
+import { useRealisasiRabByProyek, useRemoveRealisasiRab } from "@/lib/query/realisasi-rab";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import type { RealisasiRab } from "@/lib/schemas/realisasi-rab";
 import { formatRupiah } from "@/lib/format";
+import { CancelPembatalanModal } from "@/components/shared/cancel-pembatalan-modal";
+import { useCancelPembatalan } from "@/lib/query/pembatalan";
 
 /** Status badge variant heuristic — workflow_statuses is config-driven (no
  * fixed enum), so this maps by systemRole rather than a hardcoded label
@@ -272,7 +288,10 @@ function MilestoneRow({
   const [showDelete, setShowDelete] = React.useState(false);
   const namaRef = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => { setNama(m.nama); }, [m.nama]);
+  React.useEffect(() => {
+    const syncNama = () => setNama(m.nama);
+    syncNama();
+  }, [m.nama]);
   React.useEffect(() => { if (isNew) namaRef.current?.focus(); }, [isNew]);
 
   const save = (patch: {
@@ -569,18 +588,187 @@ function PerusahaanPic({ perusahaanId }: { perusahaanId: string }) {
   );
 }
 
+const ubahProyekSchema = z.object({
+  nama: z.string().min(1, "Nama proyek wajib diisi."),
+  areaId: z.string().optional(),
+  tahun: z.coerce.number().optional(),
+  statusId: z.string().optional(),
+  assigneeIds: z.array(z.string()),
+});
+type UbahProyekForm = z.infer<typeof ubahProyekSchema>;
+
+/** Single edit surface for a Proyek — same fields as the (now-removed) manual
+ * "Buat Proyek" create form, plus status, since Proyek is no longer created
+ * manually (auto-created by the SPH Deal-transition cascade). Nama/Area/Tahun
+ * fill in what the cascade can't derive from the SPH alone. */
+function UbahProyekForm({ proyek, open, onOpenChange, statusOptions }: { proyek: Proyek; open: boolean; onOpenChange: (o: boolean) => void; statusOptions: WorkflowStatusOption[] }) {
+  const updateProyek = useUpdateProyek();
+  const { data: areaOptions = [] } = useOptionList("area_kawasan");
+  const { data: karyawanList = [] } = useKaryawanList();
+  const activeKaryawan = karyawanList.filter((k) => k.status === "aktif");
+
+  const defaults = React.useCallback((p: Proyek): UbahProyekForm => ({
+    nama: p.nama,
+    areaId: p.areaId ?? "",
+    tahun: p.tahun ?? new Date().getFullYear(),
+    statusId: p.statusId ?? "",
+    assigneeIds: p.assignees.map((a) => a.karyawanId),
+  }), []);
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<UbahProyekForm>({
+    resolver: zodResolver(ubahProyekSchema) as Resolver<UbahProyekForm>,
+    defaultValues: defaults(proyek),
+  });
+
+  React.useEffect(() => { if (open) reset(defaults(proyek)); }, [open, proyek, reset, defaults]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    await updateProyek.mutateAsync({
+      id: proyek.id,
+      input: { nama: values.nama, areaId: values.areaId, tahun: values.tahun, statusId: values.statusId, assigneeIds: values.assigneeIds },
+    });
+    onOpenChange(false);
+  });
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}
+      title="Ubah Proyek"
+      description={`Perbarui data proyek ${proyek.number ?? proyek.id}.`}
+      onSubmit={onSubmit}
+      submitLabel={updateProyek.isPending ? "Menyimpan…" : "Simpan Perubahan"}
+    >
+      <Field data-invalid={!!errors.nama}>
+        <FieldLabel htmlFor="pr-nama">Nama Proyek</FieldLabel>
+        <Input id="pr-nama" aria-invalid={!!errors.nama} {...register("nama")} />
+        <FieldError errors={errors.nama ? [errors.nama] : undefined} />
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="pr-area">Area / Kawasan</FieldLabel>
+        <Controller
+          control={control}
+          name="areaId"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="pr-area" className="w-full">
+                <SelectValue placeholder="Pilih area/kawasan…" />
+              </SelectTrigger>
+              <SelectContent>
+                {areaOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.nama}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </Field>
+
+      <Field data-invalid={!!errors.tahun}>
+        <FieldLabel htmlFor="pr-tahun">Tahun Pengerjaan</FieldLabel>
+        <Input id="pr-tahun" type="number" aria-invalid={!!errors.tahun} {...register("tahun")} />
+        <FieldError errors={errors.tahun ? [errors.tahun] : undefined} />
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="pr-status">Status</FieldLabel>
+        <Controller
+          control={control}
+          name="statusId"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger id="pr-status" className="w-full">
+                <SelectValue placeholder="Pilih status…" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+        />
+      </Field>
+
+      <div className="space-y-2">
+        <FieldLabel>Assignee</FieldLabel>
+        <Controller
+          control={control}
+          name="assigneeIds"
+          render={({ field }) => (
+            <div className="space-y-2">
+              {activeKaryawan.map((k) => (
+                <label key={k.id} className="flex cursor-pointer items-center gap-2.5">
+                  <Checkbox
+                    checked={field.value.includes(k.id)}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked ? [...field.value, k.id] : field.value.filter((id) => id !== k.id));
+                    }}
+                  />
+                  <span className="text-sm">{k.nama}</span>
+                  <span className="text-xs text-muted-foreground">{k.jabatan}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        />
+      </div>
+    </FormSheet>
+  );
+}
+
+// ── Aktivitas — status-change audit trail (project_status_log, DB-trigger-
+// written) — staff-only, mirrors the API route's role gate (not Viewer). ──
+function ProyekAktivitas({ proyekId }: { proyekId: string }) {
+  const { data: log = [], isLoading } = useProyekLog(proyekId);
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2">
+        <History className="size-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Aktivitas</h3>
+      </div>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Memuat…</p>
+      ) : log.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Belum ada perubahan status.</p>
+      ) : (
+        <div className="space-y-1">
+          {log.map((entry) => (
+            <div key={entry.id} className="flex items-start justify-between gap-4 border-b py-1.5 text-sm last:border-0">
+              <span>
+                {entry.fromStatus ? (
+                  <>Status berubah dari <strong>{entry.fromStatus}</strong> ke <strong>{entry.toStatus}</strong></>
+                ) : (
+                  <>Status awal diset ke <strong>{entry.toStatus}</strong></>
+                )}
+                {entry.changedByNama && <span className="text-muted-foreground"> — oleh {entry.changedByNama}</span>}
+              </span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {format(new Date(entry.changedAt), "d MMM yyyy HH:mm", { locale: idLocale })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
+  const router = useRouter();
   const { data } = useProyek(initial.id, initial);
   const proyek = data ?? initial;
 
-  const updateStatus = useUpdateProyekStatus();
   const { data: statusOptions = [] } = useWorkflowStatuses("proyek");
-  const [statusTarget, setStatusTarget] = React.useState<WorkflowStatusOption | null>(null);
   const [modalMilestone, setModalMilestone] = React.useState<Milestone | null>(null);
   const [realisasiOpen, setRealisasiOpen] = React.useState(false);
+  const [editingRealisasi, setEditingRealisasi] = React.useState<RealisasiRab | null>(null);
+  const [deletingRealisasi, setDeletingRealisasi] = React.useState<RealisasiRab | null>(null);
+  const removeRealisasi = useRemoveRealisasiRab();
+  const [ubahOpen, setUbahOpen] = React.useState(false);
+  const [cancelOpen, setCancelOpen] = React.useState(false);
+  const cancelPembatalan = useCancelPembatalan();
   const { data: session } = useSession();
   const canSeeCost = checkFinanceAccess(session);
   const isClient = isClientPortal(session);
+  const isAdmin = isAdminUser(session);
   const { data: realisasiList = [] } = useRealisasiRabByProyek(proyek.id);
   const totalRealisasi = realisasiList.reduce((s, r) => s + r.jumlah, 0);
   const currentStatus = statusOptions.find((s) => s.id === proyek.statusId);
@@ -590,19 +778,6 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
   const freshMilestone = openMilestoneId
     ? (proyek.milestones.find((m) => m.id === openMilestoneId) ?? null)
     : null;
-
-  const handleConfirmStatus = () => {
-    if (!statusTarget) return;
-    updateStatus.mutate(
-      { id: proyek.id, statusId: statusTarget.id },
-      {
-        onSuccess: () => {
-          toast.success(`Status diubah: ${statusTarget.label}`);
-          setStatusTarget(null);
-        },
-      },
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -617,26 +792,72 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><Building2 className="size-3.5" />{proyek.perusahaanNama}</span>
-              <span className="flex items-center gap-1"><MapPin className="size-3.5" />{proyek.area}</span>
+              <span className="flex items-center gap-1"><MapPin className="size-3.5" />{proyek.area || "—"}</span>
               <span className="flex items-center gap-1"><CalendarDays className="size-3.5" />{proyek.tahun}</span>
             </div>
+            {(proyek.sphNumber || proyek.fakturs.length > 0) && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                {proyek.sphNumber && (
+                  <span className="flex items-center gap-1">
+                    <FileText className="size-3.5" /> No. SPH: <span className="font-mono">{proyek.sphNumber}</span>
+                  </span>
+                )}
+                {proyek.fakturs.length > 0 && (
+                  <span className="flex items-center gap-1 flex-wrap">
+                    <Receipt className="size-3.5" /> No. Faktur:{" "}
+                    {proyek.fakturs.map((f, i) => (
+                      <React.Fragment key={f.id}>
+                        {i > 0 && ", "}
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/faktur/${encodeURIComponent(f.id)}`)}
+                          className="font-mono text-(--link) hover:underline"
+                        >
+                          {f.number ?? "—"}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {!isClient && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">Ubah Status</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {statusOptions.filter((s) => s.id !== proyek.statusId).map((s) => (
-                  <DropdownMenuItem key={s.id} onSelect={() => setStatusTarget(s)}>
-                    {s.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              {isAdmin && proyek.statusSystemRole !== "BATAL" && (
+                <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)}>Batalkan</Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const url = `${window.location.origin}/proyek/share/${proyek.shareToken}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success("Link proyek disalin.");
+                }}
+              >
+                <Link2 className="size-4" /> Copy Link
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setUbahOpen(true)}>Ubah</Button>
+            </div>
           )}
         </div>
+
+        <UbahProyekForm proyek={proyek} open={ubahOpen} onOpenChange={setUbahOpen} statusOptions={statusOptions} />
+
+        {/* Batalkan — cascades to the linked SPH + Faktur Induk too */}
+        <CancelPembatalanModal
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+          isPending={cancelPembatalan.isPending}
+          onConfirm={({ alasan, biayaAdministrasi }) => {
+            cancelPembatalan.mutate(
+              { proyekId: proyek.id, alasan, biayaAdministrasi },
+              { onSuccess: () => setCancelOpen(false) },
+            );
+          }}
+        />
 
         <PerusahaanPic perusahaanId={proyek.perusahaanId} />
       </div>
@@ -662,6 +883,14 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
         <ProyekJadwal proyekId={proyek.id} />
       </div>
 
+      {/* Estimasi RAB — biaya rencana proyek, Admin/Keuangan only (PRD Bab 6.8, view_project_cost) */}
+      {canSeeCost && (
+        <div>
+          <h3 className="text-sm font-semibold mb-3">Estimasi RAB</h3>
+          <ProyekRab proyekId={proyek.id} />
+        </div>
+      )}
+
       {/* Realisasi RAB — biaya/margin proyek, Admin/Keuangan only (PRD Bab 6.8, view_project_cost) */}
       {canSeeCost && (
         <div>
@@ -674,9 +903,17 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
           ) : (
             <div className="space-y-1">
               {realisasiList.map((r) => (
-                <div key={r.id} className="flex justify-between text-sm py-1 border-b last:border-0">
+                <div key={r.id} className="flex items-center justify-between text-sm py-1 border-b last:border-0">
                   <span className="text-muted-foreground">{r.tanggal} · {r.kategori === "personil" ? "A" : "B"} · {r.rabLineLabel}</span>
-                  <span className="font-medium tabular-nums">{formatRupiah(r.jumlah)}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium tabular-nums">{formatRupiah(r.jumlah)}</span>
+                    <Button variant="ghost" size="icon" className="size-7" onClick={() => setEditingRealisasi(r)}>
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="size-7" onClick={() => setDeletingRealisasi(r)}>
+                      <Trash2 className="size-3.5 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
               ))}
               <div className="flex justify-between text-sm pt-2 font-semibold">
@@ -686,26 +923,30 @@ export function ProyekDetail({ proyek: initial }: { proyek: Proyek }) {
             </div>
           )}
           <RealisasiRabForm proyekId={proyek.id} open={realisasiOpen} onOpenChange={setRealisasiOpen} />
+          <RealisasiRabForm
+            proyekId={proyek.id}
+            open={!!editingRealisasi}
+            onOpenChange={(o) => { if (!o) setEditingRealisasi(null); }}
+            editing={editingRealisasi}
+          />
+          <ConfirmDeleteDialog
+            open={!!deletingRealisasi}
+            onOpenChange={(o) => { if (!o) setDeletingRealisasi(null); }}
+            entityLabel="Realisasi RAB"
+            target={deletingRealisasi?.rabLineLabel}
+            loading={removeRealisasi.isPending}
+            onConfirm={() => {
+              if (!deletingRealisasi) return;
+              removeRealisasi.mutate(
+                { id: deletingRealisasi.id, proyekId: proyek.id },
+                { onSuccess: () => setDeletingRealisasi(null) },
+              );
+            }}
+          />
         </div>
       )}
 
-      {/* Status confirm dialog */}
-      <AlertDialog open={!!statusTarget} onOpenChange={(o) => !o && setStatusTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {`Ubah status ke ${statusTarget?.label ?? ""}?`}
-            </AlertDialogTitle>
-            <AlertDialogDescription>Status proyek akan diperbarui.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction disabled={updateStatus.isPending} onClick={handleConfirmStatus}>
-              Ubah Status
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {!isClient && <ProyekAktivitas proyekId={proyek.id} />}
     </div>
   );
 }

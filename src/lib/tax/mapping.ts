@@ -13,7 +13,6 @@ export function toTaxEntry(row: TaxEntryRow): TaxEntry {
     dueDate: row.dueDate,
     settlementStatus: row.settlementStatus,
     settledDate: row.settledDate,
-    ntpn: row.ntpn,
     buktiPotongReceived: row.buktiPotongReceived,
     notes: row.notes ?? "",
     companyId: row.companyId,

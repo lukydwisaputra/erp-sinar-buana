@@ -12,7 +12,6 @@ function service(overrides: Partial<Parameters<typeof toLayanan>[0]> = {}) {
     authorityId: "auth-1",
     legalBasisId: "legal-1",
     standardPrice: "75000000",
-    isRecurring: false,
     milestoneTemplateId: null,
     isActive: true,
     createdAt: new Date(),
@@ -53,10 +52,6 @@ describe("toLayanan", () => {
   it("converts standardPrice to a number, or null when unset", () => {
     expect(toLayanan(service({ standardPrice: "50000" }), documentType, authority, legalBasis, undefined, 0, 0).hargaStandar).toBe(50000);
     expect(toLayanan(service({ standardPrice: null }), documentType, authority, legalBasis, undefined, 0, 0).hargaStandar).toBeNull();
-  });
-
-  it("passes through isRecurring", () => {
-    expect(toLayanan(service({ isRecurring: true }), documentType, authority, legalBasis, undefined, 0, 0).isRecurring).toBe(true);
   });
 
   it("resolves milestoneTemplateNama when a milestone template is linked, null otherwise", () => {

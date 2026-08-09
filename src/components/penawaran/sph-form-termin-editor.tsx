@@ -1,13 +1,60 @@
 "use client";
 
-import { Trash2Icon } from "lucide-react";
+import * as React from "react";
+import { FileStack, TriangleAlert, Trash2Icon } from "lucide-react";
 
 import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { terminPersenTotal, isTerminValid } from "@/lib/sph";
+import { useTerminTemplateList } from "@/lib/query/termin-templates";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+
+/** Applies a Termin template as a one-time copy — replaces the current
+ * termin rows, no live link back to the template afterward. */
+function TerminTemplatePicker({ onApply }: { onApply: (v: SphFormValues["termin"]) => void }) {
+  const { data: templates = [] } = useTerminTemplateList();
+  const [open, setOpen] = React.useState(false);
+
+  if (!templates.length) return null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" size="sm">
+          <FileStack className="size-4" /> Gunakan Template Termin
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Cari template termin…" />
+          <CommandList>
+            <CommandEmpty>Tidak ada template.</CommandEmpty>
+            <CommandGroup>
+              {templates.map((t) => (
+                <CommandItem
+                  key={t.id}
+                  value={t.nama}
+                  onSelect={() => {
+                    onApply(t.steps.map((s) => ({ ...s })));
+                    setOpen(false);
+                  }}
+                >
+                  {t.nama}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /* ---------- 3. Skema Termin ---------- */
 export function TerminEditor({
@@ -28,6 +75,18 @@ export function TerminEditor({
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <TerminTemplatePicker onApply={onChange} />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addRow}
+          disabled={total >= 100}
+        >
+          Tambah Termin
+        </Button>
+      </div>
       {termin.map((t, i) => (
         <div key={i} className="flex flex-wrap items-end gap-2 rounded-md border border-border p-3">
           <div className="min-w-32 flex-1">
@@ -72,16 +131,6 @@ export function TerminEditor({
         </div>
       ))}
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={addRow}
-        disabled={total >= 100}
-      >
-        Tambah Termin
-      </Button>
-
       <p className="text-sm">
         <span className="text-muted-foreground">Σ% = </span>
         <span className="font-mono tabular-nums font-semibold">{total}%</span>
@@ -89,6 +138,7 @@ export function TerminEditor({
 
       {!valid && (
         <Alert variant="destructive">
+          <TriangleAlert className="size-4" />
           <AlertTitle>Total persentase termin harus 100%.</AlertTitle>
         </Alert>
       )}

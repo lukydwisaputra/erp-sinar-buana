@@ -12,6 +12,7 @@ export function toArusKasEntry(row: CashflowEntryRow, categoryLabel: string | nu
     tanggal: row.date,
     jumlah: Number(row.amount),
     kategori: categoryLabel ?? "—",
+    categoryId: row.categoryId,
     sumber: row.source,
     keterangan: row.description ?? "",
     proyekId: row.projectId,

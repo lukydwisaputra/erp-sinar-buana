@@ -220,7 +220,7 @@
     color: var(--primary-foreground);
   }
   html {
-    @apply font-sans;
+    @apply font-sans bg-background;
   }
   /* Dark mode: drop body weight ~50 units to offset the optical bloom of light
    * text on a dark surface (hallmark color.md § dark-mode recipe). */

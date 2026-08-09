@@ -154,7 +154,8 @@ function EditSifatDialog({
   const [sifat, setSifat] = React.useState<SifatBeban>(row?.sifat ?? "operasional");
 
   React.useEffect(() => {
-    if (row) setSifat(row.sifat);
+    const syncSifat = (r: CashflowCategoryRow) => setSifat(r.sifat);
+    if (row) syncSifat(row);
   }, [row]);
 
   return (

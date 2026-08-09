@@ -22,7 +22,13 @@ export async function getBoss(): Promise<PgBoss> {
       await boss.createQueue(DELIVERY_EMAIL_QUEUE);
       await boss.createQueue(PASSWORD_RESET_EMAIL_QUEUE);
       return boss;
-    })();
+    })().catch((err) => {
+      // Don't cache a failed startup forever — a transient outage (e.g.
+      // Postgres briefly unavailable) would otherwise permanently break
+      // every future call in this process, even once the DB recovers.
+      bossPromise = null;
+      throw err;
+    });
   }
   return bossPromise;
 }

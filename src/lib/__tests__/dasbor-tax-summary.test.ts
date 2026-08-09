@@ -8,7 +8,7 @@ function mk(overrides: Partial<TaxEntry>): TaxEntry {
   return {
     id: "k1", taxType: "ppn_keluaran", nature: "kewajiban", taxPeriod: "2026-05-01",
     jumlah: 1_000_000, dueDate: "2026-06-10", settlementStatus: "belum_disetor",
-    settledDate: null, ntpn: null, buktiPotongReceived: true, notes: "",
+    settledDate: null, buktiPotongReceived: true, notes: "",
     companyId: null, employeeId: null,
     ...overrides,
   };

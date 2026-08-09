@@ -35,7 +35,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-1 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-md bg-primary text-primary-foreground">
+          <div
+            className={`flex aspect-square size-8 items-center justify-center overflow-hidden rounded-md ${
+              profile?.logo ? "" : "bg-primary text-primary-foreground"
+            }`}
+          >
             {profile?.logo ? (
               <img src={profile.logo} alt="Logo perusahaan" className="size-full object-contain" />
             ) : (

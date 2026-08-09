@@ -13,13 +13,13 @@ function rowsTotal(rows: RabRow[]): number {
 function RabRowCells({ no, row }: { no: number; row: RabRow }): React.JSX.Element {
   return (
     <tr>
-      <td className="border border-[var(--doc-rule)] px-2 py-1 text-center">{no}</td>
-      <td className="border border-[var(--doc-rule)] px-2 py-1">{row.uraian}</td>
-      <td className="border border-[var(--doc-rule)] px-2 py-1 text-center">{row.vol}</td>
-      <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+      <td className="border border-(--doc-rule) px-2 py-1 text-center">{no}</td>
+      <td className="border border-(--doc-rule) px-2 py-1">{row.uraian}</td>
+      <td className="border border-(--doc-rule) px-2 py-1 text-center">{row.vol}</td>
+      <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
         {formatRupiah(row.hargaSatuan)}
       </td>
-      <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+      <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
         {formatRupiah(rabRowTotal(row))}
       </td>
     </tr>
@@ -51,14 +51,14 @@ export function SphRabPage({
 
         {/* A. Rincian Biaya Personil */}
         <p className="mt-6 font-bold">A. Rincian Biaya Personil</p>
-        <table className="mt-2 w-full border-collapse border border-[var(--doc-rule)]">
+        <table className="mt-2 w-full border-collapse border border-(--doc-rule)">
           <thead>
-            <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
-              <th className="border border-[var(--doc-rule)] px-2 py-1">No</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Uraian</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Vol (Bln)</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Harga Satuan (Rp)</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Jumlah Harga (Rp)</th>
+            <tr className="bg-(--doc-blue-soft) text-center font-bold">
+              <th className="border border-(--doc-rule) px-2 py-1">No</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Uraian</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Vol (Bln)</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Harga Satuan (Rp)</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Jumlah Harga (Rp)</th>
             </tr>
           </thead>
           <tbody>
@@ -66,10 +66,10 @@ export function SphRabPage({
               <RabRowCells key={i} no={i + 1} row={row} />
             ))}
             <tr>
-              <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right font-bold">
+              <td colSpan={4} className="border border-(--doc-rule) px-2 py-1 text-right font-bold">
                 Jumlah A
               </td>
-              <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
+              <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono font-bold tabular-nums">
                 {formatRupiah(personilTotal)}
               </td>
             </tr>
@@ -78,14 +78,14 @@ export function SphRabPage({
 
         {/* B. Rincian Biaya Langsung */}
         <p className="mt-6 font-bold">B. Rincian Biaya Langsung</p>
-        <table className="mt-2 w-full border-collapse border border-[var(--doc-rule)]">
+        <table className="mt-2 w-full border-collapse border border-(--doc-rule)">
           <thead>
-            <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
-              <th className="border border-[var(--doc-rule)] px-2 py-1">No</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Uraian</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Volume (Ls)</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Harga Satuan (Rp)</th>
-              <th className="border border-[var(--doc-rule)] px-2 py-1">Jumlah Harga (Rp)</th>
+            <tr className="bg-(--doc-blue-soft) text-center font-bold">
+              <th className="border border-(--doc-rule) px-2 py-1">No</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Uraian</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Volume (Ls)</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Harga Satuan (Rp)</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Jumlah Harga (Rp)</th>
             </tr>
           </thead>
           <tbody>
@@ -93,10 +93,10 @@ export function SphRabPage({
               <RabRowCells key={i} no={i + 1} row={row} />
             ))}
             <tr>
-              <td colSpan={4} className="border border-[var(--doc-rule)] px-2 py-1 text-right font-bold">
+              <td colSpan={4} className="border border-(--doc-rule) px-2 py-1 text-right font-bold">
                 Jumlah B
               </td>
-              <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
+              <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono font-bold tabular-nums">
                 {formatRupiah(langsungTotal)}
               </td>
             </tr>
@@ -104,23 +104,23 @@ export function SphRabPage({
         </table>
 
         {/* Total */}
-        <table className="mt-6 w-full max-w-md border-collapse border border-[var(--doc-rule)]">
+        <table className="mt-6 w-full max-w-md border-collapse border border-(--doc-rule)">
           <tbody>
             <tr>
-              <td className="border border-[var(--doc-rule)] px-2 py-1">Biaya Personil</td>
-              <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+              <td className="border border-(--doc-rule) px-2 py-1">Biaya Personil</td>
+              <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
                 {formatRupiah(personilTotal)}
               </td>
             </tr>
             <tr>
-              <td className="border border-[var(--doc-rule)] px-2 py-1">Biaya Langsung</td>
-              <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono tabular-nums">
+              <td className="border border-(--doc-rule) px-2 py-1">Biaya Langsung</td>
+              <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
                 {formatRupiah(langsungTotal)}
               </td>
             </tr>
-            <tr className="bg-[var(--doc-blue-soft)]">
-              <td className="border border-[var(--doc-rule)] px-2 py-1 font-bold">TOTAL BIAYA</td>
-              <td className="border border-[var(--doc-rule)] px-2 py-1 text-right font-mono font-bold tabular-nums">
+            <tr className="bg-(--doc-blue-soft)">
+              <td className="border border-(--doc-rule) px-2 py-1 font-bold">TOTAL BIAYA</td>
+              <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono font-bold tabular-nums">
                 {formatRupiah(grandTotal)}
               </td>
             </tr>

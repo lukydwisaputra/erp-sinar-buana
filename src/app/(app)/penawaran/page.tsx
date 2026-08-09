@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
   FileText, Plus, EllipsisIcon, SquarePenIcon, Trash2Icon,
   SendIcon, CircleCheckIcon, FileIcon, BanIcon, FolderKanban, SlidersHorizontal,
-  CalendarIcon, EyeIcon,
+  CalendarIcon, EyeIcon, XCircleIcon,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { id as idLocale } from "date-fns/locale";
@@ -29,6 +29,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { CancelPembatalanModal } from "@/components/shared/cancel-pembatalan-modal";
+import { useCancelPembatalan } from "@/lib/query/pembatalan";
 import { formatRupiah } from "@/lib/format";
 import { totalPenawaran } from "@/lib/sph";
 import { afterTaxAmount } from "@/lib/faktur";
@@ -49,12 +51,11 @@ const STATUS: Record<SphStatus, { label: string; variant: "info" | "warning" | "
   dibatalkan: { label: "Dibatalkan", variant: "secondary" },
 };
 
-const STATUS_DIALOG: Record<SphStatus, { title: string; description: string; action: string; destructive?: boolean }> = {
+const STATUS_DIALOG: Partial<Record<SphStatus, { title: string; description: string; action: string; destructive?: boolean }>> = {
   draft:      { title: "Ubah ke Draf?",       description: "Status penawaran akan dikembalikan ke Draf.",                               action: "Ubah ke Draf" },
   terkirim:   { title: "Ubah ke Terkirim?",   description: "Penawaran akan ditandai sebagai sudah dikirimkan ke klien.",                action: "Ubah ke Terkirim" },
-  deal:       { title: "Ubah ke Disetujui?",  description: "Faktur termin akan dibuat otomatis. Tindakan ini tidak dapat dibatalkan.",  action: "Disetujui" },
-  ditolak:    { title: "Tolak Penawaran?",     description: "Status berubah ke Ditolak. Tindakan ini tidak dapat dibatalkan.",          action: "Tolak", destructive: true },
-  dibatalkan: { title: "Batalkan penawaran?",  description: "Status berubah ke Dibatalkan.",                                            action: "Batalkan", destructive: true },
+  deal:       { title: "Ubah ke Disetujui?",  description: "Faktur termin akan dibuat otomatis.",  action: "Disetujui" },
+  ditolak:    { title: "Tolak Penawaran?",     description: "Status berubah ke Ditolak.",          action: "Tolak", destructive: true },
 };
 
 function tanggalID(iso: string) {
@@ -85,6 +86,8 @@ export default function PenawaranPage() {
 
   const [statusTarget, setStatusTarget] = React.useState<{ sph: Sph; nextStatus: SphStatus } | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Sph | null>(null);
+  const [cancelTarget, setCancelTarget] = React.useState<Sph | null>(null);
+  const cancelPembatalan = useCancelPembatalan();
 
   // Filter dialog
   const [filterOpen, setFilterOpen] = React.useState(false);
@@ -168,8 +171,6 @@ export default function PenawaranPage() {
         const sph = row.original;
         const isDeal       = sph.status === "deal";
         const isDibatalkan = sph.status === "dibatalkan";
-        const isDitolak    = sph.status === "ditolak";
-        const isLocked     = isDeal || isDibatalkan || isDitolak;
 
         // Client portal — a single view-only action, no status/edit/delete
         // menu at all (the write API already rejects all of it for viewer;
@@ -219,9 +220,8 @@ export default function PenawaranPage() {
 
                 <DropdownMenuSeparator />
 
-                {/* Ubah — disabled when locked */}
+                {/* Ubah — never locked by status anymore, even Deal/Ditolak/Dibatalkan stay editable */}
                 <DropdownMenuItem
-                  disabled={isLocked}
                   onSelect={() => router.push(`/penawaran/${encodeURIComponent(sph.id)}`)}
                 >
                   <SquarePenIcon className="mr-2 size-4" /> Ubah
@@ -238,6 +238,15 @@ export default function PenawaranPage() {
                   <BanIcon className="mr-2 size-4" /> Tolak
                 </DropdownMenuItem>
 
+                {/* Batalkan — cascades to the linked Proyek + Faktur Induk too */}
+                <DropdownMenuItem
+                  disabled={isDibatalkan}
+                  variant="destructive"
+                  onSelect={(e) => { e.preventDefault(); setCancelTarget(sph); }}
+                >
+                  <XCircleIcon className="mr-2 size-4" /> Batalkan
+                </DropdownMenuItem>
+
                 {/* Hapus — disabled only when deal */}
                 <DropdownMenuItem
                   disabled={isDeal}
@@ -246,22 +255,14 @@ export default function PenawaranPage() {
                 >
                   <Trash2Icon className="mr-2 size-4" /> Hapus
                 </DropdownMenuItem>
-                {isDeal && (
+                {isDeal && sphToProyekId.has(sph.id) && (
                   <>
                     <DropdownMenuSeparator />
-                    {sphToProyekId.has(sph.id) ? (
-                      <DropdownMenuItem
-                        onSelect={() => router.push(`/proyek/${encodeURIComponent(sphToProyekId.get(sph.id) ?? "")}`)}
-                      >
-                        <FolderKanban className="mr-2 size-4" /> Lihat Proyek
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem
-                        onSelect={() => router.push(`/proyek/baru?sphId=${encodeURIComponent(sph.id)}`)}
-                      >
-                        <FolderKanban className="mr-2 size-4" /> Buat Proyek
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem
+                      onSelect={() => router.push(`/proyek/${encodeURIComponent(sphToProyekId.get(sph.id) ?? "")}`)}
+                    >
+                      <FolderKanban className="mr-2 size-4" /> Lihat Proyek
+                    </DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>
@@ -383,12 +384,12 @@ export default function PenawaranPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirm: Status change (Terkirim / Disetujui / Batalkan) */}
+      {/* Confirm: Status change (Terkirim / Disetujui / Tolak) */}
       <AlertDialog open={!!statusTarget} onOpenChange={(o) => !o && setStatusTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{dialogInfo?.title}</AlertDialogTitle>
-            <AlertDialogDescription>{dialogInfo?.description}</AlertDialogDescription>
+            <AlertDialogTitle>{dialogInfo?.title ?? ""}</AlertDialogTitle>
+            <AlertDialogDescription>{dialogInfo?.description ?? ""}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Batal</AlertDialogCancel>
@@ -413,6 +414,20 @@ export default function PenawaranPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Batalkan — cascades to the linked Proyek + Faktur Induk too */}
+      <CancelPembatalanModal
+        open={!!cancelTarget}
+        onOpenChange={(o) => { if (!o) setCancelTarget(null); }}
+        isPending={cancelPembatalan.isPending}
+        onConfirm={({ alasan, biayaAdministrasi }) => {
+          if (!cancelTarget) return;
+          cancelPembatalan.mutate(
+            { sphId: cancelTarget.id, alasan, biayaAdministrasi },
+            { onSuccess: () => setCancelTarget(null) },
+          );
+        }}
+      />
 
       {/* Confirm: Hapus. Faktur/Proyek stay mock — this only cleans up their
           still-mock fixture entries referencing this SPH id; it's not a real

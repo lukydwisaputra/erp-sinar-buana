@@ -5,13 +5,13 @@
  * per-project milestones (optionally seeded from a template), assignees, a
  * timeline/Gantt (via the shared activity_schedule), and a comment/activity feed.
  */
+import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
   date,
   integer,
   pgTable,
-  smallint,
   text,
   unique,
   uuid,
@@ -47,19 +47,20 @@ export const projects = pgTable(
     quotationId: uuid("quotation_id").references(() => quotations.id, {
       onDelete: "set null",
     }),
-    // Recurring Laporan Semester bookkeeping (PRD Bab 6.6). NULL = not a recurring
-    // auto-generated report; 1/2 = semester. Guards against duplicate generation.
-    recurringPeriod: smallint("recurring_period"),
+    // Cancellation record — mirrored from the same cascade as quotations/master_invoices.
+    cancelReason: text("cancel_reason"),
+    cancelFee: money("cancel_fee"),
+    // Public read-only share link (Proyek "Copy Link") — an opaque per-project
+    // credential, not a user session, so its lookup runs under service_role
+    // (src/lib/db/tx.ts) with no app.user_id to adopt; the token itself is the
+    // only gate. Financial fields (nilaiKontrak/RAB/realisasi) are never
+    // exposed through it — see src/lib/proyek/share-service.ts.
+    shareToken: uuid("share_token")
+      .notNull()
+      .unique()
+      .default(sql`gen_random_uuid()`),
     ...bookkeeping,
   },
-  (t) => ({
-    // One auto-generated semester project per company/year/semester.
-    uqRecurring: unique("projects_recurring_uq").on(
-      t.companyId,
-      t.workYear,
-      t.recurringPeriod,
-    ),
-  }),
 );
 
 /** Services contained in a project (PRD Bab 6.1 — a project may hold several). */

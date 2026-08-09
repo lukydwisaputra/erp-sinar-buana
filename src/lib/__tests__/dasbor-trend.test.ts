@@ -20,7 +20,7 @@ function faktur(overrides: Partial<FakturTerminRow>): FakturTerminRow {
 function kas(overrides: Partial<ArusKasEntry>): ArusKasEntry {
   return {
     id: "a1", jenis: "kredit", tanggal: "2026-06-10", jumlah: 10_000_000,
-    kategori: "Faktur", sumber: "faktur", keterangan: "", proyekId: null,
+    kategori: "Faktur", categoryId: null, sumber: "faktur", keterangan: "", proyekId: null,
     locked: false, isCancelled: false,
     ...overrides,
   };

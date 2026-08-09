@@ -17,6 +17,7 @@ export const ALLOWED_UPLOAD_EXTENSIONS = [
   ".jpg",
   ".jpeg",
   ".png",
+  ".pdf",
 ] as const;
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB

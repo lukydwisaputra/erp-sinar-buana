@@ -7,7 +7,7 @@ const juni = { mulai: "2026-06-01", selesai: "2026-06-30" };
 function mk(overrides: Partial<ArusKasEntry>): ArusKasEntry {
   return {
     id: "a1", jenis: "kredit", tanggal: "2026-06-10", jumlah: 1_000_000,
-    kategori: "Faktur", sumber: "faktur", keterangan: "", proyekId: null,
+    kategori: "Faktur", categoryId: null, sumber: "faktur", keterangan: "", proyekId: null,
     locked: false, isCancelled: false,
     ...overrides,
   };

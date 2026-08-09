@@ -36,7 +36,7 @@ begin
                  when new.tax_type = 'pph21' then 'pph21'
                  else 'ppn_keluaran' end)::cashflow_tax_component,
            'Setor ' || new.tax_type::text
-             || coalesce(' (NTPN ' || new.ntpn || ')', ''),
+             || coalesce(' - ' || new.notes, ''),
            true, new.id);
       end if;
     end if;

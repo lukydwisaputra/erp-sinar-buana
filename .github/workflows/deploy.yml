@@ -1,0 +1,100 @@
+name: Build and push images
+
+# Builds the app + worker images on GitHub's runners (the ~4GB/2-vCPU VPS
+# can't build them without OOM) and pushes to GHCR. Coolify deploys by
+# pulling these images instead of building on the box.
+on:
+  push:
+    branches: [testing]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Quality gate — build/deploy never run on a red test suite, type error, or
+  # lint error. No DB needed: the test suite is pure unit/mapping tests
+  # against Drizzle/Zod types, not integration tests against Postgres.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: erp-sinar-buana
+            dockerfile: ./Dockerfile
+            context: .
+          - image: erp-sinar-buana-worker
+            dockerfile: ./infra/worker/Dockerfile
+            context: .
+          - image: erp-migrator
+            dockerfile: ./infra/migrator/Dockerfile
+            context: .
+          - image: erp-sinar-buana-docs-client
+            dockerfile: ./infra/docs-client/Dockerfile
+            context: ./docs-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # After both images are pushed, tell Coolify to pull + roll them out.
+  # force=true so Coolify re-pulls the fresh :testing image (its pull shims
+  # do `FROM ...:testing`, which would otherwise reuse a stale local base).
+  # Only App + Worker — the Database rarely changes and is deployed manually.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify deploy
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          curl --fail-with-body -sS \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            "https://coolify.portalkonsultan.com/api/v1/deploy?uuid=qi9xjxj7f1pffzdqq1dbhtf9,u8ybkbiztdwepeh9w4dm7alz&force=true"

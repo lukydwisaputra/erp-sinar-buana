@@ -9,7 +9,7 @@
 import { boolean, date, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { money, rate, bookkeeping, pk } from "./_shared";
 import { companies, companyContacts, serviceCatalog } from "./master-data";
-import { workflowStatuses } from "./config";
+import { workflowStatuses, signatureTemplates } from "./config";
 import { kelengkapanItemStatus } from "./enums";
 import { kelengkapanTemplates } from "./kelengkapan";
 
@@ -37,6 +37,8 @@ export const quotations = pgTable("quotations", {
   openingSentence: text("opening_sentence"), // kalimat pembuka
   attachmentNote: text("attachment_note"), // lampiran
   recipientTitle: text("recipient_title"), // jabatan penerima, e.g. "Direktur"
+  recipientSalutation: text("recipient_salutation").notNull().default("bapak_ibu"), // "Kepada Yth." salutation, e.g. "Bapak/Ibu Direktur"
+  place: text("place"), // tempat, e.g. "Di Bandung" — blank renders the literal "Di Tempat"
   rincianActive: boolean("rincian_active").notNull().default(true), // include RAB/Jadwal appendix
   // Tax toggles — per-SPH override of company defaults (PRD Bab 4.1 / 10).
   ppnActive: boolean("ppn_active").notNull().default(false),
@@ -47,6 +49,21 @@ export const quotations = pgTable("quotations", {
   picOverrideActive: boolean("pic_override_active").notNull().default(false),
   picOverrideName: text("pic_override_name"),
   picOverridePosition: text("pic_override_position"),
+  // Snapshot of the picked PIC's own salutation (company_contacts.salutation)
+  // at authoring time — the "u.p." line, e.g. "u.p. Bapak/Ibu Agus Kurniawan".
+  picOverrideSalutation: text("pic_override_salutation"),
+  // Digital signature (PRD-adjacent client request) — optional, per-document.
+  // When off, the printed cover letter just leaves blank space for a manual
+  // signature + wet stamp (existing behavior, no fallback rendering needed).
+  useDigitalSignature: boolean("use_digital_signature").notNull().default(false),
+  signatureTemplateId: uuid("signature_template_id").references(() => signatureTemplates.id, {
+    onDelete: "set null",
+  }),
+  // Cancellation record (PRD-adjacent client request) — set together with the
+  // BATAL status transition; cascades and is mirrored onto the linked
+  // Proyek/Faktur Induk at the same time (see penawaran/service.ts cancelAll).
+  cancelReason: text("cancel_reason"),
+  cancelFee: money("cancel_fee"), // biaya administrasi pembatalan, optional
   ...bookkeeping,
 });
 

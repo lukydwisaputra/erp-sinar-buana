@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /** Real `tax_entries` shape (read-only visibility only this pass — manual
- * create, settlement workflow (bukti-potong upload, NTPN, settle actions),
- * and Tax Center config all stay out of scope; see the Faktur plan). */
+ * create, settlement workflow (bukti-potong upload, settle actions), and Tax
+ * Center config all stay out of scope; see the Faktur plan). */
 export const taxType = z.enum([
   "ppn_keluaran", "ppn_masukan", "pph23_dipotong", "pph21", "bpjs_kesehatan", "bpjs_ketenagakerjaan",
 ]);
@@ -23,7 +23,6 @@ export const taxEntrySchema = z.object({
   dueDate: z.string().nullable(),
   settlementStatus: taxSettlementStatus,
   settledDate: z.string().nullable(),
-  ntpn: z.string().nullable(),
   buktiPotongReceived: z.boolean(),
   notes: z.string(),
   companyId: z.string().nullable(),
@@ -36,7 +35,7 @@ export type TaxEntry = z.infer<typeof taxEntrySchema>;
  * debit; the app never inserts into cashflow_entries itself). */
 export const settleTaxEntrySchema = z.object({
   settledDate: z.string().min(1, "Tanggal setor wajib diisi."),
-  ntpn: z.string().optional(),
+  notes: z.string().optional(),
   buktiPotongReceived: z.boolean().optional(), // only meaningful for pph23_dipotong
 });
 export type SettleTaxEntryInput = z.infer<typeof settleTaxEntrySchema>;

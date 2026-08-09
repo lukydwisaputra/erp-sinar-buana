@@ -44,7 +44,6 @@ export const taxEntries = pgTable("tax_entries", {
     .notNull()
     .default("belum_disetor"),
   settledDate: date("settled_date"),
-  ntpn: text("ntpn"), // No. Bukti Setor (NTPN)
   proofAttachmentUrl: text("proof_attachment_url"),
 
   // PPh23-specific — Bukti Potong from client (required to claim the credit).

@@ -40,7 +40,6 @@ export function toLayanan(
     legalBasisId: service.legalBasisId,
     dasarHukum: legalBasis?.label ?? null,
     hargaStandar: service.standardPrice !== null ? Number(service.standardPrice) : null,
-    isRecurring: service.isRecurring,
     status: service.isActive ? "aktif" : "terarsip",
     milestoneTemplateId: service.milestoneTemplateId,
     milestoneTemplateNama: milestoneTemplate?.name ?? null,

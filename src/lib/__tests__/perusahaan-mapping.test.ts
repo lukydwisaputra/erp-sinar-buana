@@ -11,7 +11,7 @@ function company(overrides: Partial<Parameters<typeof toPerusahaan>[0]> = {}) {
     name: "PT Contoh",
     address: "Jl. Contoh No. 1",
     city: "Jakarta",
-    regency: "Kota Jakarta Selatan",
+    province: "DKI Jakarta",
     adminAreaId: null,
     country: "Indonesia",
     npwp: "0123456789010000",
@@ -35,6 +35,7 @@ function contact(overrides: Partial<Parameters<typeof toPerusahaan>[1][number]> 
     phone: "0812-0000-0001",
     email: "budi@contoh.co.id",
     position: "Direktur",
+    salutation: "bapak_ibu",
     isPrimary: false,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -84,8 +85,8 @@ describe("toContactRows", () => {
   it("marks only the first PIC as primary", () => {
     const rows = toContactRows(
       [
-        { nama: "A", jabatan: "Direktur", telepon: "0811", email: "a@x.co.id" },
-        { nama: "B", jabatan: "Manajer", telepon: "0812", email: "b@x.co.id" },
+        { nama: "A", jabatan: "Direktur", telepon: "0811", email: "a@x.co.id", salutation: "bapak" },
+        { nama: "B", jabatan: "Manajer", telepon: "0812", email: "b@x.co.id", salutation: "ibu" },
       ],
       "company-1",
     );
@@ -95,7 +96,7 @@ describe("toContactRows", () => {
 
   it("stores blank jabatan/email as null, not empty string", () => {
     const [row] = toContactRows(
-      [{ nama: "A", jabatan: "", telepon: "0811", email: "" }],
+      [{ nama: "A", jabatan: "", telepon: "0811", email: "", salutation: "bapak_ibu" }],
       "company-1",
     );
     expect(row.position).toBeNull();

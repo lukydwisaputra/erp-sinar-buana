@@ -44,7 +44,12 @@ function TerminStepsField({ value, onChange }: { value: TerminTemplateStep[]; on
         <div className="grid grid-cols-[2fr_1fr_2fr] gap-2">
           <Input value={row.label} onChange={(e) => update({ label: e.target.value })} placeholder="Label termin…" className="text-sm" />
           <InputGroup>
-            <InputGroupInput type="number" value={row.persen} onChange={(e) => update({ persen: Number(e.target.value) })} />
+            <InputGroupInput
+              type="number"
+              value={row.persen ? String(row.persen) : ""}
+              onChange={(e) => update({ persen: Math.max(0, Number(e.target.value) || 0) })}
+              placeholder="0"
+            />
             <InputGroupAddon align="inline-end"><InputGroupText>%</InputGroupText></InputGroupAddon>
           </InputGroup>
           <Input value={row.pemicu} onChange={(e) => update({ pemicu: e.target.value })} placeholder="Pemicu…" className="text-sm" />
@@ -86,6 +91,7 @@ function TerminForm_({
       onSubmit={onSubmit}
       submitLabel={submitLabel}
       submitDisabled={!hasStep}
+      className="data-[side=right]:sm:max-w-xl"
     >
       <Field data-invalid={!!errors.nama}>
         <FieldLabel>Nama Template</FieldLabel>

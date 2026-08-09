@@ -219,7 +219,7 @@ function DrawerTimeline() {
             {!last && (
               <span
                 aria-hidden
-                className="absolute top-6 left-[11px] h-[calc(100%+0.25rem)] w-px bg-border"
+                className="absolute top-6 left-2.75 h-[calc(100%+0.25rem)] w-px bg-border"
               />
             )}
             <span className="relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center">

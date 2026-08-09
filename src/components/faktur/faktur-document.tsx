@@ -11,12 +11,20 @@ import { DocumentLetterhead } from "@/components/shared/document/document-letter
  * service names on `master_invoice_services`) — the itemized "Baris Tagihan"
  * table from the old mock is replaced by a plain service list, with the
  * total sourced from the Faktur Induk's stored `totalBiaya`. */
+/** "Termin I - 40% (Keterangan)" — persen/pemicu are both optional so this
+ * also covers the plain header use (label + pemicu, no persen). */
+function terminRowLabel(label: string, persen: number | undefined, pemicu: string | null | undefined): string {
+  const withPersen = persen !== undefined ? `${label} - ${persen}%` : label;
+  return pemicu ? `${withPersen} (${pemicu})` : withPersen;
+}
+
 export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: InvoiceTermin }): React.JSX.Element {
   const companyProfile = companyProfileCache.current;
   const { headerNote, footerNote } = pdfTemplateNotesCache.current.invoice;
-  const cell = "border border-[var(--doc-rule)] px-2 py-1";
+  const cell = "border border-(--doc-rule) px-2 py-1";
   const sumLabel = `${cell} text-right font-bold`;
   const sumVal = `${cell} text-right font-mono tabular-nums whitespace-nowrap`;
+  const terminPersen = induk.terminScheme.find((t) => t.label === termin.label)?.persen;
 
   return (
     <DocumentPage header={<DocumentLetterhead />}>
@@ -39,16 +47,19 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
         {/* Title */}
         <div className="mt-4 text-center">
           <p className="text-lg font-bold tracking-[0.3em]">INVOICE</p>
-          <p className="font-semibold">{termin.label}</p>
+          <p className="font-semibold">{termin.label}{termin.pemicu ? ` (${termin.pemicu})` : ""}</p>
           <p className="font-mono">No Inv: {termin.number ?? "—"}</p>
         </div>
 
         {/* Table */}
-        <table className="mt-3 w-full border-collapse border border-[var(--doc-rule)]">
+        <table className="mt-3 w-full border-collapse border border-(--doc-rule)">
           <thead>
-            <tr className="bg-[var(--doc-blue-soft)] text-center font-bold">
+            <tr className="bg-(--doc-blue-soft) text-center font-bold">
               <th className={cell}>No.</th>
-              <th className={cell}>Layanan</th>
+              <th className={cell}>Uraian</th>
+              <th className={cell}>Biaya Satuan (Rp)</th>
+              <th className={cell}>Vol</th>
+              <th className={cell}>Total (Rp)</th>
             </tr>
           </thead>
           <tbody>
@@ -56,17 +67,41 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
               <tr key={l.serviceId ?? i}>
                 <td className={`${cell} text-center`}>{i + 1}</td>
                 <td className={cell}>{l.nama}</td>
+                <td className={`${cell} text-right font-mono tabular-nums`}>
+                  {l.harga !== null ? formatRupiah(l.harga) : "—"}
+                </td>
+                <td className={`${cell} text-center`}>{l.volume !== null ? `${l.volume} ${l.satuan ?? ""}`.trim() : "—"}</td>
+                <td className={`${cell} text-right font-mono tabular-nums`}>
+                  {l.harga !== null && l.volume !== null ? formatRupiah(l.harga * l.volume) : "—"}
+                </td>
               </tr>
             ))}
 
-            <SummaryRow label="TOTAL BIAYA" value={formatRupiah(induk.totalBiaya)} labelCls={sumLabel} valCls={sumVal} colSpan={1} />
-            <SummaryRow label={termin.label} value={formatRupiah(termin.nilaiTermin)} labelCls={sumLabel} valCls={sumVal} colSpan={1} />
-            {termin.ppn > 0 && <SummaryRow label="DPP" value={formatRupiah(termin.dpp)} labelCls={sumLabel} valCls={sumVal} colSpan={1} />}
-            {termin.ppn > 0 && <SummaryRow label="PPN" value={formatRupiah(termin.ppn)} labelCls={sumLabel} valCls={sumVal} colSpan={1} />}
-            {termin.pph23 > 0 && <SummaryRow label="PPh" value={formatRupiah(-termin.pph23)} labelCls={sumLabel} valCls={`${sumVal} text-destructive`} colSpan={1} />}
-            <SummaryRow label="TOTAL BIAYA SETELAH PAJAK" value={formatRupiah(termin.totalSetelahPajak)} labelCls={sumLabel} valCls={`${sumVal} font-bold`} colSpan={1} />
+            <SummaryRow label="TOTAL BIAYA" value={formatRupiah(induk.totalBiaya)} labelCls={sumLabel} valCls={sumVal} />
+            {termin.previousTermins.map((p, i) => {
+              const persen = induk.terminScheme.find((t) => t.label === p.label)?.persen;
+              return (
+                <SummaryRow
+                  key={i}
+                  label={terminRowLabel(p.label, persen, p.pemicu)}
+                  value={formatRupiah(-p.nilai)}
+                  labelCls={sumLabel}
+                  valCls={sumVal}
+                />
+              );
+            })}
+            <SummaryRow label={terminRowLabel(termin.label, terminPersen, termin.pemicu)} value={formatRupiah(termin.nilaiTermin)} labelCls={sumLabel} valCls={sumVal} />
+            {termin.ppn > 0 && <SummaryRow label="DPP" value={formatRupiah(termin.dpp)} labelCls={sumLabel} valCls={sumVal} />}
+            {termin.ppn > 0 && <SummaryRow label="PPN" value={formatRupiah(termin.ppn)} labelCls={sumLabel} valCls={sumVal} />}
+            {termin.pph23 > 0 && <SummaryRow label="PPh" value={formatRupiah(-termin.pph23)} labelCls={sumLabel} valCls={`${sumVal} text-destructive`} />}
+            <SummaryRow
+              label={termin.ppn > 0 || termin.pph23 > 0 ? "TOTAL BIAYA SETELAH PAJAK" : "TOTAL BIAYA"}
+              value={formatRupiah(termin.totalSetelahPajak)}
+              labelCls={sumLabel}
+              valCls={`${sumVal} font-bold`}
+            />
             <tr>
-              <td colSpan={2} className={`${cell} text-center`}>
+              <td colSpan={5} className={`${cell} text-center`}>
                 <span className="font-semibold">Terbilang: </span>
                 <span className="font-bold italic">{titleCase(terbilang(termin.totalSetelahPajak))} Rupiah</span>
               </td>
@@ -83,12 +118,11 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
             <span>Atas Nama</span><span>:</span><span>{termin.bankAtasNama || companyProfile.bank.atasNama}</span>
             <span>Nomor Rekening</span><span>:</span><span className="font-mono">{termin.bankNoRekening || companyProfile.bank.noRekening}</span>
           </div>
-          <ul className="mt-1 list-disc pl-5">
-            {termin.previousTermins.map((p, i) => (
-              <li key={i}>{p.label}: {formatRupiah(p.nilai)} (Sudah dibayar)</li>
-            ))}
-            {termin.catatan && <li>{termin.catatan}</li>}
-          </ul>
+          {termin.catatan && (
+            <ul className="mt-1 list-disc pl-5">
+              <li>{termin.catatan}</li>
+            </ul>
+          )}
           <p className="mt-2 font-bold">Invoice ini berlaku sebagai kwitansi</p>
           {footerNote && <p className="mt-2 whitespace-pre-line">{footerNote}</p>}
         </div>
@@ -96,7 +130,15 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
         {/* Signature */}
         <div className="mt-5 flex flex-col items-end text-right">
           <p>Hormat Kami,</p>
-          <div className="h-20" />
+          {/* Fixed-width invisible bounds so the signature centers under
+              "Hormat Kami," regardless of where the ink sits within its own
+              (mostly transparent) source image. */}
+          <div className="my-2 flex h-20 w-40 justify-center">
+            {induk.signatureImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={induk.signatureImage} alt="Tanda tangan" className="h-20 w-auto" />
+            )}
+          </div>
           <p className="font-bold underline">{companyProfile.direktur.nama}</p>
           <p className="font-bold">{companyProfile.direktur.jabatan}</p>
         </div>
@@ -105,10 +147,10 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
   );
 }
 
-function SummaryRow({ label, value, labelCls, valCls }: { label: string; value: React.ReactNode; labelCls: string; valCls: string; colSpan: number }) {
+function SummaryRow({ label, value, labelCls, valCls }: { label: string; value: React.ReactNode; labelCls: string; valCls: string }) {
   return (
     <tr>
-      <td className={labelCls} colSpan={1}>{label}</td>
+      <td className={labelCls} colSpan={4}>{label}</td>
       <td className={valCls}>{value}</td>
     </tr>
   );

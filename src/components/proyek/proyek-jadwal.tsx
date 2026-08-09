@@ -1,30 +1,35 @@
 "use client";
 import * as React from "react";
-import { Plus, Trash2 as Trash2Icon } from "lucide-react";
+import { Minus, Plus, Trash2 as Trash2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   useProjectSchedules, useToggleActualWeek, useAddScheduleRow, useRemoveScheduleRow,
+  useUpdateScheduleMonths,
 } from "@/lib/query/proyek";
 import { useSession } from "@/lib/query/session";
-import { isClientPortal } from "@/lib/auth/rbac";
+import { isAdminUser } from "@/lib/auth/rbac";
 
 /**
  * Read/write Gantt view for a project — reuses the same activity_schedules
- * rows Penawaran wrote at SPH time (one section per linked service/schedule,
- * mirroring the SPH builder's per-item structure). `rencana` (outline) is the
- * plan carried over from the SPH, read-only here; `aktual` (filled) is the
- * ongoing progress Tim Teknis marks week by week.
+ * shape Penawaran writes at SPH time (one section per linked service/
+ * schedule, mirroring the SPH builder's per-item structure), but as of the
+ * Deal-time clone (jadwal-service.ts `cloneQuotationSchedulesToProject`) this
+ * is the project's OWN independent copy — editing it never touches the
+ * source SPH document. Visible to everyone; only Admin can edit (add/remove
+ * activities, change month count, mark `aktual` progress) — everyone else
+ * gets a read-only view.
  */
 export function ProyekJadwal({ proyekId }: { proyekId: string }) {
   const { data: schedules = [], isLoading } = useProjectSchedules(proyekId);
   const toggleActual = useToggleActualWeek();
   const addRow = useAddScheduleRow();
   const removeRow = useRemoveScheduleRow();
+  const updateMonths = useUpdateScheduleMonths();
   const [newActivityName, setNewActivityName] = React.useState("");
   const { data: session } = useSession();
-  const isClient = isClientPortal(session);
+  const isAdmin = isAdminUser(session);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Memuat jadwal…</p>;
 
@@ -37,7 +42,29 @@ export function ProyekJadwal({ proyekId }: { proyekId: string }) {
         const weeks = Array.from({ length: schedule.bulan * 4 }, (_, i) => i + 1);
         return (
           <div key={schedule.scheduleId} className="space-y-2">
-            <h4 className="text-sm font-medium">{schedule.layananNama ?? "Jadwal"}</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium">{schedule.layananNama ?? "Jadwal"}</h4>
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Jumlah Bulan:</span>
+                  <Button
+                    type="button" variant="outline" size="icon-sm" aria-label="Kurangi bulan"
+                    disabled={schedule.bulan <= 1 || updateMonths.isPending}
+                    onClick={() => updateMonths.mutate({ proyekId, scheduleId: schedule.scheduleId, numMonths: schedule.bulan - 1 })}
+                  >
+                    <Minus className="size-4" />
+                  </Button>
+                  <span className="w-5 text-center font-mono tabular-nums text-sm font-semibold">{schedule.bulan}</span>
+                  <Button
+                    type="button" variant="outline" size="icon-sm" aria-label="Tambah bulan"
+                    disabled={updateMonths.isPending}
+                    onClick={() => updateMonths.mutate({ proyekId, scheduleId: schedule.scheduleId, numMonths: schedule.bulan + 1 })}
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
             {schedule.rows.length > 0 && (
               <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="border-collapse text-sm w-full">
@@ -70,7 +97,7 @@ export function ProyekJadwal({ proyekId }: { proyekId: string }) {
                                 ? "border-primary/50 bg-transparent hover:bg-primary/20"
                                 : "border-border bg-transparent hover:bg-primary/10",
                           );
-                          if (isClient) {
+                          if (!isAdmin) {
                             return (
                               <td key={w} className="px-0.5 py-1 text-center">
                                 <span
@@ -93,7 +120,7 @@ export function ProyekJadwal({ proyekId }: { proyekId: string }) {
                             </td>
                           );
                         })}
-                        {!isClient && (
+                        {isAdmin && (
                           <td className="px-1 py-1">
                             <Button
                               type="button" variant="ghost" size="icon-sm" aria-label="Hapus kegiatan"
@@ -113,7 +140,7 @@ export function ProyekJadwal({ proyekId }: { proyekId: string }) {
         );
       })}
 
-      {!isClient && (
+      {isAdmin && (
         <div className="flex items-center gap-2">
           <Input
             value={newActivityName}

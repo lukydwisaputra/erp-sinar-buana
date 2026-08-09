@@ -19,12 +19,20 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Fixed, user-independent install path — the browser is installed here as
+# root (below) but the process runs as the unprivileged `worker` user (see
+# USER below); without this, Playwright installs into /root/.cache/ms-playwright
+# and the runtime process (a different $HOME) can't find it, failing every
+# send with "Executable doesn't exist at /home/worker/.cache/ms-playwright/...".
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev \
   # @playwright/test is a real (non-dev) dependency (see package.json) —
   # `npm ci --omit=dev` keeps it; this installs the actual browser binary
   # + required system libraries (fonts, codecs, etc.) it needs at runtime.
   && npx playwright install --with-deps chromium \
+  && chmod -R a+rX /ms-playwright \
   && rm -rf /var/lib/apt/lists/*
 
 # Only what scripts/worker.ts actually imports (relative paths, not the `@/`
@@ -38,5 +46,12 @@ COPY src/lib/observability ./src/lib/observability
 
 RUN useradd --system --uid 1001 worker
 USER worker
+
+# scripts/worker.ts touches /tmp/worker-heartbeat every 15s once its queues
+# are registered — this process has no HTTP server, so a stale heartbeat
+# file is the only way Docker/Coolify can tell "running" apart from "wedged"
+# (e.g. stuck on a hung Chromium page.goto with no timeout).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD find /tmp/worker-heartbeat -newermt '-60 seconds' | grep -q . || exit 1
 
 CMD ["node", "scripts/worker.ts"]

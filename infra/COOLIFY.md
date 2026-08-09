@@ -130,6 +130,11 @@ S3_KEY_PREFIX=testing
 > `email_accounts` row — restoring it under a *different* key means the app
 > throws trying to decrypt that password the first time anything touches
 > Pengiriman. Copy the value straight from your local `infra/.env`.
+>
+> This isn't just a first-deploy gotcha — there's no key rotation support at
+> all (see `src/lib/crypto.ts`'s header). Changing `ENCRYPTION_KEY` *ever*
+> breaks every already-encrypted secret; recovery is manually re-entering
+> the SMTP password through the UI, not a migration.
 
 > **Internal hostnames** (for `DATABASE_URL`'s `<postgres internal host>`):
 > Coolify assigns each resource its own internal DNS name on the project's
@@ -235,6 +240,49 @@ Then log in with a restored account and:
   the logo should still be there (proves the MinIO round trip, not just a
   client-side preview).
 
+## 9. Applying new migrations
+
+New `db-schema/migrations/*.sql` files ship in the `erp-migrator` image (built
+by the same GitHub Actions workflow as `App`/`Worker`) but are **not**
+auto-applied — `infra/migrator/run.sh` is run manually, on purpose, so a
+schema change never lands on the live DB in the same breath as an app
+deploy. There's no drizzle tracking table on this DB (it was hand-provisioned
+via `db-schema/scripts/migrate.sh`, not `drizzle-kit migrate`), so `run.sh`
+applies every migration file whose numeric prefix is `>= MIGRATE_FROM`
+(default `20`) — **it does not know what's already applied**. Getting
+`MIGRATE_FROM` wrong either re-runs already-applied DDL (fails outright on
+anything that isn't `IF NOT EXISTS`/idempotent) or silently skips a real
+pending migration.
+
+**Runbook — don't trust a remembered number, verify first:**
+
+1. Find the highest migration number already reflected in the live schema.
+   Pick a column/table from a *recent* migration and check it exists, e.g.
+   for this repo's current head (`0032_drop_tax_entries_ntpn.sql`):
+   ```sql
+   -- run against the live DB (read-only, safe)
+   select column_name from information_schema.columns
+   where table_name = 'tax_entries' and column_name = 'ntpn';
+   -- empty result = 0032 already applied; a row back = it isn't yet
+   ```
+   Walk backwards through recent migration files (newest first) until you
+   find one whose change is *not* yet present — that migration's number is
+   your `MIGRATE_FROM`.
+2. Run the migrator once, pointed at that number:
+   ```bash
+   docker run --rm --network coolify \
+     -e DATABASE_URL='postgres://postgres:<pw>@sbmj-db:5432/sbmj_erp' \
+     -e MIGRATE_FROM=<number from step 1> \
+     ghcr.io/lukydwisaputra/erp-migrator:testing
+   ```
+3. Re-run the same `information_schema` check for the migration(s) you just
+   applied to confirm they landed before deploying app code that depends on
+   them.
+
+Take a backup first (§ backups above) — migrations here run against a live
+DB with `ON_ERROR_STOP=1`, so a bad migration mid-batch leaves the schema
+partially updated.
+
 ## Deliberately deferred (revisit before this is *real* production, not a test)
 
 - **Cloudflare Tunnel** — using Coolify's own domains + Let's Encrypt
@@ -250,8 +298,21 @@ Then log in with a restored account and:
   (multiple record types, presigned direct-to-MinIO uploads for anything
   bigger than a logo, per the Cloudflare 100MB proxied-body cap noted in
   `docs/architecture.md` §6).
-- **Scheduled backups** — `infra/scripts/backup.sh` exists but needs a
-  Coolify Scheduled Task (or cron) wired to actually run it periodically;
-  see [`infra/README.md`](README.md#backups).
+- **Scheduled backups** — `infra/postgres/backup.sh` is now baked into the
+  Database image (`/usr/local/bin/backup.sh`), but still needs to actually be
+  scheduled and given somewhere durable to write to. Two manual Coolify steps:
+  1. **Add a persistent volume** on the `Database` resource: Storage tab →
+     add a volume mounted at `/backups` (matches `docker-compose.yml`'s
+     `pg_backups` volume for local dev parity). Skip this and every backup
+     is lost on the next redeploy — the container filesystem isn't durable.
+  2. **Add a Scheduled Task** on the `Database` resource: command
+     `backup.sh`, container `postgres` (or whatever the service is named in
+     that resource), frequency `0 2 * * *` (daily 02:00 UTC — adjust as
+     needed). Verify with a one-off run first, then check
+     `docker exec <container> ls -la /backups` shows a fresh `.sql.gz`.
+  Retention defaults to 14 days (`BACKUP_RETENTION_DAYS` env var to change).
+  For off-site copies (recommended once real client data is in), a follow-up
+  step would push each dump to the MinIO bucket already running in this
+  stack — not done here, no destination bucket/credentials scoped for it yet.
 - **Real `SENTRY_DSN`** — optional for a test pass; errors still land in
   Coolify's own container logs via Pino either way.

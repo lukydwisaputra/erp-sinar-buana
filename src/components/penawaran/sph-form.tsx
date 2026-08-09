@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { SlidersHorizontal } from "lucide-react";
 
@@ -7,7 +8,7 @@ import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { BuilderSection } from "@/components/shared/builder-layout";
 import { LineItemEditor, type ServiceOption } from "@/components/shared/line-item-editor";
 import { ServiceRabJadwalEditor } from "@/components/penawaran/service-rab-jadwal-editor";
-import { totalPenawaran } from "@/lib/sph";
+import { totalPenawaran, defaultKalimatPembuka } from "@/lib/sph";
 import { formatRupiah } from "@/lib/format";
 import { terbilang } from "@/lib/terbilang";
 
@@ -20,6 +21,8 @@ import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useSignatureTemplateList } from "@/lib/query/signature-templates";
 
 // Re-exported — sph-builder.tsx imports both from this file's original
 // location; kept stable rather than touching every call site.
@@ -38,6 +41,23 @@ export function SphForm({
   layananOptions: LayananOption[];
 }): React.JSX.Element {
   const values = form.watch();
+  const { data: signatureTemplates = [] } = useSignatureTemplateList();
+
+  // Auto-generate Kalimat Pembuka from the picked service names — keeps
+  // regenerating as items change, but only while the field still matches the
+  // last value THIS effect wrote; once the user edits it by hand, it's left
+  // alone (never overwrites a manual edit).
+  const lastGenerated = React.useRef("");
+  const namaLayanan = values.items.map((it) => it.nama).filter(Boolean).join("|");
+  React.useEffect(() => {
+    const generated = defaultKalimatPembuka(namaLayanan ? namaLayanan.split("|") : []);
+    const current = form.getValues("kalimatPembuka");
+    if (generated && (current === "" || current === lastGenerated.current)) {
+      form.setValue("kalimatPembuka", generated);
+    }
+    lastGenerated.current = generated;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [namaLayanan]);
 
   return (
     <div className="space-y-6">
@@ -139,12 +159,46 @@ export function SphForm({
             onPersen={(n) => form.setValue("ppnPersen", n)}
           />
           <PajakRow
-            label="PPh 23"
+            label="PPh"
             aktif={values.pph23Aktif}
             persen={values.pph23Persen}
             onToggle={(c) => form.setValue("pph23Aktif", c)}
             onPersen={(n) => form.setValue("pph23Persen", n)}
           />
+        </div>
+      </BuilderSection>
+
+      <BuilderSection title="Tanda Tangan">
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={values.useDigitalSignature}
+              onCheckedChange={(c) => {
+                form.setValue("useDigitalSignature", c === true);
+                if (c !== true) form.setValue("signatureTemplateId", null);
+              }}
+            />
+            Gunakan tanda tangan digital
+          </label>
+          {values.useDigitalSignature && (
+            <Field>
+              <FieldLabel>Pilih Tanda Tangan</FieldLabel>
+              <Select
+                value={values.signatureTemplateId ?? ""}
+                onValueChange={(v) => form.setValue("signatureTemplateId", v)}
+              >
+                <SelectTrigger className="w-full"><SelectValue placeholder="Pilih tanda tangan…" /></SelectTrigger>
+                <SelectContent>
+                  {signatureTemplates.map((s) => <SelectItem key={s.id} value={s.id}>{s.nama}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+          {!values.useDigitalSignature && (
+            <p className="text-xs text-muted-foreground">
+              Dokumen akan menyediakan ruang kosong untuk tanda tangan manual dan stempel basah.
+            </p>
+          )}
         </div>
       </BuilderSection>
     </div>

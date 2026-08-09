@@ -41,6 +41,10 @@ function FakturPageInner() {
       ),
     },
     {
+      id: "sphNumber", header: "No. SPH", accessorKey: "sphNumber", meta: { mono: true },
+      cell: ({ row }) => row.original.sphNumber ?? "—",
+    },
+    {
       id: "proyek", header: "Proyek", meta: { className: "min-w-56" },
       accessorKey: "proyekNama",
       cell: ({ row }) => row.original.proyekNama,

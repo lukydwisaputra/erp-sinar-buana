@@ -161,7 +161,7 @@ export async function createAccount(input: {
 
 export async function updateAccount(
   id: string,
-  input: { role?: AppRole; employeeId?: string | null; clientCompanyId?: string | null },
+  input: { fullName?: string; role?: AppRole; employeeId?: string | null; clientCompanyId?: string | null },
 ): Promise<void> {
   await withServiceRole(async (tx) => {
     if (input.employeeId) {
@@ -186,5 +186,18 @@ export async function setAccountActive(id: string, isActive: boolean): Promise<v
 export async function setPasswordHash(id: string, passwordHash: string): Promise<void> {
   await withServiceRole(async (tx) => {
     await tx.update(schema.userProfiles).set({ passwordHash }).where(eq(schema.userProfiles.id, id));
+  });
+}
+
+/** Self-service "Ubah Sandi" needs the caller's own current hash to verify
+ * against — `Account`/`toAccount` deliberately strip it out everywhere else. */
+export async function getPasswordHashById(id: string): Promise<string | null> {
+  return withServiceRole(async (tx) => {
+    const [row] = await tx
+      .select({ passwordHash: schema.userProfiles.passwordHash })
+      .from(schema.userProfiles)
+      .where(eq(schema.userProfiles.id, id))
+      .limit(1);
+    return row?.passwordHash ?? null;
   });
 }

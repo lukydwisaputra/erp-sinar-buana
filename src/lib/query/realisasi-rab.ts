@@ -24,6 +24,19 @@ export function useCreateRealisasiRab() {
   });
 }
 
+export function useUpdateRealisasiRab() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; proyekId: string; input: RealisasiRabFormValues }) =>
+      apiClient.patch<RealisasiRab>(`/api/realisasi-rab/${id}`, input),
+    onSuccess: (_, { proyekId }) => {
+      qc.invalidateQueries({ queryKey: ["realisasi-rab", proyekId] });
+      toast.success("Realisasi RAB berhasil diperbarui.");
+    },
+    onError: (error) => toast.error(apiErrorMessage(error, "Gagal memperbarui realisasi RAB.")),
+  });
+}
+
 export function useRemoveRealisasiRab() {
   const qc = useQueryClient();
   return useMutation({

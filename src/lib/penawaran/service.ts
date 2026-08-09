@@ -1,4 +1,4 @@
-import { and, eq, desc, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, desc, inArray, isNull } from "drizzle-orm";
 import { withUserTransaction, withServiceRole, type Tx } from "@/lib/db/tx";
 import { schema } from "@/lib/db/client";
 import { NotFoundError } from "@/lib/api-error";
@@ -8,6 +8,8 @@ import {
   STATUS_LABEL_BY_ENUM,
   type ToSphInput,
 } from "@/lib/penawaran/mapping";
+import { createProyekTx } from "@/lib/proyek/service";
+import { createFakturIndukTx, syncFakturIndukFromSph } from "@/lib/faktur/service";
 import type { Sph, SphItem, SphStatus, SphKelengkapan, CreatePenawaranInput, UpdatePenawaranInput } from "@/lib/schemas/penawaran";
 
 export { toSph } from "@/lib/penawaran/mapping";
@@ -61,6 +63,10 @@ async function assembleSph(tx: Tx, quotation: typeof schema.quotations.$inferSel
     ? await tx.select().from(schema.quotationKelengkapanItems).where(inArray(schema.quotationKelengkapanItems.quotationKelengkapanId, kelengkapanParentIds))
     : [];
 
+  const signatureImage = quotation.signatureTemplateId
+    ? await tx.select({ signatureImage: schema.signatureTemplates.signatureImage }).from(schema.signatureTemplates).where(eq(schema.signatureTemplates.id, quotation.signatureTemplateId)).limit(1).then((r) => r[0]?.signatureImage ?? null)
+    : null;
+
   const input: ToSphInput = {
     quotation,
     companyName: company.name,
@@ -75,6 +81,7 @@ async function assembleSph(tx: Tx, quotation: typeof schema.quotations.$inferSel
     statusLabel,
     kelengkapanAttachments,
     kelengkapanItems,
+    signatureImage,
   };
   return toSph(input);
 }
@@ -321,12 +328,81 @@ export async function updateQuotation(userId: string, id: string, input: UpdateP
       await insertKelengkapan(tx, id, input.kelengkapan);
     }
 
+    // Faktur no longer has its own edit UI — push the current SPH state (not
+    // just this call's changed fields) into every Faktur Induk born from it,
+    // so a Deal SPH edit always keeps Faktur in sync regardless of which
+    // subset of fields this particular PATCH touched.
+    const freshTermScheme = await tx
+      .select({ label: schema.quotationTermScheme.label, percentage: schema.quotationTermScheme.percentage, pemicu: schema.quotationTermScheme.milestoneTriggerLabel })
+      .from(schema.quotationTermScheme)
+      .where(eq(schema.quotationTermScheme.quotationId, id))
+      .orderBy(asc(schema.quotationTermScheme.sortOrder));
+    const freshServiceIds = await tx
+      .select({ serviceId: schema.quotationItems.serviceId })
+      .from(schema.quotationItems)
+      .where(eq(schema.quotationItems.quotationId, id))
+      .then((rows) => [...new Set(rows.map((r) => r.serviceId).filter((x): x is string => !!x))]);
+    await syncFakturIndukFromSph(tx, userId, id, {
+      serviceIds: freshServiceIds,
+      totalBiaya: Number(quotation.totalAmount),
+      terminScheme: freshTermScheme.map((t) => ({ label: t.label, persen: Number(t.percentage), pemicu: t.pemicu ?? null })),
+    });
+
     return assembleSph(tx, quotation);
   });
 }
 
-/** Pure status transition — no Proyek/Faktur cascade (both stay mock; see
- * docs/architecture.md's Penawaran note). */
+/** Deal-time cascade — auto-creates the Proyek (and, from it, a Faktur Induk
+ * billing every service at the SPH's full value/termin scheme) so the user
+ * doesn't have to trigger "Buat Proyek"/"Buat Faktur Induk" by hand. Both stay
+ * fully editable afterward (Ubah Proyek / Faktur's own edit form) — this just
+ * seeds sensible defaults. Idempotent: skips entirely if a project already
+ * exists for this quotation (e.g. status flipped away from Deal and back, or
+ * one was already created manually before this cascade shipped). Runs inside
+ * the caller's transaction (updateQuotationStatus), not its own. */
+async function createProyekAndFakturForDeal(tx: Tx, userId: string, quotationId: string): Promise<void> {
+  const [existingProject] = await tx
+    .select({ id: schema.projects.id })
+    .from(schema.projects)
+    .where(eq(schema.projects.quotationId, quotationId))
+    .limit(1);
+  if (existingProject) return;
+
+  const [quotation] = await tx.select().from(schema.quotations).where(eq(schema.quotations.id, quotationId)).limit(1);
+  if (!quotation) return;
+  const company = await loadCompany(tx, quotation.companyId);
+
+  const project = await createProyekTx(tx, userId, {
+    nama: `Proyek — ${company.name}`,
+    perusahaanId: quotation.companyId,
+    areaId: undefined,
+    tahun: new Date(quotation.date).getFullYear(),
+    sphId: quotationId,
+    serviceIds: [],
+    assigneeIds: [],
+  });
+
+  const termScheme = await tx
+    .select({ label: schema.quotationTermScheme.label, percentage: schema.quotationTermScheme.percentage, pemicu: schema.quotationTermScheme.milestoneTriggerLabel })
+    .from(schema.quotationTermScheme)
+    .where(eq(schema.quotationTermScheme.quotationId, quotationId))
+    .orderBy(asc(schema.quotationTermScheme.sortOrder));
+  if (!termScheme.length) return; // createFakturIndukSchema requires >=1 termin — nothing sensible to seed without it
+
+  await createFakturIndukTx(tx, userId, {
+    proyekId: project.id,
+    serviceIds: project.layanan.map((l) => l.serviceId).filter((x): x is string => !!x),
+    totalBiaya: Number(quotation.totalAmount),
+    notes: "",
+    terminScheme: termScheme.map((t) => ({ label: t.label, persen: Number(t.percentage), pemicu: t.pemicu ?? null })),
+    // Inherit the SPH's own signature choice as a starting point — editable
+    // afterward via updateFakturInduk, same "one-time copy" pattern as the
+    // rest of this cascade.
+    useDigitalSignature: quotation.useDigitalSignature,
+    signatureTemplateId: quotation.signatureTemplateId,
+  });
+}
+
 export async function updateQuotationStatus(userId: string, id: string, status: SphStatus): Promise<Sph> {
   return withUserTransaction(userId, async (tx) => {
     const [existing] = await tx
@@ -342,6 +418,10 @@ export async function updateQuotationStatus(userId: string, id: string, status: 
       .set({ statusId, updatedBy: userId })
       .where(eq(schema.quotations.id, id))
       .returning();
+
+    if (status === "deal") {
+      await createProyekAndFakturForDeal(tx, userId, id);
+    }
 
     return assembleSph(tx, quotation);
   });

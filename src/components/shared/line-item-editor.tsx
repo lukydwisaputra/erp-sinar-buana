@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/shared/money-input";
 import { formatRupiah } from "@/lib/format";
+import { terbilang } from "@/lib/terbilang";
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
@@ -54,7 +55,7 @@ export function LineItemEditor({ items, options, onChange, renderRowExtra }: {
         <div key={i} className="space-y-3 rounded-md border border-border p-3">
           <ServicePicker value={it} options={options}
             onPick={(opt) => update(i, { layananId: opt.id, nama: opt.nama, harga: opt.harga })} />
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-start gap-3">
             <div className="w-20">
               <label className="text-xs text-muted-foreground">Volume</label>
               <Input type="number" min={1} value={it.volume}
@@ -64,18 +65,23 @@ export function LineItemEditor({ items, options, onChange, renderRowExtra }: {
               <label className="text-xs text-muted-foreground">Satuan</label>
               <Input value={it.satuan} onChange={(e) => update(i, { satuan: e.target.value })} placeholder="Paket" />
             </div>
-            <div className="w-44">
+            <div className="min-w-56 flex-1">
               <label className="text-xs text-muted-foreground">Harga Satuan</label>
-              <MoneyInput key={`${i}:${it.layananId}`} defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} showTerbilang={false} className="w-full" />
+              <MoneyInput key={`${i}:${it.layananId}`} defaultValue={it.harga} onValueChange={(n) => update(i, { harga: n })} className="w-full" />
             </div>
-            {renderRowExtra?.(it, i, update)}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="text-sm">
-              <span className="text-muted-foreground">Jumlah: </span>
-              <span className="font-mono tabular-nums">{formatRupiah(it.volume * it.harga)}</span>
+          {renderRowExtra?.(it, i, update)}
+          <div className="flex items-start justify-between gap-2">
+            <div className="text-left">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Jumlah: </span>
+                <span className="font-mono tabular-nums">{formatRupiah(it.volume * it.harga)}</span>
+              </div>
+              <p className="text-xs capitalize text-muted-foreground">
+                {it.volume * it.harga ? `${terbilang(it.volume * it.harga)} rupiah` : "—"}
+              </p>
             </div>
-            <Button type="button" variant="ghost" size="icon" className="ml-auto" aria-label="Hapus baris" onClick={() => removeRow(i)}>
+            <Button type="button" variant="ghost" size="icon" aria-label="Hapus baris" onClick={() => removeRow(i)}>
               <Trash2Icon className="size-4 text-destructive" />
             </Button>
           </div>

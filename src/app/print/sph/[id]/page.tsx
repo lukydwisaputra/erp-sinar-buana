@@ -33,10 +33,15 @@ function toFormValues(sph: Sph): SphFormValues {
     pph23Aktif: sph.pph23Aktif,
     pph23Persen: sph.pph23Persen,
     jabatanPenerima: sph.jabatanPenerima,
+    salutasiPenerima: sph.salutasiPenerima,
+    tempat: sph.tempat,
     picAktif: sph.picAktif,
     picNama: sph.picNama,
     picJabatan: sph.picJabatan,
+    picSalutation: sph.picSalutation,
     kelengkapan: sph.kelengkapan ?? [],
+    useDigitalSignature: sph.useDigitalSignature,
+    signatureTemplateId: sph.signatureTemplateId,
   };
 }
 
@@ -50,7 +55,7 @@ export default async function PrintSphPage({ params, searchParams }: RouteContex
 
   return (
     <div className="doc-print">
-      <SphDocumentPackage values={toFormValues(sph)} noSph={sph.number ?? "Draf"} />
+      <SphDocumentPackage values={toFormValues(sph)} noSph={sph.number ?? "Draf"} signatureImage={sph.signatureImage} />
       <div className="doc-print-footer" aria-hidden>
         <DocumentFooter />
       </div>

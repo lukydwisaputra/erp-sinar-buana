@@ -12,7 +12,10 @@ import type { SphKelengkapan } from "@/lib/schemas/penawaran";
 
 export function KelengkapanDetail({ template }: { template: KelengkapanTemplate }) {
   const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  React.useEffect(() => {
+    const markMounted = () => setMounted(true);
+    markMounted();
+  }, []);
 
   const preview: SphKelengkapan = {
     templateId: template.id,
@@ -42,7 +45,7 @@ export function KelengkapanDetail({ template }: { template: KelengkapanTemplate 
             </Button>
           </div>
           <div className="p-4">
-            <div className="mx-auto max-w-[794px]">
+            <div className="mx-auto max-w-198.5">
               <ScaleToFit>
                 <SphKelengkapanPage kelengkapan={preview} />
               </ScaleToFit>

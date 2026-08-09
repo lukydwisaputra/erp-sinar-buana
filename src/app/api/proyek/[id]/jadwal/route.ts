@@ -27,11 +27,12 @@ const addRowSchema = z.object({
   numMonths: z.coerce.number().optional(),
 });
 
-// Matches RLS's sched_write: sales or tim_teknis (activity_schedules family
-// is shared between Penawaran-time planning and Proyek-time progress).
+// Proyek's Jadwal is read-all/write-admin-only — everyone can see progress,
+// only Admin can edit the plan (activity_schedules is shared with Penawaran,
+// which keeps its own broader sales/tim_teknis write access there).
 export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
-    const session = requireRole(await getCurrentSession(), "admin", "sales", "tim_teknis");
+    const session = requireRole(await getCurrentSession(), "admin");
     const { id } = await params;
     const body = addRowSchema.parse(await request.json());
     const jadwal = await addScheduleRow(session.id, id, body);

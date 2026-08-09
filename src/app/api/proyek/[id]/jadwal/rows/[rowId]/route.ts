@@ -8,7 +8,7 @@ type RouteContext = { params: Promise<{ id: string; rowId: string }> };
 
 export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   try {
-    const session = requireRole(await getCurrentSession(), "admin", "sales", "tim_teknis");
+    const session = requireRole(await getCurrentSession(), "admin");
     const { id, rowId } = await params;
     const jadwal = await removeScheduleRow(session.id, id, rowId);
     return NextResponse.json(jadwal);

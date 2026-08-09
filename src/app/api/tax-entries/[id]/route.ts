@@ -20,8 +20,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = patchBodySchema.parse(await request.json());
 
     if (body.action === "settle") {
-      const { settledDate, ntpn, buktiPotongReceived } = body;
-      const entry = await settleTaxEntry(session.id, id, { settledDate, ntpn, buktiPotongReceived });
+      const { settledDate, notes, buktiPotongReceived } = body;
+      const entry = await settleTaxEntry(session.id, id, { settledDate, notes, buktiPotongReceived });
       return NextResponse.json(entry);
     }
     if (body.action === "unsettle") {
