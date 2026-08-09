@@ -9,4 +9,4 @@
 #
 # The VPS docker daemon must be logged in to GHCR: `sudo docker login
 # ghcr.io -u <user>` with a PAT (read:packages).
-FROM ghcr.io/lukydwisaputra/erp-sinar-buana-worker:testing
+FROM ghcr.io/lukydwisaputra/erp-sinar-buana-worker:main

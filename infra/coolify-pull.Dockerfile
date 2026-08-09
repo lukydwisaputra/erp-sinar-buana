@@ -9,4 +9,4 @@
 #
 # The VPS docker daemon needs to be logged in to GHCR to pull this private
 # image: `sudo docker login ghcr.io -u <user>` with a PAT (read:packages).
-FROM ghcr.io/lukydwisaputra/erp-sinar-buana:testing
+FROM ghcr.io/lukydwisaputra/erp-sinar-buana:main

@@ -10,7 +10,7 @@
 # Run once per new batch of migrations, e.g.:
 #   docker run --rm --network coolify \
 #     -e DATABASE_URL='postgres://postgres:<pw>@sbmj-db:5432/sbmj_erp' \
-#     ghcr.io/lukydwisaputra/erp-migrator:testing
+#     ghcr.io/lukydwisaputra/erp-migrator:main
 # Bump MIGRATE_FROM when the applied baseline moves forward.
 set -euo pipefail
 : "${DATABASE_URL:?DATABASE_URL required (superuser connection string)}"

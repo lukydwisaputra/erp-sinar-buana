@@ -273,7 +273,7 @@ pending migration.
    docker run --rm --network coolify \
      -e DATABASE_URL='postgres://postgres:<pw>@sbmj-db:5432/sbmj_erp' \
      -e MIGRATE_FROM=<number from step 1> \
-     ghcr.io/lukydwisaputra/erp-migrator:testing
+     ghcr.io/lukydwisaputra/erp-migrator:main
    ```
 3. Re-run the same `information_schema` check for the migration(s) you just
    applied to confirm they landed before deploying app code that depends on

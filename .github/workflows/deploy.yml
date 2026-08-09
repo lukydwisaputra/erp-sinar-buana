@@ -5,7 +5,7 @@ name: Build and push images
 # pulling these images instead of building on the box.
 on:
   push:
-    branches: [testing]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -84,8 +84,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
   # After both images are pushed, tell Coolify to pull + roll them out.
-  # force=true so Coolify re-pulls the fresh :testing image (its pull shims
-  # do `FROM ...:testing`, which would otherwise reuse a stale local base).
+  # force=true so Coolify re-pulls the fresh :main image (its pull shims
+  # do `FROM ...:main`, which would otherwise reuse a stale local base).
   # Only App + Worker — the Database rarely changes and is deployed manually.
   deploy:
     needs: build

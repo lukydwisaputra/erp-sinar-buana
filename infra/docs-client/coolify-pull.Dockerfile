@@ -8,4 +8,4 @@
 #
 # The VPS docker daemon must already be logged in to GHCR (see
 # infra/coolify-pull.Dockerfile's header) — no extra login step needed here.
-FROM ghcr.io/lukydwisaputra/erp-sinar-buana-docs-client:testing
+FROM ghcr.io/lukydwisaputra/erp-sinar-buana-docs-client:main
