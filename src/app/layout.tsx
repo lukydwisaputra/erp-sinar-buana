@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Sinar Buana ERP",
-  description: "Prototype ERP internal PT Sinar Buana Mandiri Jaya",
+  description: "ERP internal PT Sinar Buana Mandiri Jaya",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
