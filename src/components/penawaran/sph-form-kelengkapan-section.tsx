@@ -5,6 +5,7 @@ import { Plus, X, Pencil, GripVertical } from "lucide-react";
 
 import type { SphKelengkapan } from "@/lib/schemas/penawaran";
 import { useKelengkapanList } from "@/lib/query/kelengkapan";
+import { alphaLabel } from "@/lib/format";
 import { BuilderSection } from "@/components/shared/builder-layout";
 
 import { Input } from "@/components/ui/input";
@@ -196,7 +197,7 @@ export function KelengkapanSection({
                   className="grid grid-cols-[1.25rem_1.5rem_1fr_5rem_5rem_11rem_2rem] items-center gap-2"
                 >
                   <GripVertical className="size-4 cursor-grab text-muted-foreground/50 active:cursor-grabbing" />
-                  <span className="text-xs text-muted-foreground">{String.fromCharCode(97 + ii)}.</span>
+                  <span className="text-xs text-muted-foreground">{alphaLabel(ii)}.</span>
                   <Input
                     value={it.persyaratan}
                     onChange={(e) => updateItem(editingIdx!, ii, { persyaratan: e.target.value })}

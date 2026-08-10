@@ -6,6 +6,20 @@ export function formatIntIDR(n: number): string {
   return Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+/** 0-indexed → bijective base-26 letter label: a, b, ... z, aa, ab, ... —
+ * used for checklist row markers so item #27 reads "aa." instead of the
+ * raw charCode symbol past 'z'. */
+export function alphaLabel(i: number): string {
+  let n = i + 1;
+  let s = "";
+  while (n > 0) {
+    n -= 1;
+    s = String.fromCharCode(97 + (n % 26)) + s;
+    n = Math.floor(n / 26);
+  }
+  return s;
+}
+
 /** "baru saja" / "12 menit lalu" / "3 jam lalu", falling back to a full date
  * past 24h — shared by the milestone activity feed and the notification bell. */
 export function relativeTime(iso: string): string {

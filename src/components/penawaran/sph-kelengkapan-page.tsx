@@ -1,5 +1,6 @@
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
+import { alphaLabel } from "@/lib/format";
 import type { SphKelengkapan } from "@/lib/schemas/penawaran";
 
 const cell = "border border-(--doc-rule) px-2 py-1";
@@ -22,7 +23,7 @@ export function SphKelengkapanPage({ kelengkapan }: { kelengkapan: SphKelengkapa
           <tbody>
             {kelengkapan.items.map((item, i) => (
               <tr key={i}>
-                <td className={`${cell} text-center`}>{String.fromCharCode(97 + i)}.</td>
+                <td className={`${cell} text-center`}>{alphaLabel(i)}.</td>
                 <td className={cell}>{item.persyaratan}</td>
                 <td className={`${cell} text-center`}>{item.status === "ada" ? "✓" : ""}</td>
                 <td className={`${cell} text-center`}>{item.status === "tidak" ? "✓" : ""}</td>

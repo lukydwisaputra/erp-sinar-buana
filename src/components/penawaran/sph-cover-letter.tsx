@@ -216,15 +216,11 @@ export function SphCoverLetter({
           {signatureImage ? (
             // Fixed-width invisible bounds so the hand-drawn ink visually
             // centers under "Hormat Kami," regardless of where it sits
-            // within its own (mostly transparent) source canvas image —
-            // the stamp/logo below doesn't need this, it's already symmetric.
+            // within its own (mostly transparent) source canvas image.
             <div className="my-2 flex w-40 justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={signatureImage} alt="Tanda tangan" className="h-20 w-auto" />
             </div>
-          ) : companyProfile.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={companyProfile.logo} alt="Cap perusahaan" className="my-2 size-20 object-contain opacity-50" />
           ) : (
             // Approximates the round company stamp — blank space for a manual signature + wet stamp.
             <div className="my-2 flex size-20 rotate-[-8deg] items-center justify-center rounded-full border-2 border-(--doc-blue)/60 text-(--doc-blue)/70">
