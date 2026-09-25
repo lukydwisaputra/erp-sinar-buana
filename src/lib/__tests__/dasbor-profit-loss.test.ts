@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import { hppPeriode, bebanOperasionalPeriode, computeLabaRugi } from "@/lib/dasbor/profit-loss";
-import type { FakturTerminRow } from "@/lib/faktur/mapping";
 import type { RealisasiRab } from "@/lib/schemas/realisasi-rab";
 import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
 import type { SifatBeban } from "@/lib/schemas/expense-nature";
@@ -9,14 +8,6 @@ import type { PajakConfig } from "@/lib/schemas/pajak-config";
 const juni = { mulai: "2026-06-01", selesai: "2026-06-30" };
 const finalCfg: PajakConfig = { metode: "final_05", tarifFinalPersen: 0.5, tarifBadanPersen: 22, ambangOmzet: 4_800_000_000 };
 
-function mkFaktur(p: Partial<FakturTerminRow>): FakturTerminRow {
-  return {
-    id: "INV-1", indukId: "MI-1", number: "INV/1", proyekId: "P1", perusahaanNama: "PT A",
-    tanggal: "2026-06-10", jatuhTempo: "2026-07-10", statusSystemRole: null,
-    nilaiTermin: 100_000_000, pph23: 0, netIncome: 100_000_000, totalSetelahPajak: 100_000_000,
-    ...p,
-  };
-}
 const rr = (jumlah: number, tanggal: string): RealisasiRab => ({
   id: "RRB-1", proyekId: "P1", kategori: "personil", rabLineLabel: "x", jumlah, tanggal, keterangan: "",
 });
@@ -43,14 +34,22 @@ describe("bebanOperasionalPeriode", () => {
     const rows = [ak(5_000_000, "Bahan", "2026-06-10")];
     expect(bebanOperasionalPeriode(rows, natureOfHpp, juni)).toBe(0);
   });
+
+  it("excludes kredit (income) entries even if their category defaults to operasional", () => {
+    const rows = [{ ...ak(20_000_000, "Termin", "2026-06-10"), jenis: "kredit" as const }];
+    expect(bebanOperasionalPeriode(rows, natureOf, juni)).toBe(0);
+  });
 });
 
 describe("computeLabaRugi", () => {
   it("builds the full waterfall with margins", () => {
     const result = computeLabaRugi({
-      fakturs: [mkFaktur({})], // revenue 100jt
+      fakturs: [],
       realisasi: [rr(40_000_000, "2026-06-05")], // HPP 40jt
-      arusKas: [ak(10_000_000, "Sewa Kantor", "2026-06-03")], // Opex 10jt
+      arusKas: [
+        { ...ak(100_000_000, "Termin", "2026-06-10"), jenis: "kredit" }, // pendapatan 100jt
+        ak(10_000_000, "Sewa Kantor", "2026-06-03"), // Opex 10jt
+      ],
       natureOf, config: finalCfg, periode: juni,
     });
     expect(result.pendapatan).toBe(100_000_000);
@@ -68,7 +67,10 @@ describe("computeLabaRugi", () => {
 
   it("flags revenue with no recorded cost (margin not a true 100%)", () => {
     const result = computeLabaRugi({
-      fakturs: [mkFaktur({})], realisasi: [], arusKas: [], natureOf, config: finalCfg, periode: juni,
+      fakturs: [],
+      realisasi: [],
+      arusKas: [{ ...ak(100_000_000, "Termin", "2026-06-10"), jenis: "kredit" }],
+      natureOf, config: finalCfg, periode: juni,
     });
     expect(result.adaPendapatanTanpaBiaya).toBe(true);
     expect(result.labaKotor).toBe(100_000_000);
@@ -80,5 +82,18 @@ describe("computeLabaRugi", () => {
     });
     expect(result.marginKotorPersen).toBe(0);
     expect(result.marginBersihPersen).toBe(0);
+  });
+
+  it("ignores non-kredit and cancelled cashflow entries as revenue", () => {
+    const result = computeLabaRugi({
+      fakturs: [],
+      realisasi: [],
+      arusKas: [
+        ak(50_000_000, "Sewa Kantor", "2026-06-03"), // debit, not revenue
+        { ...ak(20_000_000, "Termin", "2026-06-10"), jenis: "kredit", isCancelled: true }, // cancelled
+      ],
+      natureOf, config: finalCfg, periode: juni,
+    });
+    expect(result.pendapatan).toBe(0);
   });
 });

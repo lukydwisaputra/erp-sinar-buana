@@ -1,6 +1,6 @@
 "use client";
 import { StatCard, type StatCardInfo } from "@/components/shared/stat-card";
-import { formatRupiahCompact } from "@/lib/format";
+import { formatRupiah } from "@/lib/format";
 import type { LabaRugi, ForecastView } from "@/lib/dasbor/types";
 
 interface KpiStripProps {
@@ -15,12 +15,12 @@ const INFO: Record<string, StatCardInfo> = {
     definisi: "Estimasi laba bersih setelah pajak untuk periode terpilih.",
     basisPerhitungan:
       "Laba Operasional dikurangi estimasi PPh Badan (final 0,5% dari pendapatan, atau 22% dari laba operasional positif dikurangi kredit PPh 23 terkumpul — tergantung metode pajak di Konfigurasi).",
-    sumberData: ["Faktur (pendapatan & kredit PPh 23)", "Realisasi RAB (HPP)", "Arus Kas kategori operasional", "Konfigurasi Pajak"],
+    sumberData: ["Arus Kas (pendapatan)", "Faktur (kredit PPh 23)", "Realisasi RAB (HPP)", "Arus Kas kategori operasional", "Konfigurasi Pajak"],
   },
   pendapatan: {
-    definisi: "Total nilai jasa yang diakui (accrual) dari termin faktur terbit pada periode terpilih, di luar PPN.",
-    basisPerhitungan: "Jumlah nilai termin semua Faktur yang sudah terbit (status bukan Batal) dengan tanggal dalam periode.",
-    sumberData: ["Faktur — termin per proyek"],
+    definisi: "Total kas masuk (cash-basis) pada periode terpilih — sama dengan Total Pemasukan di Ringkasan Keuangan Bulanan.",
+    basisPerhitungan: "Jumlah seluruh entri Arus Kas jenis kredit yang tidak dibatalkan, dengan tanggal dalam periode.",
+    sumberData: ["Arus Kas — entri kredit"],
   },
   kasSaatIni: {
     definisi: "Saldo kas riil saat ini — akumulasi seluruh transaksi Arus Kas sampai hari ini, bukan dibatasi periode dasbor.",
@@ -45,17 +45,17 @@ const INFO: Record<string, StatCardInfo> = {
   labaKotor: {
     definisi: "Pendapatan dikurangi harga pokok penjualan (HPP) pada periode terpilih.",
     basisPerhitungan: "Pendapatan periode dikurangi realisasi RAB (biaya proyek) yang dicatat dalam periode yang sama.",
-    sumberData: ["Faktur (pendapatan)", "Realisasi RAB (HPP)"],
+    sumberData: ["Arus Kas (pendapatan)", "Realisasi RAB (HPP)"],
   },
   labaOperasional: {
     definisi: "Laba Kotor dikurangi beban operasional pada periode terpilih.",
     basisPerhitungan: "Laba Kotor dikurangi entri Arus Kas berkategori operasional (bukan modal/investasi) dalam periode.",
-    sumberData: ["Faktur (pendapatan)", "Realisasi RAB (HPP)", "Arus Kas kategori operasional"],
+    sumberData: ["Arus Kas (pendapatan)", "Realisasi RAB (HPP)", "Arus Kas kategori operasional"],
   },
 };
 
 export function KpiStrip({ labaRugi, forecastView, arOutstanding, taxDue }: KpiStripProps) {
-  const fmt = (n: number | undefined) => n !== undefined ? formatRupiahCompact(n) : undefined;
+  const fmt = (n: number | undefined) => n !== undefined ? formatRupiah(n) : undefined;
   const pct = (n: number | undefined) => n !== undefined ? `${n.toFixed(1)}%` : undefined;
   const runway = forecastView?.runwayBulan;
 

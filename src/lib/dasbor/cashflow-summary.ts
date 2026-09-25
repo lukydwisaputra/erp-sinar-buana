@@ -9,10 +9,18 @@ export type MonthlySummary = {
   saldoPerBulan: { bulan: string; saldo: number }[];
 };
 
+/** Total kas masuk (kredit) dalam periode — shared with Pendapatan on the P&L
+ * so the two stay identical by construction (see computeLabaRugi). */
+export function pemasukanPeriode(entries: ArusKasEntry[], periode: Periode): number {
+  return entries
+    .filter((e) => !e.isCancelled && e.jenis === "kredit" && dalamPeriode(e.tanggal, periode))
+    .reduce((s, e) => s + e.jumlah, 0);
+}
+
 /** FR-09.1 — Ringkasan Keuangan Bulanan. */
 export function computeMonthlySummary(entries: ArusKasEntry[], periode: Periode): MonthlySummary {
   const active = entries.filter((e) => !e.isCancelled && dalamPeriode(e.tanggal, periode));
-  const totalPemasukan = active.filter((e) => e.jenis === "kredit").reduce((s, e) => s + e.jumlah, 0);
+  const totalPemasukan = pemasukanPeriode(entries, periode);
   const totalPengeluaran = active.filter((e) => e.jenis === "debit").reduce((s, e) => s + e.jumlah, 0);
 
   const byMonth = new Map<string, number>();
