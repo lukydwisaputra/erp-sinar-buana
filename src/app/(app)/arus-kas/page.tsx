@@ -33,6 +33,7 @@ import {
   ChartLegend, ChartLegendContent, type ChartConfig,
 } from "@/components/ui/chart";
 import { formatRupiah } from "@/lib/format";
+import { isSaldoKategori } from "@/lib/dasbor/cashflow-summary";
 import { useArusKasList, useCreateArusKas, useUpdateArusKas, useRemoveArusKas } from "@/lib/query/arus-kas";
 import { useKategoriArusKasList, useCreateKategoriArusKas } from "@/lib/query/expense-nature";
 import type { ArusKasEntry, ArusKasJenis, ArusKasSumber } from "@/lib/schemas/arus-kas";
@@ -294,7 +295,7 @@ function buildLineData(entries: ArusKasEntry[], dateRange?: DateRange) {
   }
 
   for (const e of entries) {
-    if (e.isCancelled) continue;
+    if (e.isCancelled || isSaldoKategori(e.kategori)) continue;
     const [ey2, em2] = e.tanggal.split("-");
     const rec = monthMap.get(`${ey2}-${em2}`);
     if (!rec) continue;
@@ -344,19 +345,25 @@ function deltaPct(current: number, previous: number): number {
 
 function SummaryCards({ entries, showDelta = true }: { entries: ArusKasEntry[]; showDelta?: boolean }) {
   const active = entries.filter((e) => !e.isCancelled);
-  const totalKredit = active.filter((e) => e.jenis === "kredit").reduce((s, e) => s + e.jumlah, 0);
-  const totalDebit = active.filter((e) => e.jenis === "debit").reduce((s, e) => s + e.jumlah, 0);
-  const saldo = totalKredit - totalDebit;
+  // Saldo-category entries are opening-balance adjustments — real cash, but
+  // not business income/expense, so they're excluded from Total Pemasukan/
+  // Pengeluaran below and only affect the Saldo (kas) figure.
+  const activity = active.filter((e) => !isSaldoKategori(e.kategori));
+  const totalKredit = activity.filter((e) => e.jenis === "kredit").reduce((s, e) => s + e.jumlah, 0);
+  const totalDebit = activity.filter((e) => e.jenis === "debit").reduce((s, e) => s + e.jumlah, 0);
+  const saldo = active.reduce((s, e) => s + (e.jenis === "kredit" ? e.jumlah : -e.jumlah), 0);
 
   const thisKey = `${CURRENT_YEAR}-${String(CURRENT_MONTH).padStart(2, "0")}`;
   const prevDate = new Date(CURRENT_YEAR, CURRENT_MONTH - 2);
   const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
-  const sumBy = (key: string, jenis: ArusKasJenis) =>
-    active.filter((e) => e.jenis === jenis && e.tanggal.startsWith(key)).reduce((s, e) => s + e.jumlah, 0);
+  const sumBy = (rows: ArusKasEntry[], key: string, jenis: ArusKasJenis) =>
+    rows.filter((e) => e.jenis === jenis && e.tanggal.startsWith(key)).reduce((s, e) => s + e.jumlah, 0);
 
-  const kreditNow = sumBy(thisKey, "kredit"), kreditPrev = sumBy(prevKey, "kredit");
-  const debitNow = sumBy(thisKey, "debit"), debitPrev = sumBy(prevKey, "debit");
-  const saldoDelta = deltaPct(kreditNow - debitNow, kreditPrev - debitPrev);
+  const kreditNow = sumBy(activity, thisKey, "kredit"), kreditPrev = sumBy(activity, prevKey, "kredit");
+  const debitNow = sumBy(activity, thisKey, "debit"), debitPrev = sumBy(activity, prevKey, "debit");
+  const saldoNow = sumBy(active, thisKey, "kredit") - sumBy(active, thisKey, "debit");
+  const saldoPrev = sumBy(active, prevKey, "kredit") - sumBy(active, prevKey, "debit");
+  const saldoDelta = deltaPct(saldoNow, saldoPrev);
   const kreditDelta = deltaPct(kreditNow, kreditPrev);
   const debitDelta = deltaPct(debitNow, debitPrev);
 

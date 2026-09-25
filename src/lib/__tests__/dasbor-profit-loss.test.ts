@@ -39,6 +39,12 @@ describe("bebanOperasionalPeriode", () => {
     const rows = [{ ...ak(20_000_000, "Termin", "2026-06-10"), jenis: "kredit" as const }];
     expect(bebanOperasionalPeriode(rows, natureOf, juni)).toBe(0);
   });
+
+  it("excludes Saldo entries even if natureOf would call them operasional", () => {
+    const alwaysOperasional = (): SifatBeban => "operasional";
+    const rows = [ak(9_000_000, "Saldo", "2026-06-10")];
+    expect(bebanOperasionalPeriode(rows, alwaysOperasional, juni)).toBe(0);
+  });
 });
 
 describe("computeLabaRugi", () => {
@@ -95,5 +101,18 @@ describe("computeLabaRugi", () => {
       natureOf, config: finalCfg, periode: juni,
     });
     expect(result.pendapatan).toBe(0);
+  });
+
+  it("excludes Saldo entries from pendapatan (opening-balance, not revenue)", () => {
+    const result = computeLabaRugi({
+      fakturs: [],
+      realisasi: [],
+      arusKas: [
+        { ...ak(100_000_000, "Faktur", "2026-06-10"), jenis: "kredit" },
+        { ...ak(50_000_000, "Saldo", "2026-06-01"), jenis: "kredit" },
+      ],
+      natureOf, config: finalCfg, periode: juni,
+    });
+    expect(result.pendapatan).toBe(100_000_000);
   });
 });
