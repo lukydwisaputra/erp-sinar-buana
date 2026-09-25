@@ -1,21 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { computeMonthlyTrend } from "@/lib/dasbor/trend";
-import type { FakturTerminRow } from "@/lib/faktur/mapping";
 import type { RealisasiRab } from "@/lib/schemas/realisasi-rab";
 import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
 import type { PajakConfig } from "@/lib/schemas/pajak-config";
 
 const config: PajakConfig = { metode: "final_05", tarifFinalPersen: 0.5, tarifBadanPersen: 22, ambangOmzet: 4_800_000_000 };
 const natureOf = () => "operasional" as const;
-
-function faktur(overrides: Partial<FakturTerminRow>): FakturTerminRow {
-  return {
-    id: "t1", indukId: "mi1", number: "INV/t1", proyekId: "p1", perusahaanNama: "PT A",
-    tanggal: "2026-06-10", jatuhTempo: "2026-07-10", statusSystemRole: "LUNAS",
-    nilaiTermin: 10_000_000, pph23: 0, netIncome: 10_000_000, totalSetelahPajak: 10_000_000,
-    ...overrides,
-  };
-}
 
 function kas(overrides: Partial<ArusKasEntry>): ArusKasEntry {
   return {
@@ -35,9 +25,9 @@ describe("computeMonthlyTrend", () => {
   });
 
   it("computes pendapatan/laba per month from computeLabaRugi", () => {
-    const fakturs = [faktur({ tanggal: "2026-06-05", nilaiTermin: 20_000_000 })];
+    const arusKas = [kas({ tanggal: "2026-06-05", jumlah: 20_000_000 })];
     const points = computeMonthlyTrend({
-      fakturs, realisasi: [] as RealisasiRab[], arusKas: [], natureOf, config, today: "2026-06-15", months: 2,
+      fakturs: [], realisasi: [] as RealisasiRab[], arusKas, natureOf, config, today: "2026-06-15", months: 2,
     });
     const juni = points.find((p) => p.bulan === "2026-06")!;
     const mei = points.find((p) => p.bulan === "2026-05")!;
