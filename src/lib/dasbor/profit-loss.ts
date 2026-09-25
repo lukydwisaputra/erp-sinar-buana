@@ -6,7 +6,7 @@ import type { PajakConfig } from "@/lib/schemas/pajak-config";
 import type { LabaRugi, Periode } from "@/lib/dasbor/types";
 import { dalamPeriode } from "@/lib/dasbor/period";
 import { pph23KreditPeriode } from "@/lib/dasbor/revenue";
-import { pemasukanPeriode } from "@/lib/dasbor/cashflow-summary";
+import { pemasukanPeriode, isSaldoKategori } from "@/lib/dasbor/cashflow-summary";
 import { estimasiPphBadan } from "@/lib/dasbor/income-tax";
 
 /** COGS = realisasi RAB recorded within the period. */
@@ -18,14 +18,17 @@ export function hppPeriode(realisasi: RealisasiRab[], periode: Periode): number 
  * Restricted to `jenis === "debit"` — a kredit (income) entry whose category
  * has no explicit nature mapping falls back to DEFAULT_SIFAT ("operasional"),
  * which would otherwise double-count it as both Pendapatan and Opex now that
- * Pendapatan reads straight off Arus Kas (see computeLabaRugi). */
+ * Pendapatan reads straight off Arus Kas (see computeLabaRugi). Saldo entries
+ * are excluded explicitly (not just via nature mapping) since a category's
+ * configured nature is user-editable in Konfigurasi and Saldo must never
+ * count as Opex regardless. */
 export function bebanOperasionalPeriode(
   arusKas: ArusKasEntry[],
   natureOf: (kategori: string) => SifatBeban,
   periode: Periode,
 ): number {
   return arusKas.reduce((s, e) => {
-    if (e.isCancelled || e.jenis !== "debit" || !dalamPeriode(e.tanggal, periode)) return s;
+    if (e.isCancelled || e.jenis !== "debit" || isSaldoKategori(e.kategori) || !dalamPeriode(e.tanggal, periode)) return s;
     return natureOf(e.kategori) === "operasional" ? s + e.jumlah : s;
   }, 0);
 }

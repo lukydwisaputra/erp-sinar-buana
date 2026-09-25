@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeMonthlySummary, groupByKategori } from "@/lib/dasbor/cashflow-summary";
+import { computeMonthlySummary, groupByKategori, pemasukanPeriode } from "@/lib/dasbor/cashflow-summary";
 import type { ArusKasEntry } from "@/lib/schemas/arus-kas";
 
 const juni = { mulai: "2026-06-01", selesai: "2026-06-30" };
@@ -40,6 +40,29 @@ describe("computeMonthlySummary", () => {
     const summary = computeMonthlySummary(entries, { mulai: "2026-01-01", selesai: "2026-12-31" });
     expect(summary.saldoPerBulan).toEqual([{ bulan: "2026-06", saldo: 3_000_000 }]);
   });
+
+  it("excludes Saldo-category entries from Pemasukan/Pengeluaran but keeps them in saldoAkhir/saldoPerBulan", () => {
+    const entries = [
+      mk({ id: "a1", jenis: "kredit", jumlah: 10_000_000, kategori: "Faktur", tanggal: "2026-06-05" }),
+      mk({ id: "a2", jenis: "debit", jumlah: 3_000_000, kategori: "Sewa Kantor", tanggal: "2026-06-06" }),
+      mk({ id: "a3", jenis: "kredit", jumlah: 50_000_000, kategori: "Saldo", tanggal: "2026-06-01" }),
+    ];
+    const summary = computeMonthlySummary(entries, juni);
+    expect(summary.totalPemasukan).toBe(10_000_000);
+    expect(summary.totalPengeluaran).toBe(3_000_000);
+    expect(summary.saldoAkhir).toBe(57_000_000); // includes the Saldo entry
+    expect(summary.saldoPerBulan).toEqual([{ bulan: "2026-06", saldo: 57_000_000 }]);
+  });
+});
+
+describe("pemasukanPeriode", () => {
+  it("excludes Saldo-category entries", () => {
+    const entries = [
+      mk({ id: "a1", jenis: "kredit", jumlah: 10_000_000, kategori: "Faktur" }),
+      mk({ id: "a2", jenis: "kredit", jumlah: 50_000_000, kategori: "Saldo" }),
+    ];
+    expect(pemasukanPeriode(entries, juni)).toBe(10_000_000);
+  });
 });
 
 describe("groupByKategori", () => {
@@ -71,5 +94,13 @@ describe("groupByKategori", () => {
     ];
     expect(groupByKategori(entries, "kredit")).toEqual([]);
     expect(groupByKategori(entries, "debit")).toEqual([{ kategori: "Sewa", jumlah: 2_000_000 }]);
+  });
+
+  it("excludes Saldo-category entries", () => {
+    const entries = [
+      mk({ id: "a1", jenis: "kredit", kategori: "Faktur", jumlah: 5_000_000 }),
+      mk({ id: "a2", jenis: "kredit", kategori: "Saldo", jumlah: 50_000_000 }),
+    ];
+    expect(groupByKategori(entries, "kredit")).toEqual([{ kategori: "Faktur", jumlah: 5_000_000 }]);
   });
 });
