@@ -16,6 +16,7 @@ function RabRowCells({ no, row }: { no: number; row: RabRow }): React.JSX.Elemen
       <td className="border border-(--doc-rule) px-2 py-1 text-center">{no}</td>
       <td className="border border-(--doc-rule) px-2 py-1">{row.uraian}</td>
       <td className="border border-(--doc-rule) px-2 py-1 text-center">{row.vol}</td>
+      <td className="border border-(--doc-rule) px-2 py-1 text-center">{row.satuan}</td>
       <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono tabular-nums">
         {formatRupiah(row.hargaSatuan)}
       </td>
@@ -56,7 +57,8 @@ export function SphRabPage({
             <tr className="bg-(--doc-blue-soft) text-center font-bold">
               <th className="border border-(--doc-rule) px-2 py-1">No</th>
               <th className="border border-(--doc-rule) px-2 py-1">Uraian</th>
-              <th className="border border-(--doc-rule) px-2 py-1">Vol (Bln)</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Vol</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Satuan</th>
               <th className="border border-(--doc-rule) px-2 py-1">Harga Satuan (Rp)</th>
               <th className="border border-(--doc-rule) px-2 py-1">Jumlah Harga (Rp)</th>
             </tr>
@@ -66,7 +68,7 @@ export function SphRabPage({
               <RabRowCells key={i} no={i + 1} row={row} />
             ))}
             <tr>
-              <td colSpan={4} className="border border-(--doc-rule) px-2 py-1 text-right font-bold">
+              <td colSpan={5} className="border border-(--doc-rule) px-2 py-1 text-right font-bold">
                 Jumlah A
               </td>
               <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono font-bold tabular-nums">
@@ -83,7 +85,8 @@ export function SphRabPage({
             <tr className="bg-(--doc-blue-soft) text-center font-bold">
               <th className="border border-(--doc-rule) px-2 py-1">No</th>
               <th className="border border-(--doc-rule) px-2 py-1">Uraian</th>
-              <th className="border border-(--doc-rule) px-2 py-1">Volume (Ls)</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Vol</th>
+              <th className="border border-(--doc-rule) px-2 py-1">Satuan</th>
               <th className="border border-(--doc-rule) px-2 py-1">Harga Satuan (Rp)</th>
               <th className="border border-(--doc-rule) px-2 py-1">Jumlah Harga (Rp)</th>
             </tr>
@@ -93,7 +96,7 @@ export function SphRabPage({
               <RabRowCells key={i} no={i + 1} row={row} />
             ))}
             <tr>
-              <td colSpan={4} className="border border-(--doc-rule) px-2 py-1 text-right font-bold">
+              <td colSpan={5} className="border border-(--doc-rule) px-2 py-1 text-right font-bold">
                 Jumlah B
               </td>
               <td className="border border-(--doc-rule) px-2 py-1 text-right font-mono font-bold tabular-nums">
