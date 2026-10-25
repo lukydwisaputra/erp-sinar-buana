@@ -77,10 +77,10 @@ async function main() {
         await tx`
           insert into service_catalog (
             id, name, document_type_id, authority_id, legal_basis_id,
-            standard_price, is_recurring, is_active
+            standard_price, is_active
           ) values (
             ${s.id}, ${s.nama}, ${documentType.id}, ${authority.id}, ${legalBasis.id},
-            ${s.hargaStandar}, ${s.isRecurring}, ${s.isActive}
+            ${s.hargaStandar}, ${s.isActive}
           )
         `;
         console.log(`Seeded service: ${s.nama} (${s.id})`);

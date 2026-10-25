@@ -151,6 +151,16 @@ const companies: Company[] = [
     pic: [{ nama: "Agus Kurniawan", jabatan: "Direktur", telepon: "0831-0011-1110", email: "agus.k@indonialestari.co.id" }] },
 ];
 
+/** companies.province is NOT NULL; the old fixtures only carried kota/kabupaten. */
+const PROVINSI_BY_KOTA: Record<string, string> = {
+  Jakarta: "DKI Jakarta",
+  Bandung: "Jawa Barat",
+  Surabaya: "Jawa Timur",
+  Semarang: "Jawa Tengah",
+  Denpasar: "Bali",
+  Medan: "Sumatera Utara",
+};
+
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -172,8 +182,8 @@ async function main() {
         }
 
         await tx`
-          insert into companies (id, name, address, city, regency, npwp, email, is_active)
-          values (${c.id}, ${c.nama}, ${c.alamat}, ${c.kota}, ${c.kabupaten}, ${c.npwp}, ${c.email}, ${c.isActive})
+          insert into companies (id, name, address, city, province, npwp, email, is_active)
+          values (${c.id}, ${c.nama}, ${c.alamat}, ${c.kota}, ${PROVINSI_BY_KOTA[c.kota] ?? c.kota}, ${c.npwp}, ${c.email}, ${c.isActive})
         `;
         for (const [i, pic] of c.pic.entries()) {
           await tx`
