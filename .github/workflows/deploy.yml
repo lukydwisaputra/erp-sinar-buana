@@ -95,6 +95,6 @@ jobs:
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
-          curl --fail-with-body -sS \
+          curl --fail-with-body -sS -X POST \
             -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
             "https://coolify.portalkonsultan.com/api/v1/deploy?uuid=qi9xjxj7f1pffzdqq1dbhtf9,u8ybkbiztdwepeh9w4dm7alz&force=true"
