@@ -4,7 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { DataTable } from "@/components/shared/data-table";
 import { FormSheet } from "@/components/shared/form-sheet";
 import { SignaturePad } from "@/components/shared/signature-pad";
@@ -27,9 +27,82 @@ import type { SignatureTemplate } from "@/lib/schemas/signature-templates";
 
 const signatureFormSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi."),
-  signatureImage: z.string().min(1, "Tanda tangan wajib digambar."),
+  signatureImage: z.string().min(1, "Gambar tanda tangan atau unggah gambar cap."),
 });
 type SignatureForm = z.infer<typeof signatureFormSchema>;
+
+const UPLOAD_ACCEPT = ["image/png", "image/jpeg", "image/webp"];
+const UPLOAD_MAX_BYTES = 1024 * 1024; // 1MB — stored inline as a data URI
+// SignaturePad always exports a PNG of exactly this size, so any other
+// dimensions on an existing template mean it was an uploaded cap image.
+const PAD_WIDTH = 480;
+const PAD_HEIGHT = 160;
+
+/** Either draw a signature, or upload a cap image that already contains the
+ * signature — the chosen image is stored as-is in `signatureImage`. */
+function SignatureInput({ value, onChange }: { value: string; onChange: (dataUrl: string) => void }) {
+  const [mode, setMode] = React.useState<"draw" | "upload">("draw");
+  const [error, setError] = React.useState<string | null>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // Editing an existing template: detect whether it was drawn or uploaded.
+  React.useEffect(() => {
+    if (!value) return;
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth !== PAD_WIDTH || img.naturalHeight !== PAD_HEIGHT) setMode("upload");
+    };
+    img.src = value;
+    // Only on mount — later changes come from this component itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const switchMode = (next: "draw" | "upload") => {
+    if (next === mode) return;
+    setMode(next);
+    setError(null);
+    onChange("");
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!UPLOAD_ACCEPT.includes(file.type)) { setError("Format harus PNG, JPG, atau WebP."); return; }
+    if (file.size > UPLOAD_MAX_BYTES) { setError("Ukuran gambar maksimal 1MB."); return; }
+    const reader = new FileReader();
+    reader.onload = () => { setError(null); onChange(reader.result as string); };
+    reader.onerror = () => setError("Gagal membaca gambar.");
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <Button type="button" size="sm" variant={mode === "draw" ? "default" : "outline"} onClick={() => switchMode("draw")}>Gambar Tanda Tangan</Button>
+        <Button type="button" size="sm" variant={mode === "upload" ? "default" : "outline"} onClick={() => switchMode("upload")}>Unggah Gambar Cap</Button>
+      </div>
+      {mode === "draw" ? (
+        <SignaturePad value={value} onChange={(dataUrl) => onChange(dataUrl ?? "")} />
+      ) : (
+        <div className="space-y-2">
+          <input ref={inputRef} type="file" accept={UPLOAD_ACCEPT.join(",")} className="hidden" onChange={handleFile} />
+          {value && (
+            <div className="flex h-40 items-center justify-center rounded-md border border-input bg-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={value} alt="Gambar cap" className="max-h-36 w-auto" />
+            </div>
+          )}
+          <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+            <Upload className="size-4" /> {value ? "Ganti Gambar" : "Pilih Gambar"}
+          </Button>
+          <p className="text-xs text-muted-foreground">Gambar cap yang sudah memuat tanda tangan. PNG/JPG/WebP maks. 1MB, PNG berlatar transparan paling baik.</p>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SignatureForm_({
   initial, onSubmitTemplate, open, onOpenChange, title, submitLabel,
@@ -65,9 +138,7 @@ function SignatureForm_({
         <Controller
           control={control}
           name="signatureImage"
-          render={({ field }) => (
-            <SignaturePad value={field.value} onChange={(dataUrl) => field.onChange(dataUrl ?? "")} />
-          )}
+          render={({ field }) => <SignatureInput value={field.value} onChange={field.onChange} />}
         />
         <FieldError errors={errors.signatureImage ? [errors.signatureImage] : undefined} />
       </Field>

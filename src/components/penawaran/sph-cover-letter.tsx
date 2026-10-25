@@ -7,6 +7,7 @@ import { taxBreakdown } from "@/lib/faktur";
 import type { SphFormValues } from "@/lib/schemas/penawaran";
 import { SALUTATION_LABEL } from "@/lib/schemas/common";
 import { DocumentPage } from "@/components/shared/document/document-page";
+import { SignatureImage } from "@/components/shared/document/signature-image";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
 
 export function SphCoverLetter({
@@ -214,13 +215,7 @@ export function SphCoverLetter({
         <div className="mt-8 flex flex-col items-end text-right">
           <p>Hormat Kami,</p>
           {signatureImage ? (
-            // Fixed-width invisible bounds so the hand-drawn ink visually
-            // centers under "Hormat Kami," regardless of where it sits
-            // within its own (mostly transparent) source canvas image.
-            <div className="my-2 flex w-40 justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={signatureImage} alt="Tanda tangan" className="h-20 w-auto" />
-            </div>
+            <SignatureImage src={signatureImage} />
           ) : (
             // Approximates the round company stamp — blank space for a manual signature + wet stamp.
             <div className="my-2 flex size-20 rotate-[-8deg] items-center justify-center rounded-full border-2 border-(--doc-blue)/60 text-(--doc-blue)/70">

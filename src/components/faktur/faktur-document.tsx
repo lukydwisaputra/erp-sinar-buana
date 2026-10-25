@@ -5,6 +5,7 @@ import { terbilang } from "@/lib/terbilang";
 import type { FakturInduk, InvoiceTermin } from "@/lib/schemas/faktur";
 import { DocumentPage } from "@/components/shared/document/document-page";
 import { DocumentLetterhead } from "@/components/shared/document/document-letterhead";
+import { SignatureImage } from "@/components/shared/document/signature-image";
 
 /** Printable Invoice Termin document. Faktur Induk no longer stores per-item
  * volume/harga (that lived on the SPH; the DB's normalized model just lists
@@ -130,15 +131,11 @@ export function FakturDocument({ induk, termin }: { induk: FakturInduk; termin: 
         {/* Signature */}
         <div className="mt-5 flex flex-col items-end text-right">
           <p>Hormat Kami,</p>
-          {/* Fixed-width invisible bounds so the signature centers under
-              "Hormat Kami," regardless of where the ink sits within its own
-              (mostly transparent) source image. */}
-          <div className="my-2 flex h-20 w-40 justify-center">
-            {induk.signatureImage && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={induk.signatureImage} alt="Tanda tangan" className="h-20 w-auto" />
-            )}
-          </div>
+          {induk.signatureImage ? (
+            <SignatureImage src={induk.signatureImage} />
+          ) : (
+            <div className="my-2 h-20 w-40" />
+          )}
           <p className="font-bold underline">{companyProfile.direktur.nama}</p>
           <p className="font-bold">{companyProfile.direktur.jabatan}</p>
         </div>
