@@ -12,7 +12,7 @@ import { usePending } from "@/lib/use-pending";
 import { cn } from "@/lib/utils";
 
 /**
- * Presentational shell for the "Tambah" create forms.
+ * Presentational shell for the right-side form drawers (full-screen).
  * Keeps header/footer/scroll behaviour consistent across the three master-data pages.
  */
 export function FormSheet({
@@ -33,14 +33,14 @@ export function FormSheet({
   onSubmit: (e: React.FormEvent) => void;
   submitLabel?: string;
   submitDisabled?: boolean;
-  /** Override the default sm:max-w-md width — wider forms (e.g. multi-column step rows). */
+  /** Extra classes for the sheet; it is full-screen by default. */
   className?: string;
   children: React.ReactNode;
 }) {
   const [submitting, run] = usePending();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className={cn("flex flex-col overflow-hidden sm:max-w-md", className)}>
+      <SheetContent className={cn("flex flex-col overflow-hidden data-[side=right]:w-full data-[side=right]:sm:max-w-none", className)}>
         <SheetHeader className="pr-10">
           <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}

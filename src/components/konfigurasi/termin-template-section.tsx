@@ -91,7 +91,6 @@ function TerminForm_({
       onSubmit={onSubmit}
       submitLabel={submitLabel}
       submitDisabled={!hasStep}
-      className="data-[side=right]:sm:max-w-xl"
     >
       <Field data-invalid={!!errors.nama}>
         <FieldLabel>Nama Template</FieldLabel>
