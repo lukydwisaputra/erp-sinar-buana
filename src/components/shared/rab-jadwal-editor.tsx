@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Trash2Icon, Plus, Minus } from "lucide-react";
+import { Trash2Icon, Plus, Minus, GripVertical } from "lucide-react";
+import {
+  DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +66,9 @@ export function RabEditor({ rab, onChange }: { rab: Rab; onChange: (next: Rab) =
   );
 }
 
+let rowIdSeq = 0;
+const newRowId = () => `rab-row-${++rowIdSeq}`;
+
 function RabRowsEditor({
   title,
   rows,
@@ -73,75 +84,51 @@ function RabRowsEditor({
   newRowSatuan: string;
   onChange: (rows: RabRow[]) => void;
 }) {
+  // Rows carry no id of their own, but drag-and-drop (and MoneyInput's
+  // uncontrolled defaultValue) need a stable identity per row. `ids` runs
+  // parallel to `rows`; every add/remove/move below updates both in lockstep.
+  const [ids, setIds] = React.useState<string[]>(() => rows.map(() => newRowId()));
+  // Rows replaced from outside (e.g. "Gunakan Template RAB"): resize to match.
+  if (ids.length !== rows.length) {
+    setIds(rows.map((_, i) => ids[i] ?? newRowId()));
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   const update = (i: number, patch: Partial<RabRow>) =>
     onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
-  const removeRow = (i: number) => onChange(rows.filter((_, idx) => idx !== i));
-  const addRow = () =>
+  const removeRow = (i: number) => {
+    setIds(ids.filter((_, idx) => idx !== i));
+    onChange(rows.filter((_, idx) => idx !== i));
+  };
+  const addRow = () => {
+    setIds([...ids, newRowId()]);
     onChange([...rows, { uraian: "", vol: 1, satuan: newRowSatuan, hargaSatuan: 0 }]);
+  };
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = ids.indexOf(String(active.id));
+    const to = ids.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    setIds(arrayMove(ids, from, to));
+    onChange(arrayMove(rows, from, to));
+  };
 
   return (
     <div className="space-y-3">
       <p className="font-semibold">{title}</p>
-      <div className="space-y-2">
-        {rows.map((row, i) => (
-          <div
-            key={i}
-            className="flex flex-wrap items-end gap-3 rounded-md border border-border p-3"
-          >
-            <div className="w-1/4 min-w-50">
-              <label className="text-xs text-muted-foreground">Uraian</label>
-              <Input
-                value={row.uraian}
-                onChange={(e) => update(i, { uraian: e.target.value })}
-                placeholder="Uraian biaya…"
-              />
-            </div>
-            <div className="w-20">
-              <label className="text-xs text-muted-foreground">Vol</label>
-              <Input
-                type="number"
-                min={0}
-                value={row.vol}
-                onChange={(e) => update(i, { vol: Number(e.target.value) })}
-                className="text-right font-mono tabular-nums"
-              />
-            </div>
-            <div className="w-20">
-              <label className="text-xs text-muted-foreground">Satuan</label>
-              <Input
-                value={row.satuan}
-                onChange={(e) => update(i, { satuan: e.target.value })}
-                placeholder="Ls"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Harga Satuan</label>
-              <MoneyInput
-                key={i}
-                defaultValue={row.hargaSatuan}
-                onValueChange={(n) => update(i, { hargaSatuan: n })}
-                showTerbilang={false}
-                className="w-40"
-              />
-            </div>
-            <div className="ml-auto pb-2 text-right whitespace-nowrap">
-              <span className="text-xs text-muted-foreground">Jumlah: </span>
-              <span className="font-mono tabular-nums">
-                {formatRupiah((Number(row.vol) || 0) * (Number(row.hargaSatuan) || 0))}
-              </span>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Hapus baris"
-              onClick={() => removeRow(i)}
-            >
-              <Trash2Icon className="size-4 text-destructive" />
-            </Button>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {rows.map((row, i) => (
+              <SortableRabRow key={ids[i]} id={ids[i]} row={row} onUpdate={(patch) => update(i, patch)} onRemove={() => removeRow(i)} />
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
       <div className="flex items-center justify-between">
         <Button type="button" variant="outline" size="sm" onClick={addRow}>
           <Plus className="size-4" /> Tambah Baris
@@ -153,6 +140,87 @@ function RabRowsEditor({
           </span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SortableRabRow({
+  id,
+  row,
+  onUpdate,
+  onRemove,
+}: {
+  id: string;
+  row: RabRow;
+  onUpdate: (patch: Partial<RabRow>) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={cn(
+        "flex flex-wrap items-end gap-3 rounded-md border border-border bg-background p-3",
+        isDragging && "relative z-10 shadow-md",
+      )}
+    >
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        aria-label="Geser untuk mengubah urutan"
+        className="mb-2 cursor-grab touch-none rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <div className="w-1/4 min-w-50">
+        <label className="text-xs text-muted-foreground">Uraian</label>
+        <Input
+          value={row.uraian}
+          onChange={(e) => onUpdate({ uraian: e.target.value })}
+          placeholder="Uraian biaya…"
+        />
+      </div>
+      <div className="w-20">
+        <label className="text-xs text-muted-foreground">Vol</label>
+        <Input
+          type="number"
+          min={0}
+          value={row.vol}
+          onChange={(e) => onUpdate({ vol: Number(e.target.value) })}
+          className="text-right font-mono tabular-nums"
+        />
+      </div>
+      <div className="w-20">
+        <label className="text-xs text-muted-foreground">Satuan</label>
+        <Input
+          value={row.satuan}
+          onChange={(e) => onUpdate({ satuan: e.target.value })}
+          placeholder="Ls"
+        />
+      </div>
+      <div>
+        <label className="text-xs text-muted-foreground">Harga Satuan</label>
+        <MoneyInput
+          defaultValue={row.hargaSatuan}
+          onValueChange={(n) => onUpdate({ hargaSatuan: n })}
+          showTerbilang={false}
+          className="w-40"
+        />
+      </div>
+      <div className="ml-auto pb-2 text-right whitespace-nowrap">
+        <span className="text-xs text-muted-foreground">Jumlah: </span>
+        <span className="font-mono tabular-nums">
+          {formatRupiah((Number(row.vol) || 0) * (Number(row.hargaSatuan) || 0))}
+        </span>
+      </div>
+      <Button type="button" variant="ghost" size="icon" aria-label="Hapus baris" onClick={onRemove}>
+        <Trash2Icon className="size-4 text-destructive" />
+      </Button>
     </div>
   );
 }
